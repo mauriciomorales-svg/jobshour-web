@@ -40,7 +40,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose }: Props)
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('https://jobshour.dondemorales.cl/api/v1/requests/mine', {
+      const res = await fetch('/api/v1/requests/mine', {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
