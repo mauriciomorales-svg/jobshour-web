@@ -4,8 +4,25 @@ import './globals.css'
 import './console-error-suppressor'
 
 export const metadata: Metadata = {
-  title: 'Jobshour | Encuentra expertos cerca de ti',
-  description: 'Plataforma de servicios y trabajos por hora en Renaico',
+  title: 'JobsHours | Encuentra expertos cerca de ti en segundos',
+  description: 'Conecta con electricistas, gasfíteres, pintores, jardineros y más profesionales cerca de ti. Publica lo que necesitas y recibe ayuda al instante. Renaico, Araucanía, Chile.',
+  keywords: ['servicios', 'trabajos', 'expertos', 'Renaico', 'Araucanía', 'Chile', 'electricista', 'gasfíter', 'pintor', 'jardinero', 'plomero', 'trabajos por hora'],
+  authors: [{ name: 'JobsHours' }],
+  openGraph: {
+    title: 'JobsHours | Encuentra expertos cerca de ti',
+    description: 'Publica lo que necesitas y conecta con socios verificados en minutos.',
+    url: 'https://jobshour.dondemorales.cl',
+    siteName: 'JobsHours',
+    locale: 'es_CL',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'JobsHours | Expertos cerca de ti',
+    description: 'Conecta con profesionales verificados en tu zona.',
+  },
+  robots: { index: true, follow: true },
+  alternates: { canonical: 'https://jobshour.dondemorales.cl' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
