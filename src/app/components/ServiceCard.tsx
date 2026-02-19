@@ -50,7 +50,11 @@ const TYPE_CONFIG = {
 }
 
 function formatTimeAgo(dateStr: string) {
+  if (!dateStr) return ''
+  // Si ya viene formateado (ej: "hace 2 meses") devolverlo directo
+  if (dateStr.startsWith('hace') || dateStr.startsWith('Hace')) return dateStr
   const diff = Date.now() - new Date(dateStr).getTime()
+  if (isNaN(diff)) return dateStr
   const m = Math.floor(diff / 60000)
   if (m < 1) return 'Ahora mismo'
   if (m < 60) return `hace ${m}min`
@@ -60,7 +64,7 @@ function formatTimeAgo(dateStr: string) {
 }
 
 function PayloadChips({ request }: { request: ServiceRequest }) {
-  if (!request.payload) return null
+  if (!request.payload || Array.isArray(request.payload)) return null
   const chips: string[] = []
   if (request.type === 'ride_share') {
     if (request.payload.seats) chips.push(`👥 ${request.payload.seats} asientos`)
@@ -159,7 +163,7 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, on
       }`}
     >
       {/* Urgency ribbon */}
-      {request.urgency === 'high' && (
+      {(request.urgency === 'high' || request.urgency === 'urgent') && (
         <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl tracking-wide">
           🔥 URGENTE
         </div>
