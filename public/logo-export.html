@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>JobsHours - Exportar Íconos PNG</title>
+  <style>
+    body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; gap: 24px; font-family: sans-serif; padding: 40px; }
+    .row { display: flex; gap: 24px; align-items: end; flex-wrap: wrap; justify-content: center; }
+    .item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    canvas { border: 1px solid #334155; border-radius: 12px; }
+    button { padding: 10px 24px; background: #14b8a6; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; }
+    button:hover { background: #0d9488; }
+    p { color: #94a3b8; font-size: 12px; margin: 0; }
+    h1 { color: white; font-size: 24px; margin: 0; }
+    h2 { color: #2dd4bf; font-size: 14px; margin: 0; }
+  </style>
+</head>
+<body>
+  <h1>Exportar Íconos JobsHours</h1>
+  
+  <div class="row">
+    <div class="item">
+      <h2>PWA 192×192</h2>
+      <canvas id="c192" width="192" height="192"></canvas>
+      <button onclick="dl('c192','icon-192x192.png')">Descargar</button>
+    </div>
+    <div class="item">
+      <h2>PWA 512×512</h2>
+      <canvas id="c512" width="512" height="512"></canvas>
+      <button onclick="dl('c512','icon-512x512.png')">Descargar</button>
+    </div>
+    <div class="item">
+      <h2>Meta 1024×1024</h2>
+      <canvas id="c1024" width="1024" height="1024"></canvas>
+      <button onclick="dl('c1024','icon-1024x1024.png')">Descargar</button>
+    </div>
+  </div>
+
+  <p>Descarga los 3 PNGs. Copia icon-192x192.png y icon-512x512.png a /public/ para la PWA.</p>
+
+  <script>
+    const sizes = [192, 512, 1024];
+    const svg = '/logo-1024.svg';
+
+    sizes.forEach(size => {
+      const canvas = document.getElementById('c' + size);
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, size, size);
+      img.src = svg;
+    });
+
+    function dl(id, name) {
+      const link = document.createElement('a');
+      link.download = name;
+      link.href = document.getElementById(id).toDataURL('image/png');
+      link.click();
+    }
+  </script>
+</body>
+</html>

@@ -127,6 +127,7 @@ export default function Home() {
   const [ratingWorkerInfo, setRatingWorkerInfo] = useState<{ name: string; avatar: string | null } | null>(null)
   const [showCategoryRequiredModal, setShowCategoryRequiredModal] = useState(false)
   const [workerCategories, setWorkerCategories] = useState<number[]>([]) // Categorías del worker
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false)
   // const [showTravelModeModal, setShowTravelModeModal] = useState(false)
   const [workerStatus, setWorkerStatus] = useState<'guest' | 'inactive' | 'intermediate' | 'active'>('guest') // Estados del trabajador
   const workerStatusRef = useRef<'guest' | 'inactive' | 'intermediate' | 'active'>('guest')
@@ -729,19 +730,18 @@ export default function Home() {
       })
   }, [userLat, userLng, user])
 
-  // Obtener ubicación del usuario al cargar
+  // Obtener ubicación — si ya la tenemos en localStorage, usarla
+  // Si no, mostrar prompt persuasivo
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLat(position.coords.latitude)
-          setUserLng(position.coords.longitude)
-        },
-        (error) => {
-          console.warn('⚠️ Error obteniendo ubicación:', error)
-          // Usar coordenadas por defecto si falla
-        }
-      )
+    const savedLat = localStorage.getItem('user_lat')
+    const savedLng = localStorage.getItem('user_lng')
+    if (savedLat && savedLng) {
+      setUserLat(parseFloat(savedLat))
+      setUserLng(parseFloat(savedLng))
+    } else {
+      // Mostrar prompt después de 2s para no interrumpir la carga
+      const timer = setTimeout(() => setShowLocationPrompt(true), 2000)
+      return () => clearTimeout(timer)
     }
   }, [])
 
@@ -1605,6 +1605,65 @@ export default function Home() {
             onLoginRequest={() => { setShowSolicitudesPanel(false); setShowLoginModal(true) }}
             onClose={() => { setShowSolicitudesPanel(false); setActiveTab('map') }}
           />
+        </div>
+      )}
+
+      {/* ── PROMPT UBICACIÓN PERSUASIVO ── */}
+      {showLocationPrompt && (
+        <div className="fixed bottom-20 left-4 right-4 z-[180] animate-slide-up">
+          <div className="bg-slate-900 border border-slate-700/50 rounded-2xl p-4 shadow-2xl shadow-teal-500/10 max-w-md mx-auto">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-teal-500/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-white text-sm font-bold">
+                  {user ? `${user.firstName}, veamos qué hay cerca` : 'Descubre servicios cerca de ti'}
+                </p>
+                <p className="text-slate-400 text-xs mt-0.5">
+                  Compartir tu ubicación nos ayuda a mostrarte oportunidades cercanas
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => {
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setUserLat(pos.coords.latitude)
+                            setUserLng(pos.coords.longitude)
+                            localStorage.setItem('user_lat', String(pos.coords.latitude))
+                            localStorage.setItem('user_lng', String(pos.coords.longitude))
+                            setShowLocationPrompt(false)
+                          },
+                          () => {
+                            setShowLocationPrompt(false)
+                          },
+                          { enableHighAccuracy: true, timeout: 10000 }
+                        )
+                      }
+                    }}
+                    className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white py-2 px-4 rounded-xl text-xs font-bold shadow-lg shadow-teal-500/20 flex items-center justify-center gap-1.5"
+                  >
+                    <span>📍</span> Compartir ubicación
+                  </button>
+                  <button
+                    onClick={() => setShowLocationPrompt(false)}
+                    className="px-3 py-2 text-slate-500 text-xs font-semibold hover:text-slate-300 transition"
+                  >
+                    Ahora no
+                  </button>
+                </div>
+              </div>
+              <button onClick={() => setShowLocationPrompt(false)} className="text-slate-600 hover:text-slate-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
