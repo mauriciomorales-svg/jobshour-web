@@ -164,13 +164,27 @@ export default function DashboardFeed({ userLat, userLng, onCardClick, highlight
   const goalProgress = Math.min((dailyViewed / dailyGoal) * 100, 100)
 
   return (
-    <div className="h-full overflow-y-auto bg-slate-900 p-4 space-y-4">
-      {/* Header con título */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">💰</span>
-          <h2 className="text-lg font-black text-white">Feed de Oportunidades</h2>
+    <div className="h-full overflow-y-auto bg-slate-900 p-4 space-y-3">
+
+      {/* ── HEADER ── */}
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">💰</span>
+            <h2 className="text-lg font-black text-white leading-tight">Oportunidades cerca</h2>
+          </div>
+          <p className="text-xs text-slate-400 mt-0.5 leading-snug">
+            Solicitudes reales de personas que necesitan ayuda ahora — tócala para aceptarla
+          </p>
         </div>
+        <button
+          onClick={() => loadMore(true)}
+          disabled={loading}
+          className="shrink-0 mt-0.5 p-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-300 disabled:opacity-40 transition active:scale-95"
+          title="Actualizar"
+        >
+          <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+        </button>
       </div>
 
       {/* Live Stats */}
@@ -180,39 +194,26 @@ export default function DashboardFeed({ userLat, userLng, onCardClick, highlight
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-slate-800 rounded-xl p-4 border border-slate-700"
+        className="bg-slate-800 rounded-xl p-3 border border-slate-700"
       >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">💰</span>
-            <span className="text-sm text-white font-bold">Meta Diaria</span>
-          </div>
-          <span className="text-sm font-bold text-emerald-400">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs text-slate-400 font-semibold">Meta del día (potencial en CLP)</span>
+          <span className="text-xs font-bold text-emerald-400">
             ${dailyViewed.toLocaleString()} / ${dailyGoal.toLocaleString()}
           </span>
         </div>
-        <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+        <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-emerald-400 to-teal-500"
+            className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${goalProgress}%` }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
           />
         </div>
+        {goalProgress >= 100 && (
+          <p className="text-xs text-emerald-400 font-bold mt-1 text-center">🎉 ¡Meta alcanzada!</p>
+        )}
       </motion.div>
-
-      {/* Feed de Oportunidades */}
-      {/* Botón de refrescar */}
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={() => loadMore(true)}
-          disabled={loading}
-          className="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          title="Actualizar feed"
-        >
-          {loading ? '🔄' : '↻'} Actualizar
-        </button>
-      </div>
 
       <div className="space-y-3">
         {feed.map((request, index) => (
@@ -242,26 +243,35 @@ export default function DashboardFeed({ userLat, userLng, onCardClick, highlight
         </div>
       )}
       
-      {/* Mensaje cuando no hay datos y no está cargando */}
+      {/* Estado vacío */}
       {!loading && feed.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-slate-400 mb-2">No hay oportunidades disponibles</p>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12"
+        >
+          <div className="text-5xl mb-3">📍</div>
+          <p className="text-white font-bold text-base mb-1">No hay solicitudes cerca</p>
+          <p className="text-slate-400 text-sm mb-4">Las oportunidades aparecen cuando alguien pide ayuda cerca de ti</p>
           <button
             onClick={() => loadMore(true)}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors"
+            className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition active:scale-95"
           >
-            ↻ Intentar de nuevo
+            Buscar de nuevo
           </button>
-        </div>
+        </motion.div>
       )}
 
       {/* Trigger para Infinite Scroll */}
-      <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
-        {hasMore && !loading && (
-          <span className="text-xs text-slate-500">Desliza para ver más...</span>
+      <div ref={loadMoreRef} className="h-16 flex items-center justify-center">
+        {hasMore && loading && (
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <div className="w-4 h-4 border-2 border-slate-600 border-t-orange-400 rounded-full animate-spin" />
+            Cargando más...
+          </div>
         )}
         {!hasMore && feed.length > 0 && (
-          <span className="text-xs text-slate-600">No hay más oportunidades por ahora</span>
+          <span className="text-xs text-slate-600">• Viste todas las oportunidades del momento •</span>
         )}
       </div>
     </div>
