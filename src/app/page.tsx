@@ -1164,225 +1164,174 @@ export default function Home() {
       {/* Toasts reemplazan el demandAlert banner — ver ToastContainer al final */}
 
       {/* ══════════════════════════════════════════════
-          FLOTANTE JUST-IN-TIME — solo al tocar marcador
+          WORKER DETAIL — Bottom Sheet moderno
          ══════════════════════════════════════════════ */}
       {(selectedDetail || loadingDetail) && (
-        <div className="absolute left-1/2 -translate-x-1/2 z-[110] w-[88%] max-w-[340px] animate-slide-up" style={{ bottom: dashExpanded ? '52%' : '90px' }}>
-          <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-slate-100 p-3 relative">
-            {/* Botón X para cerrar */}
-            <button
-              onClick={() => { setSelectedDetail(null); setLoadingDetail(false) }}
-              className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full shadow-md border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition z-10"
-            >
-              <svg className="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-
-            {loadingDetail && !selectedDetail ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="animate-spin w-5 h-5 border-[2.5px] border-blue-600 border-t-transparent rounded-full" />
+        <>
+          {/* Backdrop tap-to-close */}
+          <div
+            className="fixed inset-0 z-[108] bg-black/20"
+            onClick={() => { setSelectedDetail(null); setLoadingDetail(false) }}
+          />
+          <div className="fixed left-0 right-0 z-[109] bottom-[68px] animate-slide-up">
+            <div className="bg-white rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.18)] max-h-[70vh] overflow-y-auto">
+              {/* Handle bar */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 bg-gray-200 rounded-full" />
               </div>
-            ) : selectedDetail && (
-              <>
-                <div className="flex gap-2.5">
-                  <div className="relative shrink-0">
-                    <img
-                      src={selectedDetail.avatar || `https://i.pravatar.cc/100?u=${selectedDetail.id}`}
-                      alt={selectedDetail.name}
-                      className="w-12 h-12 rounded-xl object-cover"
-                    />
-                    <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 border-2 border-white rounded-full ${
-                      selectedDetail.status === 'active' ? 'bg-green-500 animate-pulse' :
-                      selectedDetail.status === 'intermediate' ? 'bg-yellow-500' : 'bg-gray-300'
-                    }`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <h4 className="font-bold text-slate-800 text-xs truncate">{selectedDetail.name}</h4>
-                      {selectedDetail.nickname && (
-                        <span className="text-[8px] bg-slate-800 text-white px-1.5 py-0.5 rounded-full font-bold">@{selectedDetail.nickname}</span>
-                      )}
-                      {selectedDetail.is_verified && (
-                        <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="flex items-center gap-0.5 text-[10px]">
-                        <svg className="w-3 h-3 fill-orange-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                        <span className="font-bold text-slate-800">{selectedDetail.fresh_score}</span>
-                      </span>
-                      <span className="font-bold text-blue-600 text-[11px]">{formatCLP(selectedDetail.hourly_rate)}/hr</span>
-                      {selectedDetail.showcase_video && (
-                        <span className="text-[8px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-bold">📹 30s</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Información de Modo Viaje si está activo */}
-                {selectedDetail.active_route && selectedDetail.active_route.available_seats && selectedDetail.active_route.available_seats > 0 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 mt-2 mb-2">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-base">🚗</span>
-                      <span className="text-xs font-bold text-blue-800">Modo Viaje Activo</span>
+              {loadingDetail && !selectedDetail ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <div className="animate-spin w-8 h-8 border-[3px] border-blue-500 border-t-transparent rounded-full" />
+                  <p className="text-sm text-gray-400">Cargando perfil...</p>
+                </div>
+              ) : selectedDetail && (
+                <div className="px-5 pb-6">
+                  {/* Header — Avatar + Info */}
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="relative shrink-0">
+                      <img
+                        src={selectedDetail.avatar || `https://i.pravatar.cc/150?u=${selectedDetail.id}`}
+                        alt={selectedDetail.name}
+                        className="w-16 h-16 rounded-2xl object-cover shadow-sm"
+                      />
+                      <span className={`absolute -bottom-1 -right-1 w-4 h-4 border-2 border-white rounded-full shadow ${
+                        selectedDetail.status === 'active' ? 'bg-green-500 animate-pulse' :
+                        selectedDetail.status === 'intermediate' ? 'bg-yellow-400' : 'bg-gray-300'
+                      }`} />
                     </div>
-                    <div className="space-y-1 text-[10px] text-blue-700">
-                      {selectedDetail.active_route.origin && selectedDetail.active_route.destination && (
-                        <div className="flex items-center gap-1">
-                          <span className="font-semibold">Desde:</span>
-                          <span>{selectedDetail.active_route.origin.address}</span>
-                        </div>
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-black text-gray-900 text-base leading-tight">{selectedDetail.name}</h3>
+                        {selectedDetail.is_verified && (
+                          <svg className="w-4 h-4 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      {selectedDetail.nickname && (
+                        <p className="text-xs text-gray-400 font-medium mt-0.5">@{selectedDetail.nickname}</p>
                       )}
-                      {selectedDetail.active_route.destination && (
-                        <div className="flex items-center gap-1">
-                          <span className="font-semibold">Hacia:</span>
-                          <span>{selectedDetail.active_route.destination.address}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-blue-200">
-                        <span className="flex items-center gap-1">
-                          <span>👥</span>
-                          <span className="font-bold">{selectedDetail.active_route.available_seats} asientos disponibles</span>
-                        </span>
-                        {selectedDetail.active_route.departure_time && (
-                          <span className="text-[9px] text-blue-600">
-                            {new Date(selectedDetail.active_route.departure_time).toLocaleString('es-CL', { 
-                              day: '2-digit', 
-                              month: '2-digit', 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
+                      {/* Stats row */}
+                      <div className="flex items-center gap-3 mt-1.5">
+                        {selectedDetail.fresh_score > 0 && (
+                          <span className="flex items-center gap-1 text-sm">
+                            <svg className="w-3.5 h-3.5 fill-orange-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            <span className="font-bold text-gray-900">{selectedDetail.fresh_score}</span>
                           </span>
+                        )}
+                        <span className="font-black text-blue-600 text-sm">{formatCLP(selectedDetail.hourly_rate)}/hr</span>
+                        {selectedDetail.showcase_video && (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">📹 Video</span>
                         )}
                       </div>
                     </div>
+                    {/* Status badge */}
+                    <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
+                      selectedDetail.status === 'active' ? 'bg-green-100 text-green-700' :
+                      selectedDetail.status === 'intermediate' ? 'bg-amber-100 text-amber-700' :
+                      'bg-gray-100 text-gray-500'
+                    }`}>
+                      {selectedDetail.status === 'active' ? 'Disponible' :
+                       selectedDetail.status === 'intermediate' ? 'En escucha' : 'No disponible'}
+                    </span>
                   </div>
-                )}
 
-                {selectedDetail.microcopy && (
-                  <p className="text-[10px] text-slate-500 mt-1.5 italic leading-snug">{selectedDetail.microcopy}</p>
-                )}
-
-                <div className="flex gap-2 mt-2">
-                  {/* Botón Perfil */}
-                  <button 
-                    onClick={() => {
-                      setSelectedWorkerId(selectedDetail.id)
-                      setShowWorkerProfileDetail(true)
-                    }}
-                    className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-1.5 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                    <span>Perfil</span>
-                  </button>
-                  
-                  {/* Botón Chat o Solicitar */}
-                  {selectedDetail.status === 'inactive' ? (
-                    <button disabled className="flex-1 bg-gray-200 text-gray-500 py-1.5 rounded-xl text-[11px] font-bold cursor-not-allowed">No disponible</button>
-                  ) : activeRequestId ? (
-                    <button 
-                      onClick={() => {
-                        const authCheck = checkAuthAndProfile()
-                        if (!authCheck.canInteract) {
-                          if (authCheck.reason === 'login') {
-                            setShowLoginModal(true)
-                          } else {
-                            setShowOnboarding(true)
-                          }
-                          return
-                        }
-                        setShowChat(true)
-                      }}
-                      className="flex-1 bg-green-600 text-white py-1.5 rounded-xl text-[11px] font-bold hover:bg-green-700 transition flex items-center justify-center gap-1"
-                    >
-                      💬 Chat
-                    </button>
-                  ) : selectedDetail.status === 'active' ? (
-                    <button 
-                      onClick={() => {
-                        const authCheck = checkAuthAndProfile()
-                        if (!authCheck.canInteract) {
-                          if (authCheck.reason === 'login') {
-                            setShowLoginModal(true)
-                            toast('Inicia sesión para solicitar servicios', 'info')
-                          } else {
-                            setShowOnboarding(true)
-                            toast('Completa tu perfil para continuar', 'warning')
-                          }
-                          return
-                        }
-                        setShowRequestModal(true)
-                      }}
-                      className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold transition ${
-                        checkAuthAndProfile().canInteract 
-                          ? 'bg-green-600 text-white hover:bg-green-700' 
-                          : 'bg-gray-300 text-gray-500 opacity-60 cursor-not-allowed'
-                      }`}
-                      title={!checkAuthAndProfile().canInteract ? 'Inicia sesión para solicitar servicios' : ''}
-                    >
-                      {checkAuthAndProfile().canInteract ? 'Solicitar' : 'Inicia sesión'}
-                    </button>
-                  ) : selectedDetail.status === 'intermediate' ? (
-                    <button 
-                      onClick={() => {
-                        const authCheck = checkAuthAndProfile()
-                        if (!authCheck.canInteract) {
-                          if (authCheck.reason === 'login') {
-                            setShowLoginModal(true)
-                            toast('Inicia sesión para consultar disponibilidad', 'info')
-                          } else {
-                            setShowOnboarding(true)
-                            toast('Completa tu perfil para continuar', 'warning')
-                          }
-                          return
-                        }
-                        setShowRequestModal(true)
-                      }}
-                      className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold transition ${
-                        checkAuthAndProfile().canInteract 
-                          ? 'bg-amber-500 text-white hover:bg-amber-600' 
-                          : 'bg-gray-300 text-gray-500 opacity-60 cursor-not-allowed'
-                      }`}
-                      title={!checkAuthAndProfile().canInteract ? 'Inicia sesión para consultar disponibilidad' : ''}
-                    >
-                      {checkAuthAndProfile().canInteract ? 'Consultar' : 'Inicia sesión'}
-                    </button>
-                  ) : (
-                    <button disabled className="flex-1 bg-gray-200 text-gray-500 py-1.5 rounded-xl text-[11px] font-bold cursor-not-allowed">No disponible</button>
+                  {/* Microcopy */}
+                  {selectedDetail.microcopy && (
+                    <p className="text-sm text-gray-500 italic mb-4 leading-relaxed">{selectedDetail.microcopy}</p>
                   )}
-                  
-                  {/* Botón Ver Teléfono */}
-                  {selectedDetail.phone && (
-                    <button 
-                      onClick={() => {
-                        const authCheck = checkAuthAndProfile()
-                        if (!authCheck.canInteract) {
-                          if (authCheck.reason === 'login') {
+
+                  {/* Modo Viaje */}
+                  {selectedDetail.active_route?.available_seats && selectedDetail.active_route.available_seats > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3.5 mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">🚗</span>
+                        <span className="text-sm font-bold text-blue-800">Modo Viaje Activo</span>
+                        <span className="ml-auto text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full font-bold">
+                          {selectedDetail.active_route.available_seats} asientos
+                        </span>
+                      </div>
+                      {selectedDetail.active_route.destination && (
+                        <p className="text-xs text-blue-700">
+                          Hacia: <span className="font-semibold">{selectedDetail.active_route.destination.address}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Ver perfil completo */}
+                    <button
+                      onClick={() => { setSelectedWorkerId(selectedDetail.id); setShowWorkerProfileDetail(true) }}
+                      className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-2xl text-sm font-bold transition active:scale-95"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                      Ver perfil
+                    </button>
+
+                    {/* CTA principal */}
+                    {selectedDetail.status === 'inactive' ? (
+                      <button disabled className="flex items-center justify-center gap-2 bg-gray-100 text-gray-400 py-3 rounded-2xl text-sm font-bold cursor-not-allowed">
+                        No disponible
+                      </button>
+                    ) : activeRequestId ? (
+                      <button
+                        onClick={() => {
+                          const a = checkAuthAndProfile()
+                          if (!a.canInteract) { setShowLoginModal(true); return }
+                          setShowChat(true)
+                        }}
+                        className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3 rounded-2xl text-sm font-bold transition active:scale-95"
+                      >
+                        💬 Chat activo
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const a = checkAuthAndProfile()
+                          if (!a.canInteract) {
+                            setShowLoginModal(true)
+                            toast(a.reason === 'login' ? 'Inicia sesión para continuar' : 'Completa tu perfil', a.reason === 'login' ? 'info' : 'warning')
+                            return
+                          }
+                          setShowRequestModal(true)
+                        }}
+                        className={`flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition active:scale-95 ${
+                          selectedDetail.status === 'active'
+                            ? 'bg-green-500 hover:bg-green-600 text-white'
+                            : 'bg-amber-400 hover:bg-amber-500 text-white'
+                        }`}
+                      >
+                        {selectedDetail.status === 'active' ? '⚡ Solicitar ahora' : '💬 Consultar'}
+                      </button>
+                    )}
+
+                    {/* Teléfono — ancho completo si está disponible */}
+                    {selectedDetail.phone && (
+                      <button
+                        onClick={() => {
+                          const a = checkAuthAndProfile()
+                          if (!a.canInteract) {
                             setShowLoginModal(true)
                             toast('Inicia sesión para ver el teléfono', 'info')
-                          } else {
-                            setShowOnboarding(true)
-                            toast('Completa tu perfil para ver el teléfono', 'warning')
+                            return
                           }
-                          return
-                        }
-                        window.open(`tel:${selectedDetail.phone}`, '_self')
-                      }}
-                      className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1 ${
-                        checkAuthAndProfile().canInteract
-                          ? 'bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:from-purple-600 hover:via-purple-700 hover:to-purple-800 text-white'
-                          : 'bg-gray-300 text-gray-500 opacity-60 cursor-not-allowed'
-                      }`}
-                      title={!checkAuthAndProfile().canInteract ? 'Inicia sesión para ver el teléfono' : ''}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                      <span>{checkAuthAndProfile().canInteract ? 'Ver Teléfono' : 'Inicia sesión'}</span>
-                    </button>
-                  )}
+                          window.open(`tel:${selectedDetail.phone}`, '_self')
+                        }}
+                        className="col-span-2 flex items-center justify-center gap-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 py-3 rounded-2xl text-sm font-bold transition active:scale-95"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                        Llamar ahora
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
 
