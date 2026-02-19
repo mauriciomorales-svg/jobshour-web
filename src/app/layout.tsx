@@ -29,6 +29,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#059669" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="JobsHours" />
+        <link rel="apple-touch-icon" href="/icon-192x192.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -96,6 +102,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 console.log = function(...args) { if (!shouldFilter(args)) originalLog.apply(console, args); };
                 console.info = function(...args) { if (!shouldFilter(args)) originalInfo.apply(console, args); };
               })();
+            `,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function() {});
+                });
+              }
             `,
           }}
         />
