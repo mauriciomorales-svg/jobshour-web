@@ -1,0 +1,30 @@
+tunnel: 7f1549d9-a5a2-48c8-af98-eb473ec7f758
+credentials-file: C:\Users\ComercioIsabel\.cloudflared\7f1549d9-a5a2-48c8-af98-eb473ec7f758.json
+
+ingress:
+  - hostname: bio.dondemorales.cl
+    service: http://localhost:3000
+  - hostname: api.dondemorales.cl
+    service: http://localhost:8000
+  - hostname: www.dondemorales.cl
+    service: http://localhost:3000
+  - hostname: jobshour.dondemorales.cl
+    service: http://localhost:3002
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 30s
+      keepAliveConnections: 100
+      keepAliveTimeout: 90s
+      httpHostHeader: localhost:3002
+  - hostname: api.jobshour.dondemorales.cl
+    service: http://localhost:8095
+  - hostname: reverb.jobshour.dondemorales.cl
+    service: http://localhost:8085
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+      tlsTimeout: 30s
+      keepAliveConnections: 100
+      keepAliveTimeout: 90s
+      httpHostHeader: localhost:8085
+  - service: http_status:404
