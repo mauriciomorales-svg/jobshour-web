@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 
+import Logo from './components/Logo'
 const MapSection = dynamic(() => import('./components/MapSection'), { ssr: false })
 const ServiceRequestModal = dynamic(() => import('@/app/components/ServiceRequestModal'), { ssr: false }) as any
 const ChatPanel = dynamic(() => import('./components/ChatPanel'), { ssr: false })
@@ -2232,15 +2233,12 @@ export default function Home() {
       />
 
       {loading && (
-        <div className="absolute inset-0 z-[150] bg-gray-900/90 flex items-center justify-center">
-          <div className="relative w-40 h-40">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-900/30 to-teal-900/30 animate-[pulse-slow_4s_ease-in-out_infinite]"></div>
-            <div className="w-36 h-36 rounded-full border-8 border-teal-400 border-t-transparent relative mx-auto">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-5 h-5 bg-amber-400 rounded-full shadow-lg"></div>
-              </div>
-              <div className="absolute top-1/2 left-1/2 w-2 h-20 bg-gradient-to-t from-teal-300 to-amber-300 origin-bottom rounded-full transform -translate-x-1/2 -translate-y-full animate-[spin_6s_linear_infinite]"></div>
-            </div>
+        <div className="absolute inset-0 z-[150] bg-slate-950 flex flex-col items-center justify-center">
+          <Logo size="md" showTagline={false} />
+          <div className="mt-6 flex items-center gap-2">
+            <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
           </div>
         </div>
       )}
