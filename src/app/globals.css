@@ -79,6 +79,12 @@
   animation: slide-in-left 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
+/* Loading spinner - pulse slow */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
 /* Ajustar posición de controles de zoom del mapa - arriba de la atribución */
 .leaflet-control-zoom {
   margin-bottom: 80px !important;
