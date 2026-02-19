@@ -1,24 +1,25 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import ExperienceSelector from './ExperienceSelector'
 
 const iconMap: Record<string, string> = {
-  'wrench': '🔧',
-  'zap': '⚡',
-  'paintbrush': '🎨',
-  'sparkles': '✨',
-  'hammer': '🔨',
-  'leaf': '🌿',
-  'key': '🔑',
-  'building': '🏗️',
-  'scissors': '✂️',
-  'paw-print': '🐾',
-  'shopping-bag': '🛍️',
-  'truck': '🚚',
-  'package': '📦',
+  'wrench': '🔧', 'zap': '⚡', 'paintbrush': '🎨', 'sparkles': '✨',
+  'hammer': '🔨', 'leaf': '🌿', 'key': '🔑', 'building': '🏗️',
+  'scissors': '✂️', 'paw-print': '🐾', 'shopping-bag': '🛍️',
+  'truck': '🚚', 'package': '📦',
+}
+
+function InlineFeedback({ msg, type }: { msg: string; type: 'ok' | 'err' | 'info' }) {
+  const colors = { ok: 'bg-green-50 border-green-300 text-green-800', err: 'bg-red-50 border-red-300 text-red-800', info: 'bg-blue-50 border-blue-300 text-blue-800' }
+  const icons = { ok: '✅', err: '❌', info: 'ℹ️' }
+  return (
+    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className={`mt-2 px-3 py-2 rounded-lg border text-sm flex items-center gap-2 ${colors[type]}`}>
+      <span>{icons[type]}</span><span>{msg}</span>
+    </motion.div>
+  )
 }
 
 interface Props {
@@ -37,10 +38,13 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
   const [availableCategories, setAvailableCategories] = useState<any[]>([])
   const [workerData, setWorkerData] = useState<any>(null)
   const [showQR, setShowQR] = useState(false)
+  const [showShareCard, setShowShareCard] = useState(false)
   const [isLoadingSkills, setIsLoadingSkills] = useState(true)
   const [bioTarjeta, setBioTarjeta] = useState('')
   const [experiences, setExperiences] = useState<any[]>([])
   const [showExperienceSelector, setShowExperienceSelector] = useState(false)
+  const [feedback, setFeedback] = useState<{ msg: string; type: 'ok' | 'err' | 'info' } | null>(null)
+  const [savingSkills, setSavingSkills] = useState(false)
   
   const cvInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -266,7 +270,8 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
       })
       
       if (res.ok) {
-        alert('Video subido exitosamente')
+        setFeedback({ msg: 'Video subido correctamente ✅', type: 'ok' })
+        setTimeout(() => setFeedback(null), 3000)
       }
     } catch (err) {
       console.error('Error uploading video:', err)
@@ -321,7 +326,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
       
     } catch (err) {
       console.error('Error accessing camera:', err)
-      alert('No se pudo acceder a la cámara. Por favor verifica los permisos.')
+      setFeedback({ msg: 'No se pudo acceder a la cámara. Verifica permisos.', type: 'err' })
     }
   }
 
@@ -332,58 +337,163 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
     }
   }
 
-  const shareProfile = () => {
-    const profileUrl = `https://jobshour.dondemorales.cl/worker/${user.id}`
-    const whatsappText = `¡Mira mi perfil profesional en JobsHour! ${profileUrl}`
-    window.open(`https://wa.me/?text=${encodeURIComponent(whatsappText)}`, '_blank')
+  const profileUrl = `https://jobshour.dondemorales.cl/worker/${user?.id}`
+  const profileName = workerData?.name || user?.name || 'Mi Perfil'
+  const profileAvatar = workerData?.avatar || user?.avatarUrl || null
+
+  const completionSteps = [
+    { label: 'Foto de perfil', done: !!profileAvatar },
+    { label: 'Habilidades', done: selectedSkills.length > 0 },
+    { label: 'Descripción', done: bioTarjeta.length > 10 },
+    { label: 'CV o Video', done: cvUploaded || !!videoFile },
+    { label: 'Experiencia', done: experiences.length > 0 },
+  ]
+  const completionPct = Math.round((completionSteps.filter(s => s.done).length / completionSteps.length) * 100)
+
+  const handleShare = async () => {
+    const text = `¡Hola! Ofrezco mis servicios en JobsHour. Puedes contratarme aquí: ${profileUrl}`
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ title: profileName, text, url: profileUrl }) } catch {}
+    } else {
+      setShowShareCard(true)
+    }
+  }
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(profileUrl)
+    setFeedback({ msg: 'Enlace copiado al portapapeles', type: 'ok' })
+    setTimeout(() => setFeedback(null), 2500)
   }
 
   return (
-    <div className="fixed inset-0 z-[200] bg-white overflow-y-auto">
-      {/* Header con gradiente */}
-      <div className="bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 p-6 relative">
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition"
-        >
-          ✕
-        </button>
-        
-        <div className="flex flex-col items-center">
-          {/* Avatar con indicador online */}
-          <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
-              {user.avatar ? (
-                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-              ) : (
-                <svg className="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-              )}
+    <div className="fixed inset-0 z-[200] bg-gray-50 overflow-y-auto">
+
+      {/* ── HERO HEADER ── */}
+      <div className="bg-gradient-to-br from-yellow-400 via-orange-400 to-orange-500 pt-safe">
+        <div className="relative px-4 pt-5 pb-6">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-9 h-9 bg-black/20 rounded-full flex items-center justify-center text-white"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+
+          <div className="flex items-center gap-4">
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              <div className="w-20 h-20 rounded-2xl bg-white/30 overflow-hidden border-2 border-white/60">
+                {profileAvatar
+                  ? <img src={profileAvatar} alt={profileName} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-white font-black text-3xl">{profileName.charAt(0)}</div>
+                }
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 border-2 border-white rounded-full" />
             </div>
-            <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-black text-white truncate">{profileName}</h1>
+              <p className="text-sm text-white/80">
+                {selectedSkills.length > 0
+                  ? `${selectedSkills.length} habilidad${selectedSkills.length > 1 ? 'es' : ''} registrada${selectedSkills.length > 1 ? 's' : ''}`
+                  : 'Completa tu perfil para aparecer en el mapa'}
+              </p>
+              {/* Completion pill */}
+              <div className="mt-2 flex items-center gap-2">
+                <div className="flex-1 h-2 bg-white/30 rounded-full overflow-hidden">
+                  <div className="h-full bg-white rounded-full transition-all" style={{ width: `${completionPct}%` }} />
+                </div>
+                <span className="text-xs text-white font-bold">{completionPct}%</span>
+              </div>
+            </div>
           </div>
-          
-          <h1 className="text-2xl font-black text-white mt-3">{user.name}</h1>
-          <p className="text-sm text-white/90">Disponible ahora</p>
+
+          {/* Completion checklist compacto */}
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {completionSteps.map(s => (
+              <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-semibold ${s.done ? 'bg-white/30 text-white' : 'bg-black/20 text-white/60'}`}>
+                {s.done ? '✓' : '○'} {s.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Feedback global */}
+        {feedback && (
+          <div className="px-4 pb-3">
+            <InlineFeedback msg={feedback.msg} type={feedback.type} />
+          </div>
+        )}
+      </div>
+
+      {/* ── TARJETA COMPARTIBLE ── */}
+      <div className="px-4 -mt-1 pt-4 pb-2">
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 shadow-xl">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-14 h-14 rounded-xl overflow-hidden bg-white/10 border border-white/20 shrink-0">
+              {profileAvatar
+                ? <img src={profileAvatar} alt={profileName} className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center text-white font-black text-xl">{profileName.charAt(0)}</div>
+              }
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-black text-base truncate">{profileName}</p>
+              <p className="text-slate-400 text-xs mt-0.5">
+                {availableCategories.filter(c => selectedSkills.includes(c.id)).slice(0, 2).map((c: any) => c.display_name).join(' · ') || 'Sin habilidades aún'}
+              </p>
+              {bioTarjeta && <p className="text-slate-300 text-xs mt-1 line-clamp-2">{bioTarjeta}</p>}
+            </div>
+            <div className="shrink-0">
+              <QRCodeSVG value={profileUrl} size={48} level="L" bgColor="transparent" fgColor="white" />
+            </div>
+          </div>
+          <div className="flex items-center gap-1 mb-3">
+            <span className="text-xs text-slate-500">jobshour.dondemorales.cl</span>
+          </div>
+          {/* Share buttons */}
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={handleShare}
+              className="flex flex-col items-center gap-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition active:scale-95"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+              Compartir
+            </button>
+            <button
+              onClick={() => {
+                const text = `¡Hola! Soy ${profileName} y ofrezco mis servicios en JobsHour 🔧\nMírame aquí: ${profileUrl}`
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+              }}
+              className="flex flex-col items-center gap-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition active:scale-95"
+            >
+              <span className="text-base leading-none">💬</span>
+              WhatsApp
+            </button>
+            <button
+              onClick={copyLink}
+              className="flex flex-col items-center gap-1 py-2.5 bg-slate-600 hover:bg-slate-500 text-white rounded-xl text-xs font-bold transition active:scale-95"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+              Copiar link
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Contenido */}
-      <div className="p-4 space-y-4 pb-24">
+      {/* ── SECCIONES ── */}
+      <div className="px-4 pb-24 space-y-3 mt-2">
         
-        {/* 1. Mi Currículum (Opcional) */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+        {/* PASO 1: CV */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden"
+          className={`bg-white rounded-2xl border-2 overflow-hidden ${cvUploaded ? 'border-green-300' : 'border-gray-100'}`}
         >
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 border-b border-gray-200">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">📄</span>
-              <h2 className="text-lg font-black text-gray-900">Mi Currículum</h2>
+          <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${cvUploaded ? 'bg-green-500' : 'bg-gray-300'}`}>{cvUploaded ? '✓' : '1'}</div>
+            <div>
+              <h2 className="font-black text-gray-900 text-sm">Sube tu CV <span className="text-gray-400 font-normal">(opcional)</span></h2>
+              <p className="text-xs text-gray-500">PDF hasta 5MB — si no tienes uno, ¡no importa!</p>
             </div>
-            <p className="text-xs text-gray-600 mt-1">Opcional • PDF máximo 5MB</p>
           </div>
           
           <div className="p-4">
@@ -429,19 +539,19 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
           </div>
         </motion.div>
 
-        {/* 2. Mis Habilidades */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+        {/* PASO 2: Habilidades */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden"
+          transition={{ delay: 0.05 }}
+          className={`bg-white rounded-2xl border-2 overflow-hidden ${selectedSkills.length > 0 ? 'border-orange-300' : 'border-gray-100'}`}
         >
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 border-b border-gray-200">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">⚙️</span>
-              <h2 className="text-lg font-black text-gray-900">Mis Habilidades</h2>
+          <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${selectedSkills.length > 0 ? 'bg-orange-500' : 'bg-gray-300'}`}>{selectedSkills.length > 0 ? '✓' : '2'}</div>
+            <div>
+              <h2 className="font-black text-gray-900 text-sm">¿Qué sabes hacer? <span className="text-orange-500 font-bold">{selectedSkills.length > 0 ? `${selectedSkills.length} elegida${selectedSkills.length > 1 ? 's' : ''}` : 'Elige al menos 1'}</span></h2>
+              <p className="text-xs text-gray-500">Toca los servicios que ofreces — apareces en el mapa por esto</p>
             </div>
-            <p className="text-xs text-gray-600 mt-1">Haz clic para activar/desactivar habilidades</p>
           </div>
           
           <div className="p-4">
@@ -515,13 +625,14 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
                       })
                       
                       if (res.ok) {
-                        alert('✅ Habilidades guardadas exitosamente')
+                        setFeedback({ msg: 'Habilidades guardadas', type: 'ok' })
+                        setTimeout(() => setFeedback(null), 3000)
                         onCategorySelected?.()
                       } else {
-                        alert('❌ Error al guardar. Intenta nuevamente.')
+                        setFeedback({ msg: 'Error al guardar. Intenta de nuevo.', type: 'err' })
                       }
                     } catch (err) {
-                      alert('❌ Error de conexión')
+                      setFeedback({ msg: 'Error de conexión', type: 'err' })
                     }
                   }}
                   className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-black text-base shadow-lg hover:from-green-600 hover:to-green-700 transition flex items-center justify-center gap-2"
@@ -532,26 +643,26 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
                   Guardar {selectedSkills.length} habilidad{selectedSkills.length > 1 ? 'es' : ''}
                 </button>
                 <p className="text-xs text-gray-500 text-center mt-2">
-                  También puedes activar modo trabajo desde el botón PLOMO en el mapa
+                  📍 Después actívate en el mapa con el botón de estado
                 </p>
               </div>
             )}
           </div>
         </motion.div>
 
-        {/* 3. Video Currículum */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+        {/* PASO 3: Video */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-2xl border-2 border-yellow-400 overflow-hidden shadow-lg"
+          transition={{ delay: 0.1 }}
+          className={`bg-white rounded-2xl border-2 overflow-hidden ${videoFile ? 'border-green-300' : 'border-yellow-300'}`}
         >
-          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-4 border-b border-yellow-500">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🎥</span>
-              <h2 className="text-lg font-black text-white">Video Currículum</h2>
+          <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${videoFile ? 'bg-green-500' : 'bg-yellow-400'}`}>{videoFile ? '✓' : '3'}</div>
+            <div>
+              <h2 className="font-black text-gray-900 text-sm">Video de presentación <span className="text-yellow-600 font-normal text-xs">(recomendado)</span></h2>
+              <p className="text-xs text-gray-500">30 segundos mostrando lo que haces — genera mucha más confianza que un CV</p>
             </div>
-            <p className="text-xs text-white/90 mt-1">MP4/MOV/WEBM • 30MB máximo • 30 segundos para destacar tus servicios</p>
           </div>
           
           <div className="p-4">
@@ -630,19 +741,19 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
           </div>
         </motion.div>
 
-        {/* 4. Bio para Tarjeta */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+        {/* PASO 4: Bio */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden"
+          transition={{ delay: 0.15 }}
+          className={`bg-white rounded-2xl border-2 overflow-hidden ${bioTarjeta.length > 10 ? 'border-blue-300' : 'border-gray-100'}`}
         >
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 border-b border-gray-200">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">💬</span>
-              <h2 className="text-lg font-black text-gray-900">Texto para Mi Tarjeta</h2>
+          <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${bioTarjeta.length > 10 ? 'bg-blue-500' : 'bg-gray-300'}`}>{bioTarjeta.length > 10 ? '✓' : '4'}</div>
+            <div>
+              <h2 className="font-black text-gray-900 text-sm">Tu presentación en una frase</h2>
+              <p className="text-xs text-gray-500">Aparece en tu tarjeta compartible — cuéntanos quién eres</p>
             </div>
-            <p className="text-xs text-gray-600 mt-1">Preséntate en 150 caracteres</p>
           </div>
           
           <div className="p-4">
@@ -659,27 +770,25 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
           </div>
         </motion.div>
 
-        {/* 5. Mis Experiencias */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+        {/* PASO 5: Experiencias */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden"
+          transition={{ delay: 0.2 }}
+          className={`bg-white rounded-2xl border-2 overflow-hidden ${experiences.length > 0 ? 'border-purple-300' : 'border-gray-100'}`}
         >
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">💼</span>
-                <h2 className="text-lg font-black text-gray-900">Mis Experiencias</h2>
-              </div>
-              <button
-                onClick={() => setShowExperienceSelector(true)}
-                className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-lg font-bold text-sm hover:from-yellow-500 hover:to-orange-600 transition"
-              >
-                + Agregar
-              </button>
+          <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${experiences.length > 0 ? 'bg-purple-500' : 'bg-gray-300'}`}>{experiences.length > 0 ? '✓' : '5'}</div>
+            <div className="flex-1">
+              <h2 className="font-black text-gray-900 text-sm">Tus trabajos anteriores <span className="text-gray-400 font-normal">(opcional)</span></h2>
+              <p className="text-xs text-gray-500">Da más confianza mostrar qué has hecho antes</p>
             </div>
-            <p className="text-xs text-gray-600 mt-1">Muestra tu trayectoria profesional</p>
+            <button
+              onClick={() => setShowExperienceSelector(true)}
+              className="shrink-0 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition"
+            >
+              + Agregar
+            </button>
           </div>
           
           <div className="p-4">
@@ -734,62 +843,24 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
         existingExperiences={experiences}
       />
 
-      {/* Botón flotante: Guardar Cambios */}
+      {/* Barra inferior */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
         <div className="pointer-events-auto flex gap-2">
           <button
-            onClick={shareProfile}
-            className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 rounded-xl font-black text-base shadow-lg hover:from-blue-600 hover:to-blue-700 transition flex items-center justify-center gap-2"
+            onClick={handleShare}
+            className="flex-1 bg-gradient-to-r from-orange-400 to-orange-500 text-white py-3.5 rounded-xl font-black text-sm shadow-lg active:scale-95 transition flex items-center justify-center gap-2"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-            Compartir Perfil
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+            Compartir mi tarjeta
           </button>
-          
           <button
-            onClick={() => setShowQR(true)}
-            className="bg-gradient-to-r from-purple-500 to-purple-600 text-white py-4 px-6 rounded-xl font-black text-base shadow-lg hover:from-purple-600 hover:to-purple-700 transition"
+            onClick={onClose}
+            className="px-5 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition active:scale-95"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-            </svg>
+            Cerrar
           </button>
         </div>
       </div>
-
-      {/* Modal QR */}
-      {showQR && (
-        <div className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowQR(false)}>
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl p-6 max-w-sm w-full"
-          >
-            <h3 className="text-xl font-black text-center mb-4">Tu Código QR</h3>
-            <div className="bg-gray-100 rounded-2xl p-6 flex items-center justify-center mb-4">
-              <div className="w-48 h-48 bg-white rounded-xl flex items-center justify-center p-4">
-                <QRCodeSVG 
-                  value={`https://jobshour.dondemorales.cl/worker/${user.id}`}
-                  size={176}
-                  level="H"
-                  includeMargin={false}
-                />
-              </div>
-            </div>
-            <p className="text-xs text-gray-600 text-center mb-4">
-              Comparte este código para que tus clientes vean tu perfil
-            </p>
-            <button
-              onClick={() => setShowQR(false)}
-              className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-3 rounded-xl font-bold"
-            >
-              Cerrar
-            </button>
-          </motion.div>
-        </div>
-      )}
     </div>
   )
 }
