@@ -23,9 +23,11 @@ const RatingModal = dynamic(() => import('./components/RatingModal'), { ssr: fal
 // const TravelModeModal = dynamic(() => import('./components/TravelModeModal'), { ssr: false })
 
 import { useNotifications } from '@/hooks/useNotifications'
+import { useToast } from '@/hooks/useToast'
 import { MapPoint } from './components/MapSection'
-
-// ... existing imports ...
+import ToastContainer from './components/Toast'
+import BottomTabBar, { TabKey } from './components/BottomTabBar'
+import WorkerStatusPill from './components/WorkerStatusPill'
 
 interface ExpertDetail {
   id: number
@@ -125,6 +127,9 @@ export default function Home() {
   // const [showTravelModeModal, setShowTravelModeModal] = useState(false)
   const [workerStatus, setWorkerStatus] = useState<'guest' | 'inactive' | 'intermediate' | 'active'>('guest') // Estados del trabajador
   const workerStatusRef = useRef<'guest' | 'inactive' | 'intermediate' | 'active'>('guest')
+  const [activeTab, setActiveTab] = useState<TabKey>('map')
+  const [statusLoading, setStatusLoading] = useState(false)
+  const { toasts, toast, removeToast } = useToast()
 
   // Actualizar ref cuando cambia el estado
   useEffect(() => {
@@ -395,10 +400,8 @@ export default function Home() {
       const pusher = (echo as any)?.connector?.pusher
 
       const notify = (title: string, body?: string) => {
-        const text = body ? `${title}: ${body}` : title
-        setDemandAlert(text)
+        toast(title, 'info', body, 7000)
         if (hideTimer) clearTimeout(hideTimer)
-        hideTimer = setTimeout(() => setDemandAlert(null), 7000)
 
         try {
           if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -551,7 +554,7 @@ export default function Home() {
 
         const text = msg?.body ? String(msg.body) : 'Nuevo mensaje'
         console.log('[ChatNotify] message.new', { id: msgId })
-        setDemandAlert(`Nuevo mensaje: ${text}`)
+        toast('Nuevo mensaje', 'info', text, 5000)
 
         try {
           if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -830,6 +833,7 @@ export default function Home() {
           setSelectedDetail({
             id: data.data.id,
             name: data.data.client?.name || 'Cliente',
+            nickname: null,
             avatar: data.data.client?.avatar || null,
             phone: data.data.client?.phone || null,
             title: data.data.description || 'Sin descripción',
@@ -879,7 +883,7 @@ export default function Home() {
     } catch (err) {
       console.error('❌ Error fetching detail:', err)
       // Mostrar mensaje de error al usuario
-      setDemandAlert(err instanceof Error ? err.message : 'Error al cargar los detalles')
+      toast(err instanceof Error ? err.message : 'Error al cargar los detalles', 'error')
     }
     setLoadingDetail(false)
     console.log('🏁 Loading detail finalizado')
@@ -901,6 +905,49 @@ export default function Home() {
     setSelectedDetail(null)
     setLoadingDetail(false)
   }, [])
+
+  // Tab navigation handler
+  const handleTabChange = useCallback((tab: TabKey) => {
+    setActiveTab(tab)
+    if (tab === 'map') { setDashHidden(true); setActiveSection('map') }
+    if (tab === 'feed') { setDashHidden(false); setActiveSection('map') }
+    if (tab === 'requests') { setDashHidden(true); setActiveSection('map'); setShowSidebar(true) }
+    if (tab === 'profile') {
+      if (!user) { setShowLoginModal(true); return }
+      setActiveSection('profile')
+    }
+  }, [user])
+
+  // Worker status change handler (replaces inline fetch + alert)
+  const handleWorkerStatusChange = useCallback(async (next: 'active' | 'intermediate' | 'inactive') => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (!token) { setShowLoginModal(true); return }
+    if (next === 'active' && workerCategories.length === 0) {
+      setShowCategoryRequiredModal(true); return
+    }
+    const apiStatus = next === 'intermediate' ? 'listening' : next
+    setStatusLoading(true)
+    try {
+      const res = await fetch('https://jobshour.dondemorales.cl/api/v1/worker/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ status: apiStatus, lat: userLat || -37.67, lng: userLng || -72.57, categories: next === 'active' ? workerCategories : undefined }),
+      })
+      const data = await res.json()
+      if (data.status === 'success') {
+        setWorkerStatus(next)
+        fetchNearby(activeCategory)
+        const labels = { active: '🟢 Estás activo y visible', intermediate: '🟡 Modo Escucha activado', inactive: '⚫ Te desconectaste del mapa' }
+        toast(labels[next], next === 'inactive' ? 'info' : 'success')
+      } else {
+        toast(data.message || 'Error al actualizar estado', 'error')
+      }
+    } catch {
+      toast('Error de conexión', 'error')
+    } finally {
+      setStatusLoading(false)
+    }
+  }, [workerCategories, userLat, userLng, activeCategory, fetchNearby, toast])
 
   return (
     <div className="h-screen w-screen overflow-hidden relative">
@@ -938,8 +985,7 @@ export default function Home() {
           onClose={() => setShowPublishDemand(false)}
           onPublished={() => {
             // Mostrar feedback visual
-            setDemandAlert('✅ Demanda publicada exitosamente. Aparecerá en el mapa en unos segundos.')
-            setTimeout(() => setDemandAlert(null), 5000)
+            toast('Demanda publicada', 'success', 'Aparecerá en el mapa en unos segundos.')
             
             // Recargar feed y mapa después de publicar
             setTimeout(() => {
@@ -955,7 +1001,7 @@ export default function Home() {
       )}
 
       {/* ── MAPA FULLSCREEN (always visible in background) ── */}
-      <div className="absolute inset-0 pt-[180px] pb-[80px]">
+      <div className="absolute inset-0 pt-[180px] pb-[68px]">
         <MapSection ref={mapRef} points={filtered} onPointClick={handlePointClick} onMapClick={handleMapClick} />
       </div>
 
@@ -1115,21 +1161,7 @@ export default function Home() {
         </>
       )}
 
-      {/* ── DEMAND ALERT (notificación flotante sutil) ── */}
-      {demandAlert && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[95] w-[85%] max-w-[340px] animate-slide-up">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 shadow-lg flex items-start gap-2">
-            <span className="text-sm">🔔</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold text-amber-800">Notificación</p>
-              <p className="text-[10px] text-amber-700 mt-0.5 leading-snug">{demandAlert}</p>
-            </div>
-            <button onClick={() => setDemandAlert(null)} className="text-amber-400 hover:text-amber-600 shrink-0">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Toasts reemplazan el demandAlert banner — ver ToastContainer al final */}
 
       {/* ══════════════════════════════════════════════
           FLOTANTE JUST-IN-TIME — solo al tocar marcador
@@ -1271,10 +1303,10 @@ export default function Home() {
                         if (!authCheck.canInteract) {
                           if (authCheck.reason === 'login') {
                             setShowLoginModal(true)
-                            setDemandAlert('Inicia sesión para solicitar servicios')
+                            toast('Inicia sesión para solicitar servicios', 'info')
                           } else {
                             setShowOnboarding(true)
-                            setDemandAlert('Completa tu perfil para continuar')
+                            toast('Completa tu perfil para continuar', 'warning')
                           }
                           return
                         }
@@ -1296,10 +1328,10 @@ export default function Home() {
                         if (!authCheck.canInteract) {
                           if (authCheck.reason === 'login') {
                             setShowLoginModal(true)
-                            setDemandAlert('Inicia sesión para consultar disponibilidad')
+                            toast('Inicia sesión para consultar disponibilidad', 'info')
                           } else {
                             setShowOnboarding(true)
-                            setDemandAlert('Completa tu perfil para continuar')
+                            toast('Completa tu perfil para continuar', 'warning')
                           }
                           return
                         }
@@ -1326,10 +1358,10 @@ export default function Home() {
                         if (!authCheck.canInteract) {
                           if (authCheck.reason === 'login') {
                             setShowLoginModal(true)
-                            setDemandAlert('Inicia sesión para ver el teléfono completo')
+                            toast('Inicia sesión para ver el teléfono', 'info')
                           } else {
                             setShowOnboarding(true)
-                            setDemandAlert('Completa tu perfil para ver el teléfono')
+                            toast('Completa tu perfil para ver el teléfono', 'warning')
                           }
                           return
                         }
@@ -1395,10 +1427,10 @@ export default function Home() {
                 if (!authCheck.canInteract) {
                   if (authCheck.reason === 'login') {
                     setShowLoginModal(true)
-                    setDemandAlert('Inicia sesión para tomar solicitudes')
+                    toast('Inicia sesión para tomar solicitudes', 'info')
                   } else {
                     setShowOnboarding(true)
-                    setDemandAlert('Completa tu perfil para continuar')
+                    toast('Completa tu perfil para continuar', 'warning')
                   }
                   setDashHidden(true)
                   return
@@ -1438,7 +1470,9 @@ export default function Home() {
                       const fallbackDetail = {
                         id: request.worker_id || request.id,
                         name: request.client?.name || 'Cliente',
+                        nickname: null,
                         avatar: request.client?.avatar || null,
+                        phone: null,
                         title: request.description || '',
                         bio: '',
                         skills: [],
@@ -1470,7 +1504,7 @@ export default function Home() {
                   const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
                   if (!token) {
                     setShowLoginModal(true)
-                    setDemandAlert('Inicia sesión para tomar demandas')
+                    toast('Inicia sesión para tomar demandas', 'info')
                     setDashHidden(true)
                     return
                   }
@@ -1486,8 +1520,7 @@ export default function Home() {
                   .then(r => r.json())
                   .then(data => {
                     if (data.status === 'success') {
-                      setDemandAlert('✅ Has tomado esta demanda. El cliente será notificado.')
-                      setTimeout(() => setDemandAlert(null), 5000)
+                      toast('Demanda tomada', 'success', 'El cliente será notificado.')
                       
                       // Recargar feed y mapa
                       setTimeout(() => {
@@ -1500,14 +1533,12 @@ export default function Home() {
                       
                       setDashHidden(true)
                     } else {
-                      setDemandAlert(data.message || 'Error al tomar demanda')
-                      setTimeout(() => setDemandAlert(null), 5000)
+                      toast(data.message || 'Error al tomar demanda', 'error')
                     }
                   })
                   .catch(err => {
                     console.error('Error tomando demanda:', err)
-                    setDemandAlert('Error de conexión al tomar demanda')
-                    setTimeout(() => setDemandAlert(null), 5000)
+                    toast('Error de conexión al tomar demanda', 'error')
                   })
                 }
               }}
@@ -1517,10 +1548,10 @@ export default function Home() {
                 if (!authCheck.canInteract) {
                   if (authCheck.reason === 'login') {
                     setShowLoginModal(true)
-                    setDemandAlert('Inicia sesión para chatear')
+                    toast('Inicia sesión para chatear', 'info')
                   } else {
                     setShowOnboarding(true)
-                    setDemandAlert('Completa tu perfil para chatear')
+                    toast('Completa tu perfil para chatear', 'warning')
                   }
                   setDashHidden(true)
                   return
@@ -1924,8 +1955,7 @@ export default function Home() {
             setShowRequestModal(false)
             setActiveRequestId(reqId)
             setShowChat(true)
-            setDemandAlert('✅ Solicitud enviada exitosamente')
-            setTimeout(() => setDemandAlert(null), 3000)
+            toast('Solicitud enviada exitosamente', 'success')
           }}
         />
       )}
@@ -2167,8 +2197,7 @@ export default function Home() {
             // Refrescar el mapa para mostrar la ruta activa
             fetchNearby()
             // Mostrar notificación de éxito
-            setDemandAlert('¡Modo Viaje Activado! Te notificaremos si alguien necesita ir en tu dirección.')
-            setTimeout(() => setDemandAlert(null), 5000)
+            toast('Modo Viaje Activado', 'success', 'Te notificaremos si alguien necesita ir en tu dirección.')
           }}
         />
       )} */}
@@ -2197,122 +2226,29 @@ export default function Home() {
       />
 
       {/* ── BOTONES INFERIORES MODERNOS ── */}
-      <div className="fixed bottom-4 left-0 right-0 z-[90] px-4 pointer-events-none">
-        <div className="flex items-center justify-between gap-3 pointer-events-auto">
-          {/* Botón Feed de Oportunidades moderno */}
-          <button
-            onClick={() => setDashHidden(false)}
-            className="flex-1 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:via-orange-600 hover:to-red-600 text-white font-black py-3.5 px-5 rounded-2xl shadow-2xl shadow-amber-500/40 transition-all active:scale-95 flex items-center justify-center gap-2 border border-white/20 backdrop-blur-sm"
-          >
-            <span className="text-lg">💰</span>
-            <span className="text-sm">Feed de Oportunidades</span>
-          </button>
-
-          {/* Botón Modo Trabajo - CORREGIDO: Sincroniza los 3 estados con API */}
-          <button
-            onClick={() => {
-              // Si es guest, mostrar login
-              if (workerStatus === 'guest') {
-                setShowLoginModal(true)
-                return
-              }
-
-              // Determinar el siguiente estado en el ciclo
-              // PLOMO (inactive) -> VERDE (active) -> AMARILLO (intermediate) -> PLOMO
-              let nextStatus: 'active' | 'intermediate' | 'inactive'
-              if (workerStatus === 'inactive') {
-                nextStatus = 'active'      // PLOMO -> VERDE
-              } else if (workerStatus === 'active') {
-                nextStatus = 'intermediate' // VERDE -> AMARILLO
-              } else {
-                nextStatus = 'inactive'     // AMARILLO -> PLOMO
-              }
-              
-              const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-              if (!token) {
-                setShowLoginModal(true)
-                return
-              }
-
-              // Para cambio a VERDE (active), verificar PRIMERO si tiene habilidades
-              if (nextStatus === 'active') {
-                // Verificar localmente si tiene categorías antes de llamar a la API
-                if (workerCategories.length === 0) {
-                  // No tiene habilidades, mostrar modal directamente sin llamar a la API
-                  setShowCategoryRequiredModal(true)
-                  return
-                }
-                
-                // Tiene habilidades, proceder con la llamada a la API
-                fetch('https://jobshour.dondemorales.cl/api/v1/worker/status', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({
-                    status: 'active',
-                    lat: userLat || -37.67,
-                    lng: userLng || -72.57,
-                    categories: workerCategories, // Enviar categorías al backend
-                  }),
-                })
-                .then(res => res.json())
-                .then(data => {
-                  if (data.status === 'success') {
-                    setWorkerStatus('active')
-                    fetchNearby(activeCategory)
-                  } else {
-                    alert(data.message || 'Error al actualizar estado')
-                  }
-                })
-                .catch(() => {
-                  alert('Error de conexión')
-                })
-              } else {
-                // Para AMARILLO y PLOMO, sincronizar directamente con la API
-                const apiStatus = nextStatus === 'intermediate' ? 'listening' : nextStatus
-                
-                fetch('https://jobshour.dondemorales.cl/api/v1/worker/status', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({
-                    status: apiStatus,
-                    lat: userLat || -37.67,
-                    lng: userLng || -72.57,
-                  }),
-                })
-                .then(res => res.json())
-                .then(data => {
-                  if (data.status === 'success') {
-                    setWorkerStatus(nextStatus)
-                  } else {
-                    alert(data.message || 'Error al actualizar estado')
-                  }
-                })
-                .catch(() => {
-                  alert('Error de conexión')
-                })
-              }
+      {/* ── WORKER STATUS PILL (encima del bottom tab) ── */}
+      {user && (
+        <div className="fixed bottom-[68px] left-4 z-[91]">
+          <WorkerStatusPill
+            status={workerStatus}
+            loading={statusLoading}
+            onActivate={() => {
+              if (workerCategories.length === 0) { setShowCategoryRequiredModal(true); return }
+              handleWorkerStatusChange('active')
             }}
-            className={`flex-1 font-black py-3.5 px-5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 ${
-              workerStatus === 'active'
-                ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg' // VERDE: disponible inmediatamente
-                : workerStatus === 'intermediate'
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg' // AMARILLO: activo pero no inmediato
-                : 'bg-gradient-to-r from-slate-500 to-slate-600 text-white shadow-lg' // PLOMO: inactivo
-            }`}
-          >
-            <span className="text-sm">Modo Trabajo:</span>
-            <span className="text-sm font-black">
-              {workerStatus === 'active' ? 'VERDE' : workerStatus === 'intermediate' ? 'AMARILLO' : 'PLOMO'}
-            </span>
-          </button>
+            onChangeTo={handleWorkerStatusChange}
+            onShowLogin={() => setShowLoginModal(true)}
+          />
         </div>
-      </div>
+      )}
+
+      {/* ── BOTTOM TAB NAVIGATION ── */}
+      <BottomTabBar
+        active={activeTab}
+        onChange={handleTabChange}
+        requestsBadge={activeChatRequestIds.length}
+        isWorker={workerStatus !== 'guest' && workerStatus !== 'inactive'}
+      />
 
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center z-[150] bg-white/50">
@@ -2388,6 +2324,9 @@ export default function Home() {
           userName={user.name}
         />
       )}
+
+      {/* ── TOAST NOTIFICATIONS ── */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   )
 }
