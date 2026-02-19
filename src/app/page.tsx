@@ -1484,10 +1484,11 @@ export default function Home() {
                         is_verified: false,
                         status: 'active' as const,
                         category: request.category ? {
+                          slug: (request.category as any)?.slug || '',
                           name: request.category?.name || 'Servicio',
                           color: request.category?.color || '#6b7280',
-                          icon: request.category?.icon || '📌'
-                        } : { name: 'Servicio', color: '#6b7280', icon: '📌' },
+                          icon: request.category?.icon || '📌',
+                        } : { slug: '', name: 'Servicio', color: '#6b7280', icon: '📌' },
                         videos_count: 0,
                         pos: request.pos,
                         microcopy: request.description || '',
