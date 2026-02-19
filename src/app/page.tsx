@@ -1010,13 +1010,13 @@ export default function Home() {
         {/* Header Bar con gradiente y blur */}
         <div className="bg-white border-b border-gray-200 px-4 py-3 pointer-events-auto shadow-sm">
           <div className="flex items-center justify-between">
-            {/* Botón MENÚ - Gris claro con texto oscuro */}
+            {/* Botón menú */}
             <button
               onClick={() => setShowSidebar(!showSidebar)}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-800 font-bold text-sm transition-all hover:scale-105"
+              className="w-9 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-700 transition active:scale-95"
+              aria-label="Menú"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" /></svg>
-              <span>MENÚ</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
 
             {/* Logo JOBSHOURS - Azul con icono de rayo */}
@@ -1032,29 +1032,28 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Botón SESIÓN ACTIVA - AZUL según imagen */}
+            {/* Auth button */}
             {!user ? (
               <button
                 onClick={() => setShowLoginModal(!showLoginModal)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg hover:scale-105"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-sm"
               >
-                <span>INGRESAR</span>
+                Ingresar
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
               </button>
             ) : (
               <button
                 onClick={() => setShowSidebar(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-[10px] font-bold transition-all shadow-md hover:scale-105"
+                className="flex items-center gap-2 pr-3 pl-1 py-1 bg-gray-100 hover:bg-gray-200 rounded-xl transition active:scale-95"
               >
                 {user.avatarUrl ? (
-                  <img src={user.avatarUrl} className="w-6 h-6 rounded-full object-cover border border-white/50 shadow-sm" alt={user.firstName} />
+                  <img src={user.avatarUrl} className="w-7 h-7 rounded-lg object-cover" alt={user.firstName} />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center text-white font-bold text-[10px] border border-white/50 shadow-sm">
+                  <div className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center text-white font-black text-sm">
                     {user.firstName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="hidden sm:inline">SESIÓN</span>
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
+                <span className="text-xs font-bold text-gray-700 max-w-[60px] truncate">{user.firstName}</span>
               </button>
             )}
           </div>
