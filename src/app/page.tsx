@@ -191,48 +191,31 @@ export default function Home() {
         token,
       })
       
-      // Verificar si necesita onboarding (trabajador nuevo sin perfil completo)
-      // IMPORTANTE: Solo mostrar una vez por sesión para evitar spam
-      const onboardingShownKey = `onboarding_shown_${data.id}`
-      const alreadyShown = sessionStorage.getItem(onboardingShownKey) === 'true'
+      // Verificar si necesita onboarding (trabajador sin datos mínimos)
+      // Usa localStorage → aparecerá hasta que complete ubicación, categoría y tarifa
+      const onboardingDoneKey = `onboarding_done_${data.id}`
+      const onboardingDone = localStorage.getItem(onboardingDoneKey) === 'true'
       
-      // Si ya se mostró el onboarding en esta sesión, no volver a mostrarlo
-      if (alreadyShown) {
+      if (onboardingDone) {
         return
       }
       
-      // Verificar si hay intención de ser trabajador guardada en localStorage
       const workerIntent = localStorage.getItem('worker_intent')
       
       if (data.worker) {
-        // Usar profile_completed del backend si está disponible, sino usar lógica alternativa
         const profileCompleted = data.worker.profile_completed !== undefined 
           ? data.worker.profile_completed 
           : (data.worker.category_id && data.worker.hourly_rate)
         
-        const needsOnboarding = !profileCompleted
-        
-        if (needsOnboarding) {
-          sessionStorage.setItem(onboardingShownKey, 'true')
-          setTimeout(() => {
-            setShowOnboarding(true)
-          }, 100)
-          // Limpiar worker_intent si existe
-          if (workerIntent) {
-            localStorage.removeItem('worker_intent')
-          }
+        if (!profileCompleted) {
+          setTimeout(() => setShowOnboarding(true), 300)
+          if (workerIntent) localStorage.removeItem('worker_intent')
         } else {
-          sessionStorage.setItem(onboardingShownKey, 'true')
+          localStorage.setItem(onboardingDoneKey, 'true')
         }
       } else if (workerIntent === 'activate' || workerIntent === 'register') {
-        // Si no tiene worker pero hay intención de ser trabajador, mostrar onboarding
-        sessionStorage.setItem(onboardingShownKey, 'true')
-        setTimeout(() => {
-          setShowOnboarding(true)
-        }, 100)
+        setTimeout(() => setShowOnboarding(true), 300)
         localStorage.removeItem('worker_intent')
-      } else {
-        sessionStorage.setItem(onboardingShownKey, 'true')
       }
       
       // LÓGICA: Después del login, SIEMPRE empezar en inactive (plomo)
@@ -1625,17 +1608,27 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── SIDEBAR PANEL (Diseño de la imagen) ── */}
+      {/* ── SIDEBAR PREMIUM ── */}
       {showSidebar && (
         <>
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] transition-opacity" onClick={() => setShowSidebar(false)} />
-          <div className="fixed left-0 top-0 h-full w-80 bg-white z-[201] shadow-2xl overflow-y-auto animate-slide-in-left">
-            {/* Header simple */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10 flex items-center justify-between">
-              <h2 className="text-xl font-black text-gray-900">Jobshour</h2>
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[200] transition-opacity" onClick={() => setShowSidebar(false)} />
+          <div className="fixed left-0 top-0 h-full w-80 bg-slate-900 z-[201] shadow-2xl overflow-y-auto animate-slide-in-left border-r border-slate-800">
+            {/* Header con logo */}
+            <div className="sticky top-0 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-5 py-3 z-10 flex items-center justify-between">
+              <div className="flex items-baseline font-black tracking-tighter text-lg">
+                <span className="text-white">J</span>
+                <div className="relative mx-[1px] inline-flex h-[14px] w-[14px] -translate-y-[2px] items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-[1.5px] border-teal-400"></div>
+                  <div className="absolute h-1/2 w-[1.5px] origin-bottom rounded-full bg-gradient-to-t from-teal-400 to-amber-300" style={{ bottom: '50%', animation: 'spin 3s linear infinite' }}></div>
+                  <div className="z-10 h-[3px] w-[3px] rounded-full bg-amber-400"></div>
+                </div>
+                <span className="text-white">bs</span>
+                <span className="text-teal-400 ml-0.5">H</span>
+                <span className="bg-gradient-to-br from-teal-300 to-teal-500 bg-clip-text text-transparent">urs</span>
+              </div>
               <button 
                 onClick={() => setShowSidebar(false)} 
-                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 transition"
+                className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-300 transition rounded-lg hover:bg-slate-800"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
@@ -1644,120 +1637,56 @@ export default function Home() {
             <div className="p-0">
             {user ? (
               <div>
-                {/* Sección de Perfil con gradiente naranja/dorado */}
-                <div className="bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 px-6 py-5">
+                {/* Perfil con gradiente teal */}
+                <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-slate-900 px-5 py-5 border-b border-slate-700/50">
                   <div className="flex items-center gap-4">
                     <div className="relative">
                       {user.avatarUrl ? (
-                        <img src={user.avatarUrl} className="w-16 h-16 rounded-full object-cover border-2 border-white" alt={user.firstName} />
+                        <img src={user.avatarUrl} className="w-14 h-14 rounded-full object-cover border-2 border-teal-400/50 shadow-[0_0_15px_rgba(45,212,191,0.2)]" alt={user.firstName} />
                       ) : (
-                        <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center border-2 border-white">
-                          <svg className="w-10 h-10 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                          </svg>
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center border-2 border-teal-400/50 shadow-[0_0_15px_rgba(45,212,191,0.2)]">
+                          <span className="text-white text-xl font-black">{user.firstName.charAt(0)}</span>
                         </div>
                       )}
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
+                      <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 border-2 border-slate-800 rounded-full ${
+                        workerStatus === 'active' ? 'bg-teal-400' : workerStatus === 'intermediate' ? 'bg-amber-400' : 'bg-slate-500'
+                      }`}></div>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-white">{user.name}</p>
-                      <p className="text-sm text-white/90">
-                        {workerStatus === 'active' ? 'Modo Empresa' : workerStatus === 'intermediate' ? 'Modo Socio' : 'Modo Inactivo'}
+                      <p className="text-base font-black text-white">{user.name}</p>
+                      <p className="text-xs font-semibold text-amber-400/80">
+                        {workerStatus === 'active' ? 'Disponible' : workerStatus === 'intermediate' ? 'Escuchando' : 'Inactivo'}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Sección Cambiar Rol */}
-                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-sm font-semibold text-gray-800">Cambiar Rol</span>
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                    </svg>
-                  </div>
-                  
-                  {/* Botones de Rol - Solo Socio (Empresa/Cliente está en Publicar Demanda) */}
-                  <div className="flex gap-2 mb-2">
-                    {/* Botón Socio */}
-                    <button
-                      onClick={async () => {
-                        const token = localStorage.getItem('auth_token')
-                        if (!token) return
-                        
-                        // Llamar a API para cambiar a intermediate (AMARILLO)
-                        const res = await fetch('/api/v1/worker/status', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                          },
-                          body: JSON.stringify({
-                            status: 'listening',
-                            lat: userLat || -37.67,
-                            lng: userLng || -72.57
-                          })
-                        })
-                        
-                        if (res.ok) {
-                          setWorkerStatus('intermediate')
-                        }
-                      }}
-                      className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg transition ${
-                        workerStatus === 'intermediate'
-                          ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white'
-                          : 'bg-white text-gray-700 border border-gray-200'
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded-full ${workerStatus === 'intermediate' ? 'bg-white' : 'bg-yellow-400'}`}></div>
-                      <span className="text-sm font-semibold">Socio</span>
-                    </button>
-                  </div>
-                  
-                  {/* Texto informativo */}
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-                    <p className="text-xs text-gray-500">Solo referencia, no visible en mapa</p>
-                  </div>
-                </div>
-
-                {/* Sección de Seguridad */}
-                <div className="bg-green-50 px-6 py-4 border-b border-green-100">
-                  <div className="flex items-center gap-3">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    <div>
-                      <p className="text-sm font-semibold text-green-700">Conexión Segura</p>
-                      <p className="text-xs text-green-600">Cifrado SSL activo</p>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Menú Principal */}
-                <div className="px-6 py-4 space-y-1">
+                <div className="px-4 py-3 space-y-0.5">
+                  <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-2">Principal</p>
+                  
                   <button 
                     onClick={() => { setActiveSection('profile'); setShowSidebar(false) }}
-                    className="w-full flex items-center gap-4 px-3 py-3 hover:bg-gray-50 rounded-lg transition"
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
                   >
-                    <div className="w-10 h-10 bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-blue-100" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="w-9 h-9 bg-teal-500/15 rounded-lg flex items-center justify-center group-hover:bg-teal-500/25 transition">
+                      <svg className="w-5 h-5 text-teal-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                       </svg>
                     </div>
-                    <span className="text-gray-700 font-medium">Mi Perfil</span>
+                    <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition">Mi Perfil</span>
                   </button>
                   
                   <button 
                     onClick={() => { setActiveSection('jobs'); setShowSidebar(false) }}
-                    className="w-full flex items-center gap-4 px-3 py-3 hover:bg-gray-50 rounded-lg transition"
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
                   >
-                    <div className="w-10 h-10 bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-9 h-9 bg-teal-500/15 rounded-lg flex items-center justify-center group-hover:bg-teal-500/25 transition">
+                      <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
                     </div>
-                    <span className="text-gray-700 font-medium">Mis Trabajos</span>
+                    <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition">Mis Trabajos</span>
                   </button>
 
                   <button 
@@ -1774,130 +1703,137 @@ export default function Home() {
                       setShowPublishDemand(true)
                       setShowSidebar(false)
                     }}
-                    className="w-full flex items-center gap-4 px-3 py-3 hover:bg-gray-50 rounded-lg transition"
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
                   >
-                    <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 rounded-lg flex items-center justify-center">
-                      <span className="text-2xl">💰</span>
+                    <div className="w-9 h-9 bg-amber-500/15 rounded-lg flex items-center justify-center group-hover:bg-amber-500/25 transition">
+                      <span className="text-lg">💰</span>
                     </div>
-                    <span className="text-gray-700 font-medium">Publicar Demanda</span>
+                    <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition">Publicar Demanda</span>
                   </button>
 
                   <button 
                     onClick={() => { setShowCategoryManagement(true); setShowSidebar(false) }}
-                    className="w-full flex items-center gap-4 px-3 py-3 hover:bg-gray-50 rounded-lg transition"
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
                   >
-                    <div className="w-10 h-10 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-9 h-9 bg-teal-500/15 rounded-lg flex items-center justify-center group-hover:bg-teal-500/25 transition">
+                      <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
                     </div>
-                    <span className="text-gray-700 font-medium">Gestionar Categorías</span>
+                    <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition">Mis Categorías</span>
                   </button>
-                  
-                  {/* Temporalmente deshabilitado para debug */}
-                  {/* <button 
-                    onClick={() => { setShowTravelModeModal(true); setShowSidebar(false) }}
-                    className="w-full flex items-center gap-4 px-3 py-3 hover:bg-gray-50 rounded-lg transition"
-                  >
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                      <span className="text-2xl">🚗</span>
-                    </div>
-                    <span className="text-gray-700 font-medium">Ofrecer Asientos</span>
-                  </button> */}
                 </div>
 
                 {/* Separador */}
-                <div className="h-px bg-gray-200 mx-6"></div>
+                <div className="h-px bg-slate-800 mx-5"></div>
 
                 {/* Menú Secundario */}
-                <div className="px-6 py-4 space-y-1">
+                <div className="px-4 py-3 space-y-0.5">
+                  <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-2">Social</p>
+
                   <button 
                     onClick={() => { setShowFriends(true); setShowSidebar(false) }}
-                    className="w-full flex items-center gap-4 px-3 py-3 hover:bg-gray-50 rounded-lg transition"
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
                   >
-                    <div className="w-10 h-10 bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="w-9 h-9 bg-slate-700 rounded-lg flex items-center justify-center group-hover:bg-slate-600 transition">
+                      <svg className="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
                       </svg>
                     </div>
-                    <span className="text-gray-700 font-medium">Mis Amigos</span>
+                    <span className="text-slate-400 text-sm font-semibold group-hover:text-slate-200 transition">Mis Amigos</span>
                   </button>
                   
                   <button 
                     onClick={() => { setShowVerificationCard(true); setShowSidebar(false) }}
-                    className="w-full flex items-center gap-4 px-3 py-3 hover:bg-gray-50 rounded-lg transition"
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
                   >
-                    <div className="w-10 h-10 bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-9 h-9 bg-slate-700 rounded-lg flex items-center justify-center group-hover:bg-slate-600 transition">
+                      <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
                     </div>
-                    <span className="text-gray-700 font-medium">Mi Tarjeta</span>
+                    <span className="text-slate-400 text-sm font-semibold group-hover:text-slate-200 transition">Mi Tarjeta</span>
                   </button>
-                  
-                  <button 
-                    onClick={() => { setShowSidebar(false) }}
-                    className="w-full flex items-center gap-4 px-3 py-3 hover:bg-gray-50 rounded-lg transition"
-                  >
-                    <div className="w-10 h-10 bg-slate-600 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </div>
-                    <span className="text-gray-700 font-medium">Configuración</span>
-                  </button>
-                  
+
                   <button 
                     onClick={async () => {
                       const { setupNotifications } = await import('@/lib/firebase')
                       const token = localStorage.getItem('auth_token')
                       if (token) {
                         await setupNotifications(token)
-                        alert('Notificaciones activadas. Revisa la consola (F12) para ver el FCM Token.')
+                        alert('Notificaciones activadas correctamente')
                       } else {
                         alert('Debes iniciar sesión primero')
                       }
                       setShowSidebar(false)
                     }}
-                    className="w-full flex items-center gap-4 px-3 py-3 hover:bg-blue-50 rounded-lg transition"
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
                   >
-                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="w-9 h-9 bg-amber-500/15 rounded-lg flex items-center justify-center group-hover:bg-amber-500/25 transition">
+                      <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
                       </svg>
                     </div>
-                    <span className="text-blue-600 font-medium">Activar Notificaciones</span>
+                    <span className="text-slate-400 text-sm font-semibold group-hover:text-slate-200 transition">Notificaciones</span>
                   </button>
                 </div>
 
                 {/* Separador */}
-                <div className="h-px bg-gray-200 mx-6"></div>
+                <div className="h-px bg-slate-800 mx-5"></div>
 
-                {/* Cerrar Sesión */}
-                <div className="px-6 py-4">
+                {/* Compartir + Cerrar Sesión */}
+                <div className="px-4 py-3 space-y-0.5">
+                  <button 
+                    onClick={() => {
+                      const url = 'https://jobshour.dondemorales.cl'
+                      const text = '¡Encuentra servicios cerca de ti en JobsHours! 🔧⚡'
+                      if (navigator.share) {
+                        navigator.share({ title: 'JobsHours', text, url })
+                      } else {
+                        window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank')
+                      }
+                      setShowSidebar(false)
+                    }}
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
+                  >
+                    <div className="w-9 h-9 bg-teal-500/15 rounded-lg flex items-center justify-center group-hover:bg-teal-500/25 transition">
+                      <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </div>
+                    <span className="text-slate-400 text-sm font-semibold group-hover:text-slate-200 transition">Compartir App</span>
+                  </button>
+
                   <button 
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-4 px-3 py-3 hover:bg-red-50 rounded-lg transition"
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-red-500/10 rounded-xl transition group"
                   >
-                    <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-9 h-9 bg-red-500/15 rounded-lg flex items-center justify-center group-hover:bg-red-500/25 transition">
+                      <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                       </svg>
                     </div>
-                    <span className="text-red-600 font-medium">Cerrar sesión</span>
+                    <span className="text-red-400 text-sm font-semibold group-hover:text-red-300 transition">Cerrar sesión</span>
                   </button>
+                </div>
+
+                {/* Seguridad */}
+                <div className="mx-5 mb-4 bg-teal-500/5 border border-teal-500/20 rounded-xl p-3 flex items-center gap-2.5">
+                  <svg className="w-4 h-4 text-teal-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <p className="text-[10px] text-teal-500/80 font-semibold">Conexión segura · SSL activo</p>
                 </div>
               </div>
             ) : (
-              /* Social Login Buttons */
-              <div className="px-6 py-4 space-y-2">
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-4">Iniciar sesión</p>
+              /* Social Login sin sesión */
+              <div className="px-5 py-6 space-y-3">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Iniciar sesión</p>
                 <button 
                   onClick={() => window.location.href = '/api/auth/google'}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 font-medium transition"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-sm text-slate-300 font-semibold transition"
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -1907,9 +1843,9 @@ export default function Home() {
                 </button>
                 <button 
                   onClick={() => window.location.href = '/api/auth/facebook'}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 font-medium transition"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-sm text-slate-300 font-semibold transition"
                 >
-                  <svg className="w-4 h-4" fill="#1877F2" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24">
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                   </svg>
                   <span>Continuar con Facebook</span>
@@ -1919,8 +1855,8 @@ export default function Home() {
             </div>
             
             {/* Footer */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
-              <p className="text-[10px] text-gray-400">jobshour.dondemorales.cl</p>
+            <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-5 py-3">
+              <p className="text-[10px] text-slate-600 font-semibold">jobshour.dondemorales.cl</p>
             </div>
           </div>
         </>
@@ -2298,16 +2234,12 @@ export default function Home() {
           isOpen={showOnboarding}
           onClose={() => {
             setShowOnboarding(false)
-            // Marcar como cerrado para esta sesión (no volver a mostrar)
-            if (user?.id) {
-              sessionStorage.setItem(`onboarding_shown_${user.id}`, 'true')
-            }
           }}
-          onComplete={async (data) => {
+          onComplete={async () => {
             setShowOnboarding(false)
-            // Marcar como completado para esta sesión
+            // Marcar como completado permanentemente
             if (user?.id) {
-              sessionStorage.setItem(`onboarding_shown_${user.id}`, 'true')
+              localStorage.setItem(`onboarding_done_${user.id}`, 'true')
             }
             // Refrescar perfil del usuario después del onboarding
             const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -2317,6 +2249,7 @@ export default function Home() {
           }}
           userToken={user.token}
           userName={user.name}
+          userAvatar={user.avatarUrl}
         />
       )}
 

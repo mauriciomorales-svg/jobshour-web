@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { compressImageToWebP } from '@/lib/imageCompression'
+import { useState, useEffect } from 'react'
 
 interface Props {
   isOpen: boolean
@@ -9,119 +8,110 @@ interface Props {
   onComplete: (data: OnboardingData) => void
   userToken: string
   userName: string
+  userAvatar?: string | null
 }
 
 interface OnboardingData {
-  avatar?: File
   location: { lat: number; lng: number; address: string }
   hourly_rate: number
+  category_id?: number
   skills: string[]
   bio: string
-  availability: string[]
 }
 
-export default function OnboardingWizard({ isOpen, onClose, onComplete, userToken, userName }: Props) {
+interface ApiCategory {
+  id: number
+  name: string
+  icon: string
+}
+
+const MOTIVATIONAL = [
+  'Tu talento merece ser visto',
+  'Cada habilidad tiene valor',
+  'Estás a un paso de conectar con tu comunidad',
+  'Miles de personas buscan lo que tú sabes hacer',
+]
+
+export default function OnboardingWizard({ isOpen, onClose, onComplete, userToken, userName, userAvatar }: Props) {
   const [step, setStep] = useState(1)
   const [data, setData] = useState<OnboardingData>({
-    location: { lat: -33.4489, lng: -70.6693, address: 'Santiago, Chile' },
+    location: { lat: 0, lng: 0, address: '' },
     hourly_rate: 15000,
     skills: [],
     bio: '',
-    availability: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'],
   })
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [locating, setLocating] = useState(false)
+  const [categories, setCategories] = useState<ApiCategory[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
   const [customSkill, setCustomSkill] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [error, setError] = useState('')
 
-  const commonSkills = [
-    'Instalación', 'Reparación', 'Mantenimiento', 'Pintura',
-    'Electricidad', 'Gasfitería', 'Carpintería', 'Albañilería',
-    'Jardinería', 'Limpieza', 'Mudanzas', 'Delivery',
-  ]
+  const motivational = MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)]
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    try {
-      const compressed = await compressImageToWebP(file)
-      const blob = new Blob([compressed], { type: 'image/webp' })
-      const webpFile = new File([blob], 'avatar.webp', { type: 'image/webp' })
-      
-      setData({ ...data, avatar: webpFile })
-      setAvatarPreview(URL.createObjectURL(blob))
-    } catch (err) {
-      console.error('Error compressing image:', err)
-    }
-  }
+  // Fetch categories
+  useEffect(() => {
+    fetch('/api/v1/categories')
+      .then(r => r.json())
+      .then(d => setCategories(d.data || d || []))
+      .catch(() => {})
+  }, [])
 
   const handleLocationSelect = () => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setData({
-            ...data,
-            location: {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-              address: 'Ubicación actual',
-            }
-          })
-        },
-        (error) => {
-          console.error('Error getting location:', error)
-        }
-      )
+    if (!('geolocation' in navigator)) {
+      setError('Tu navegador no soporta geolocalización')
+      return
     }
+    setLocating(true)
+    setError('')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setData(prev => ({
+          ...prev,
+          location: {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            address: `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`,
+          }
+        }))
+        setLocating(false)
+      },
+      () => {
+        setError('No pudimos obtener tu ubicación. Activa el GPS e intenta de nuevo.')
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
   }
 
   const toggleSkill = (skill: string) => {
-    if (data.skills.includes(skill)) {
-      setData({ ...data, skills: data.skills.filter(s => s !== skill) })
-    } else {
-      setData({ ...data, skills: [...data.skills, skill] })
-    }
+    setData(prev => ({
+      ...prev,
+      skills: prev.skills.includes(skill)
+        ? prev.skills.filter(s => s !== skill)
+        : [...prev.skills, skill]
+    }))
   }
 
   const addCustomSkill = () => {
     if (customSkill.trim() && !data.skills.includes(customSkill.trim())) {
-      setData({ ...data, skills: [...data.skills, customSkill.trim()] })
+      setData(prev => ({ ...prev, skills: [...prev.skills, customSkill.trim()] }))
       setCustomSkill('')
     }
   }
 
-  const toggleDay = (day: string) => {
-    if (data.availability.includes(day)) {
-      setData({ ...data, availability: data.availability.filter(d => d !== day) })
-    } else {
-      setData({ ...data, availability: [...data.availability, day] })
-    }
+  const canProceed = () => {
+    if (step === 1) return data.location.lat !== 0
+    if (step === 2) return selectedCategory !== null
+    if (step === 3) return data.hourly_rate >= 5000
+    return true
   }
 
   const handleComplete = async () => {
     setLoading(true)
-    
-    // Upload avatar if exists
-    if (data.avatar) {
-      const formData = new FormData()
-      formData.append('avatar', data.avatar)
-      
-      try {
-        await fetch('/api/workers/upload-avatar', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${userToken}` },
-          body: formData,
-        })
-      } catch (err) {
-        console.error('Error uploading avatar:', err)
-      }
-    }
-
-    // Update worker profile
     try {
-      await fetch('/api/workers/profile', {
-        method: 'PUT',
+      const res = await fetch('/api/v1/worker/onboarding', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${userToken}`,
@@ -130,124 +120,171 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
           latitude: data.location.lat,
           longitude: data.location.lng,
           hourly_rate: data.hourly_rate,
+          category_id: selectedCategory,
           skills: data.skills,
           bio: data.bio,
-          availability: data.availability,
         }),
       })
-    } catch (err) {
-      console.error('Error updating profile:', err)
-    }
 
+      if (res.ok) {
+        localStorage.setItem(`onboarding_done_${userName}`, 'true')
+        onComplete({ ...data, category_id: selectedCategory || undefined })
+      } else {
+        setError('Error al guardar. Intenta nuevamente.')
+      }
+    } catch {
+      setError('Sin conexión. Revisa tu internet.')
+    }
     setLoading(false)
-    onComplete(data)
-    onClose()
   }
 
   if (!isOpen) return null
 
+  const totalSteps = 4
+  const firstName = userName.split(' ')[0]
+
+  // Mini clock component for loading states
+  const MiniClock = () => (
+    <div className="relative inline-flex h-5 w-5 items-center justify-center">
+      <div className="absolute inset-0 rounded-full border-[2px] border-teal-400"></div>
+      <div className="absolute h-1/2 w-[2px] origin-bottom rounded-full bg-gradient-to-t from-teal-400 to-amber-300" style={{ bottom: '50%', animation: 'spin 2s linear infinite' }}></div>
+      <div className="z-10 h-[3px] w-[3px] rounded-full bg-amber-400"></div>
+    </div>
+  )
+
   return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl w-[90%] max-w-lg mx-4 overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-slate-900 rounded-3xl shadow-2xl w-[92%] max-w-lg mx-4 overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto border border-slate-700/50">
         {/* Header */}
-        <div className="bg-gradient-to-br from-purple-500 via-pink-600 to-rose-700 p-6 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
-          <div className="relative z-10">
-            <h3 className="text-white text-2xl font-black text-center">¡Bienvenido, {userName.split(' ')[0]}!</h3>
-            <p className="text-white/80 text-sm text-center mt-1">Paso {step} de 5</p>
+        <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 p-6 relative overflow-hidden">
+          <div className="absolute top-3 right-3 opacity-10">
+            <div className="relative h-16 w-16">
+              <div className="absolute inset-0 rounded-full border-[3px] border-teal-400"></div>
+              <div className="absolute h-1/2 w-[3px] origin-bottom rounded-full bg-gradient-to-t from-teal-400 to-amber-300" style={{ bottom: '50%', animation: 'spin 6s linear infinite' }}></div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 mb-4">
+            {userAvatar ? (
+              <img src={userAvatar} className="w-14 h-14 rounded-full object-cover border-2 border-teal-400/50" alt={firstName} />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xl font-black border-2 border-teal-400/50">
+                {firstName.charAt(0)}
+              </div>
+            )}
+            <div>
+              <h3 className="text-white text-xl font-black">Hola, {firstName}</h3>
+              <p className="text-amber-400/80 text-xs font-semibold italic">{motivational}</p>
+            </div>
           </div>
           
-          {/* Progress bar */}
-          <div className="relative z-10 mt-4">
-            <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+          {/* Progress */}
+          <div className="flex items-center gap-2">
+            <p className="text-slate-400 text-xs font-bold">Paso {step} de {totalSteps}</p>
+            <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-white transition-all duration-300"
-                style={{ width: `${(step / 5) * 100}%` }}
+                className="h-full bg-gradient-to-r from-teal-400 to-amber-400 transition-all duration-500 rounded-full"
+                style={{ width: `${(step / totalSteps) * 100}%` }}
               />
             </div>
           </div>
+
+          {/* Minimum data notice */}
+          <p className="text-slate-500 text-[10px] mt-2">
+            Este formulario aparecerá hasta completar ubicación, categoría y tarifa
+          </p>
         </div>
 
         {/* Body */}
-        <div className="p-6">
-          {/* Step 1: Foto de perfil */}
-          {step === 1 && (
-            <div className="space-y-4 animate-slide-up">
-              <div className="text-center">
-                <h4 className="text-xl font-black text-slate-800 mb-2">Foto de Perfil</h4>
-                <p className="text-sm text-slate-600">Una buena foto genera confianza</p>
-              </div>
-
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative">
-                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
-                    {avatarPreview ? (
-                      <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-white text-4xl font-bold">{userName.charAt(0)}</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition"
-                  >
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                  />
-                </div>
-
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 w-full">
-                  <p className="text-purple-900 text-xs font-semibold mb-1">💡 Consejos</p>
-                  <ul className="text-purple-700 text-xs space-y-1">
-                    <li>• Usa una foto clara de tu rostro</li>
-                    <li>• Evita filtros o lentes oscuros</li>
-                    <li>• Sonríe, genera confianza</li>
-                  </ul>
-                </div>
-              </div>
+        <div className="p-5">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4">
+              <p className="text-red-400 text-xs font-semibold">{error}</p>
             </div>
           )}
 
-          {/* Step 2: Ubicación */}
-          {step === 2 && (
+          {/* Step 1: Ubicación */}
+          {step === 1 && (
             <div className="space-y-4 animate-slide-up">
               <div className="text-center">
-                <h4 className="text-xl font-black text-slate-800 mb-2">Tu Ubicación</h4>
-                <p className="text-sm text-slate-600">¿Dónde ofreces tus servicios?</p>
+                <h4 className="text-lg font-black text-white mb-1">Tu Ubicación</h4>
+                <p className="text-sm text-slate-400">Veremos qué oportunidades hay cerca de ti</p>
               </div>
 
-              <div className="bg-slate-100 rounded-2xl p-4 h-48 flex items-center justify-center">
-                <div className="text-center">
-                  <svg className="w-16 h-16 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <p className="text-slate-600 text-sm font-semibold">{data.location.address}</p>
-                </div>
+              <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700">
+                {data.location.lat !== 0 ? (
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-8 h-8 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="text-teal-400 text-sm font-bold">Ubicación obtenida</p>
+                    <p className="text-slate-500 text-xs mt-1">{data.location.address}</p>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <svg className="w-14 h-14 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <p className="text-slate-500 text-sm">Aún no tenemos tu ubicación</p>
+                  </div>
+                )}
               </div>
 
               <button
                 onClick={handleLocationSelect}
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-xl font-bold text-sm hover:from-purple-600 hover:to-pink-700 transition shadow-lg"
+                disabled={locating}
+                className="w-full bg-gradient-to-r from-teal-500 to-teal-600 text-white py-3.5 rounded-xl font-bold text-sm hover:from-teal-600 hover:to-teal-700 transition shadow-lg shadow-teal-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                📍 Usar mi ubicación actual
+                {locating ? (
+                  <><MiniClock /> <span>Obteniendo ubicación...</span></>
+                ) : (
+                  <><span>📍</span> <span>Compartir mi ubicación</span></>
+                )}
               </button>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-blue-900 text-xs font-semibold mb-1">🔒 Privacidad</p>
-                <p className="text-blue-700 text-xs">
-                  Tu ubicación exacta nunca se muestra. Los clientes solo ven tu ciudad y distancia aproximada.
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3">
+                <p className="text-slate-400 text-xs">
+                  🔒 Tu ubicación exacta nunca se muestra. Los clientes solo ven la distancia aproximada.
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Step 2: Categoría */}
+          {step === 2 && (
+            <div className="space-y-4 animate-slide-up">
+              <div className="text-center">
+                <h4 className="text-lg font-black text-white mb-1">¿Qué servicio ofreces?</h4>
+                <p className="text-sm text-slate-400">Elige tu categoría principal</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto pr-1">
+                {categories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`flex items-center gap-2.5 px-3 py-3 rounded-xl text-left transition-all ${
+                      selectedCategory === cat.id
+                        ? 'bg-teal-500/20 border-2 border-teal-400 text-teal-300 shadow-[0_0_12px_rgba(45,212,191,0.15)]'
+                        : 'bg-slate-800 border-2 border-slate-700 text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <span className="text-lg">{cat.icon || '📌'}</span>
+                    <span className="text-xs font-bold leading-tight">{cat.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              {selectedCategory && (
+                <div className="bg-teal-500/10 border border-teal-500/30 rounded-xl p-3">
+                  <p className="text-teal-400 text-xs font-semibold">
+                    ✅ Podrás agregar más categorías después en tu perfil
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -255,184 +292,133 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
           {step === 3 && (
             <div className="space-y-4 animate-slide-up">
               <div className="text-center">
-                <h4 className="text-xl font-black text-slate-800 mb-2">Tarifa por Hora</h4>
-                <p className="text-sm text-slate-600">¿Cuánto cobras por tu trabajo?</p>
+                <h4 className="text-lg font-black text-white mb-1">Tu Tarifa Base</h4>
+                <p className="text-sm text-slate-400">Un valor de referencia inicial — lo puedes ajustar después</p>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-6">
-                <div className="text-center mb-4">
-                  <p className="text-sm text-slate-600 mb-2">Tu tarifa</p>
-                  <p className="text-5xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+                <div className="text-center mb-5">
+                  <p className="text-xs text-slate-500 mb-1">Tarifa por hora</p>
+                  <p className="text-4xl font-black bg-gradient-to-r from-teal-300 to-amber-300 bg-clip-text text-transparent">
                     ${data.hourly_rate.toLocaleString()}
                   </p>
-                  <p className="text-sm text-slate-500 mt-1">por hora</p>
+                  <p className="text-[10px] text-slate-600 mt-1">CLP / hora</p>
                 </div>
 
                 <input
                   type="range"
-                  min="5000"
-                  max="50000"
+                  min="3000"
+                  max="80000"
                   step="1000"
                   value={data.hourly_rate}
-                  onChange={(e) => setData({ ...data, hourly_rate: parseInt(e.target.value) })}
-                  className="w-full"
+                  onChange={(e) => setData(prev => ({ ...prev, hourly_rate: parseInt(e.target.value) }))}
+                  className="w-full accent-teal-400"
                 />
 
-                <div className="flex justify-between text-xs text-slate-500 mt-2">
-                  <span>$5.000</span>
-                  <span>$50.000</span>
+                <div className="flex justify-between text-[10px] text-slate-600 mt-1">
+                  <span>$3.000</span>
+                  <span>$80.000</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {[10000, 15000, 20000].map(price => (
+              <div className="grid grid-cols-4 gap-2">
+                {[8000, 12000, 18000, 25000].map(price => (
                   <button
                     key={price}
-                    onClick={() => setData({ ...data, hourly_rate: price })}
-                    className={`py-2 rounded-lg text-sm font-bold transition ${
+                    onClick={() => setData(prev => ({ ...prev, hourly_rate: price }))}
+                    className={`py-2 rounded-lg text-xs font-bold transition ${
                       data.hourly_rate === price
-                        ? 'bg-green-600 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-teal-500 text-white'
+                        : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600'
                     }`}
                   >
-                    ${price.toLocaleString()}
+                    ${(price/1000)}k
                   </button>
                 ))}
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <p className="text-amber-900 text-xs font-semibold mb-1">💰 Tip</p>
-                <p className="text-amber-700 text-xs">
-                  Puedes cambiar tu tarifa en cualquier momento. Empieza con un precio competitivo.
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+                <p className="text-amber-400 text-xs">
+                  💡 Esta tarifa es solo una referencia. Cada trabajo puede tener un precio diferente.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Step 4: Skills */}
+          {/* Step 4: Extras opcionales (skills + bio) */}
           {step === 4 && (
             <div className="space-y-4 animate-slide-up">
               <div className="text-center">
-                <h4 className="text-xl font-black text-slate-800 mb-2">Especialidades</h4>
-                <p className="text-sm text-slate-600">¿Qué sabes hacer?</p>
+                <h4 className="text-lg font-black text-white mb-1">Toque final</h4>
+                <p className="text-sm text-slate-400">Opcional — mejora tu visibilidad</p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {commonSkills.map(skill => (
-                  <button
-                    key={skill}
-                    onClick={() => toggleSkill(skill)}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                      data.skills.includes(skill)
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {skill}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={customSkill}
-                  onChange={(e) => setCustomSkill(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addCustomSkill()}
-                  placeholder="Agregar otra especialidad..."
-                  className="flex-1 px-4 py-2 border-2 border-slate-200 rounded-xl outline-none focus:border-purple-500"
-                />
-                <button
-                  onClick={addCustomSkill}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition"
-                >
-                  +
-                </button>
-              </div>
-
-              {data.skills.length > 0 && (
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                  <p className="text-purple-900 text-xs font-semibold mb-2">
-                    ✅ Seleccionadas ({data.skills.length})
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {data.skills.map(skill => (
-                      <span key={skill} className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 5: Bio y Disponibilidad */}
-          {step === 5 && (
-            <div className="space-y-4 animate-slide-up">
-              <div className="text-center">
-                <h4 className="text-xl font-black text-slate-800 mb-2">Cuéntanos sobre ti</h4>
-                <p className="text-sm text-slate-600">Describe tu experiencia</p>
-              </div>
-
+              {/* Skills */}
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Biografía
-                </label>
-                <textarea
-                  value={data.bio}
-                  onChange={(e) => setData({ ...data, bio: e.target.value })}
-                  placeholder="Ej: Tengo 10 años de experiencia en gasfitería. Trabajo rápido y limpio. Garantía en todos mis trabajos."
-                  rows={4}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none resize-none focus:border-purple-500 focus:bg-purple-50/30"
-                />
-                <p className="text-xs text-slate-500 mt-1">{data.bio.length}/500 caracteres</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Disponibilidad
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map(day => (
+                <p className="text-xs font-bold text-slate-400 mb-2">Habilidades</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Instalación', 'Reparación', 'Pintura', 'Electricidad', 'Gasfitería', 'Carpintería', 'Jardinería', 'Limpieza', 'Mudanzas', 'Delivery', 'Cocina', 'Cuidado'].map(skill => (
                     <button
-                      key={day}
-                      onClick={() => toggleDay(day)}
-                      className={`py-2 rounded-lg text-sm font-semibold capitalize transition ${
-                        data.availability.includes(day)
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      key={skill}
+                      onClick={() => toggleSkill(skill)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                        data.skills.includes(skill)
+                          ? 'bg-teal-500 text-white'
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
                       }`}
                     >
-                      {day}
+                      {skill}
                     </button>
                   ))}
                 </div>
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={customSkill}
+                    onChange={(e) => setCustomSkill(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addCustomSkill()}
+                    placeholder="Otra habilidad..."
+                    className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 outline-none focus:border-teal-500 placeholder:text-slate-600"
+                  />
+                  <button onClick={addCustomSkill} className="px-3 py-2 bg-teal-500 text-white rounded-lg font-bold text-sm">+</button>
+                </div>
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                <p className="text-green-900 text-xs font-semibold mb-1">🎉 ¡Último paso!</p>
-                <p className="text-green-700 text-xs">
-                  Tu perfil estará listo para recibir solicitudes de trabajo.
+              {/* Bio */}
+              <div>
+                <p className="text-xs font-bold text-slate-400 mb-2">Sobre ti (opcional)</p>
+                <textarea
+                  value={data.bio}
+                  onChange={(e) => setData(prev => ({ ...prev, bio: e.target.value }))}
+                  placeholder="Ej: Tengo experiencia en gasfitería, trabajo limpio y garantizado..."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-200 outline-none resize-none focus:border-teal-500 placeholder:text-slate-600"
+                />
+              </div>
+
+              <div className="bg-teal-500/10 border border-teal-500/30 rounded-xl p-3">
+                <p className="text-teal-400 text-xs font-semibold">
+                  🎉 ¡Ya casi! Con estos datos empezarás a aparecer en el mapa
                 </p>
               </div>
             </div>
           )}
 
           {/* Buttons */}
-          <div className="flex gap-3 mt-6">
+          <div className="flex gap-3 mt-5">
             {step > 1 && (
               <button
-                onClick={() => setStep(step - 1)}
-                className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition"
+                onClick={() => { setStep(step - 1); setError('') }}
+                className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-sm hover:bg-slate-700 transition border border-slate-700"
               >
                 Atrás
               </button>
             )}
-            {step < 5 ? (
+            {step < totalSteps ? (
               <button
-                onClick={() => setStep(step + 1)}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-xl font-bold text-sm hover:from-purple-600 hover:to-pink-700 transition shadow-lg hover:shadow-xl"
+                onClick={() => { if (canProceed()) { setStep(step + 1); setError('') } }}
+                disabled={!canProceed()}
+                className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white py-3 rounded-xl font-bold text-sm transition shadow-lg shadow-teal-500/20 disabled:opacity-30 disabled:shadow-none"
               >
                 Siguiente
               </button>
@@ -440,15 +426,15 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
               <button
                 onClick={handleComplete}
                 disabled={loading}
-                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:from-green-600 hover:to-emerald-700 transition shadow-lg hover:shadow-xl disabled:opacity-50"
+                className="flex-1 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-900 py-3 rounded-xl font-black text-sm transition shadow-lg shadow-amber-400/20 disabled:opacity-50"
               >
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <MiniClock />
                     <span>Guardando...</span>
                   </div>
                 ) : (
-                  '✨ Completar Perfil'
+                  'Completar Perfil'
                 )}
               </button>
             )}
@@ -457,9 +443,9 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
           {step === 1 && (
             <button
               onClick={onClose}
-              className="w-full mt-3 text-sm text-slate-500 hover:text-slate-700 font-semibold"
+              className="w-full mt-3 text-xs text-slate-600 hover:text-slate-400 font-semibold transition"
             >
-              Saltar por ahora
+              Lo haré después
             </button>
           )}
         </div>
