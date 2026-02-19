@@ -911,7 +911,7 @@ export default function Home() {
     setActiveTab(tab)
     if (tab === 'map') { setDashHidden(true); setActiveSection('map') }
     if (tab === 'feed') { setDashHidden(false); setActiveSection('map') }
-    if (tab === 'requests') { setDashHidden(true); setActiveSection('map'); setShowSidebar(true) }
+    if (tab === 'requests') { setDashHidden(false); setActiveSection('map') }
     if (tab === 'profile') {
       if (!user) { setShowLoginModal(true); return }
       setActiveSection('profile')
@@ -1380,7 +1380,6 @@ export default function Home() {
                     setShowOnboarding(true)
                     toast('Completa tu perfil para continuar', 'warning')
                   }
-                  setDashHidden(true)
                   return
                 }
                 
@@ -1502,7 +1501,6 @@ export default function Home() {
                     setShowOnboarding(true)
                     toast('Completa tu perfil para chatear', 'warning')
                   }
-                  setDashHidden(true)
                   return
                 }
                 setActiveRequestId(request.id)
