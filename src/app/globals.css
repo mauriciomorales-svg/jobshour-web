@@ -81,11 +81,14 @@
 
 /* Ajustar posición de controles de zoom del mapa - arriba de la atribución */
 .leaflet-control-zoom {
-  margin-bottom: 60px !important;
+  margin-bottom: 80px !important;
   margin-right: 8px !important;
 }
 
+/* Safe area bottom padding for iOS home indicator */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
 /* Posicionar atribución en la esquina inferior derecha, lo más abajo posible */
 .leaflet-control-attribution {
-  margin-bottom: 0 !important;
+  margin-bottom: 68px !important;
 }
