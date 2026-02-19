@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import CategoryPicker from './CategoryPicker'
 
 interface Props {
   isOpen: boolean
@@ -325,17 +326,12 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                   <label className="block text-sm font-bold text-slate-700 mb-2">
                     Categoría principal <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={formData.category_id}
-                    onChange={(e) => setFormData({ ...formData, category_id: parseInt(e.target.value) })}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-green-500 focus:bg-green-50/30"
-                  >
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.icon} {cat.name}
-                      </option>
-                    ))}
-                  </select>
+                  <CategoryPicker
+                    categories={categories}
+                    selectedId={formData.category_id}
+                    onSelect={(id) => setFormData({ ...formData, category_id: id })}
+                    placeholder="Buscar tu oficio..."
+                  />
                   <p className="text-xs text-slate-500 mt-2">
                     Podrás agregar más categorías después
                   </p>

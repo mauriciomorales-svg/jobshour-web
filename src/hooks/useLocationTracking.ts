@@ -67,7 +67,7 @@ export function useLocationTracking({
       }
 
       try {
-        const response = await fetch(`https://jobshour.dondemorales.cl/api/v1/requests/${requestId}/activity`, {
+        const response = await fetch(`/api/v1/requests/${requestId}/activity`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

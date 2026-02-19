@@ -30,7 +30,7 @@ export default function TrackingStatusCard({
     // Polling cada 5 segundos para obtener ubicación actualizada
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`https://jobshour.dondemorales.cl/api/v1/requests/${requestId}`, {
+        const response = await fetch(`/api/v1/requests/${requestId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',

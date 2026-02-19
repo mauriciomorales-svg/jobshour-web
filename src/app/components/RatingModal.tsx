@@ -47,7 +47,7 @@ export default function RatingModal({
         return
       }
 
-      const response = await fetch('https://jobshour.dondemorales.cl/api/v1/reviews', {
+      const response = await fetch('/api/v1/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import CategoryPicker from './CategoryPicker'
 
 interface Category {
   id: number
@@ -107,17 +108,12 @@ export default function WorkerActivationModal({ isOpen, onClose, onSuccess }: Pr
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">¿Qué ofreces hoy?</label>
-            <select
-              value={selectedCategory || ''}
-              onChange={(e) => setSelectedCategory(Number(e.target.value))}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2"
-            >
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+            <CategoryPicker
+              categories={categories}
+              selectedId={selectedCategory}
+              onSelect={(id) => setSelectedCategory(id)}
+              placeholder="Buscar tu oficio..."
+            />
           </div>
 
           <div className="bg-blue-50 p-3 rounded-lg">

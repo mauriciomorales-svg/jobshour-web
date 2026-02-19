@@ -34,7 +34,7 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
         return
       }
 
-      const response = await fetch('https://jobshour.dondemorales.cl/api/v1/notifications/preferences', {
+      const response = await fetch('/api/v1/notifications/preferences', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
@@ -88,7 +88,7 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
         return
       }
 
-      const response = await fetch('https://jobshour.dondemorales.cl/api/v1/notifications/preferences', {
+      const response = await fetch('/api/v1/notifications/preferences', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

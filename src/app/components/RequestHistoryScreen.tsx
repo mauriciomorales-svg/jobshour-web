@@ -47,7 +47,7 @@ export default function RequestHistoryScreen({ isOpen, onClose }: RequestHistory
         return
       }
 
-      const response = await fetch('https://jobshour.dondemorales.cl/api/v1/requests/my-requests', {
+      const response = await fetch('/api/v1/requests/my-requests', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',

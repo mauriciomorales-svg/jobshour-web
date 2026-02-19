@@ -65,7 +65,7 @@ export default function DashboardFeed({ userLat, userLng, onCardClick, highlight
 
     try {
       const currentCursor = reset ? 0 : cursorRef.current
-      const url = `https://jobshour.dondemorales.cl/api/v1/dashboard/feed?lat=${userLat}&lng=${userLng}&cursor=${currentCursor}&_t=${Date.now()}`
+      const url = `/api/v1/dashboard/feed?lat=${userLat}&lng=${userLng}&cursor=${currentCursor}&_t=${Date.now()}`
       
       const res = await fetch(url)
       if (!res.ok) {
@@ -128,6 +128,22 @@ export default function DashboardFeed({ userLat, userLng, onCardClick, highlight
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLat, userLng])
+
+  // Listen for reload-feed and remove-feed-item events
+  useEffect(() => {
+    const handleReload = () => loadMore(true)
+    const handleRemove = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id
+      if (id) setFeed(prev => prev.filter(s => s.id !== id))
+    }
+    window.addEventListener('reload-feed', handleReload)
+    window.addEventListener('remove-feed-item', handleRemove)
+    return () => {
+      window.removeEventListener('reload-feed', handleReload)
+      window.removeEventListener('remove-feed-item', handleRemove)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Observer para infinite scroll
   useEffect(() => {

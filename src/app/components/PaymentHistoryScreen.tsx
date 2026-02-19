@@ -46,7 +46,7 @@ export default function PaymentHistoryScreen({ isOpen, onClose }: PaymentHistory
       }
 
       // Nota: Este endpoint necesita ser creado en el backend
-      const response = await fetch('https://jobshour.dondemorales.cl/api/v1/payments/history', {
+      const response = await fetch('/api/v1/payments/history', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',

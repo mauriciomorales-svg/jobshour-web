@@ -16,9 +16,9 @@ const STATUS_CONFIG = {
   guest: {
     dot: 'bg-gray-300',
     pill: 'bg-gray-100 text-gray-700 border border-gray-200',
-    label: 'Trabaja con nosotros',
+    label: 'Gana dinero extra',
     sublabel: 'Toca para ganar dinero',
-    icon: '💼',
+    icon: '�',
   },
   inactive: {
     dot: 'bg-gray-400',

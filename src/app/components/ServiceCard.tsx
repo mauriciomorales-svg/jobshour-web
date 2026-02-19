@@ -14,11 +14,19 @@ interface ServiceRequest {
   offered_price: number
   urgency: string
   distance_km: number
+  pickup_address?: string
+  delivery_address?: string
   created_at: string
   completed_at?: string
+  scheduled_at?: string | null
+  workers_needed?: number
+  workers_accepted?: number
+  recurrence?: string
+  recurrence_days?: number[] | null
   description?: string
   worker_id?: number | null
   payload?: {
+    image?: string
     seats?: number
     departure_time?: string
     destination_name?: string
@@ -81,6 +89,19 @@ function PayloadChips({ request }: { request: ServiceRequest }) {
     if (request.payload.estimated_hours) chips.push(`⏱️ ${request.payload.estimated_hours}h est.`)
     if (request.payload.tools_provided) chips.push(`🧰 Herramientas incluidas`)
   }
+  // Chips universales (scheduling, multi-worker, recurrence)
+  if (request.scheduled_at) {
+    const d = new Date(request.scheduled_at)
+    chips.push(`📅 ${d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`)
+  }
+  if (request.workers_needed && request.workers_needed > 1) {
+    const accepted = request.workers_accepted ?? 0
+    chips.push(`👥 ${accepted}/${request.workers_needed} personas`)
+  }
+  if (request.recurrence && request.recurrence !== 'once') {
+    const labels: Record<string, string> = { daily: '🔄 Diario', weekly: '🔄 Semanal', custom: '🔄 Personalizado' }
+    chips.push(labels[request.recurrence] || '🔄 Recurrente')
+  }
   if (!chips.length) return null
   return (
     <div className="flex flex-wrap gap-1.5 mt-2">
@@ -108,24 +129,44 @@ function ActionButtons({ request, onRequestService, onOpenChat, onGoToLocation }
           <span>Tomar esta solicitud · ${request.offered_price.toLocaleString('es-CL')}</span>
         </button>
       )}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-4 gap-1.5">
         {onGoToLocation && (
           <button
             onClick={(e) => { e.stopPropagation(); onGoToLocation(request) }}
-            className="flex items-center justify-center gap-1.5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95"
+            className="flex items-center justify-center gap-1 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] font-bold transition active:scale-95"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            Ver en mapa
+            Mapa
           </button>
+        )}
+        {request.pos?.lat && request.pos?.lng && (
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${request.pos.lat},${request.pos.lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center gap-1 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-[10px] font-bold transition active:scale-95"
+          >
+            �️ Llegar
+          </a>
         )}
         {onOpenChat && (
           <button
             onClick={(e) => { e.stopPropagation(); onOpenChat(request) }}
-            className="flex items-center justify-center gap-1.5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95"
+            className="flex items-center justify-center gap-1 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] font-bold transition active:scale-95"
           >
-            💬 Consultar
+            💬 Chat
           </button>
         )}
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(`🔥 ¡Mira esta solicitud en JobsHours!\n${request.description || 'Servicio disponible'}\n💰 $${request.offered_price.toLocaleString('es-CL')}\n📍 ${request.pickup_address || 'Ver en mapa'}\n👉 ${typeof window !== 'undefined' ? window.location.origin : ''}`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center justify-center gap-1 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-xl text-[10px] font-bold transition active:scale-95"
+        >
+          📲 Compartir
+        </a>
       </div>
     </div>
   )
@@ -185,7 +226,12 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, on
           )}
           <div className="flex-1 min-w-0">
             <p className="text-white font-bold text-sm truncate">{request.client.name}</p>
-            <p className="text-white/70 text-xs">{cfg.label} · {formatTimeAgo(request.created_at)}</p>
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{background: request.category?.color || '#f59e0b', color: 'white'}}>
+                {request.category?.name || cfg.label}
+              </span>
+              <span className="text-white/50 text-xs">{formatTimeAgo(request.created_at)}</span>
+            </div>
           </div>
           <div className="text-right shrink-0">
             <p className="text-white font-black text-xl">${request.offered_price.toLocaleString('es-CL')}</p>
@@ -198,19 +244,48 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, on
           <p className="text-white/90 text-sm leading-snug mb-2 line-clamp-2">{request.description}</p>
         )}
 
+        {/* Imagen adjunta */}
+        {request.payload?.image && (
+          <div className="mt-2 mb-2 rounded-xl overflow-hidden">
+            <img src={request.payload.image} alt="Foto adjunta" className="w-full h-32 object-cover rounded-xl border border-white/10" />
+          </div>
+        )}
+
         {/* Chips de payload */}
         <PayloadChips request={request} />
 
-        {/* Distancia + tiempo de llegada */}
-        <div className="flex items-center gap-3 mt-3 bg-black/20 rounded-xl p-2.5 text-xs text-white/80">
-          <span className="flex items-center gap-1">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            <span className="font-bold">{request.distance_km.toFixed(1)} km</span>
-          </span>
-          <span className="text-white/40">·</span>
-          <span>🚶 ~{Math.round(request.distance_km * 12)} min a pie</span>
-          <span className="text-white/40">·</span>
-          <span>🚗 ~{Math.round(request.distance_km * 2)} min en auto</span>
+        {/* Dirección + Ruta + Distancia */}
+        <div className="mt-3 bg-black/20 rounded-xl p-2.5 text-xs text-white/80 space-y-1.5">
+          {/* Origen → Destino para viajes y mandados */}
+          {request.pickup_address && request.delivery_address ? (
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-400 shrink-0"></span>
+                <span className="font-medium truncate">{request.pickup_address}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-400 shrink-0"></span>
+                <span className="font-medium truncate">{request.delivery_address}</span>
+              </div>
+            </div>
+          ) : request.pickup_address ? (
+            <div className="flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 shrink-0 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              <span className="font-medium truncate">{request.pickup_address}</span>
+            </div>
+          ) : null}
+          {request.distance_km > 0.01 && (
+            <div className="flex items-center gap-3">
+              <span className="font-bold">{request.distance_km.toFixed(1)} km</span>
+              <span className="text-white/40">·</span>
+              <span>🚶 ~{Math.round(request.distance_km * 12)} min</span>
+              <span className="text-white/40">·</span>
+              <span>🚗 ~{Math.max(1, Math.round(request.distance_km * 2))} min</span>
+            </div>
+          )}
+          {!request.pickup_address && !request.delivery_address && request.distance_km <= 0.01 && (
+            <span className="text-white/50">📍 Ubicación disponible en el mapa</span>
+          )}
         </div>
 
         {/* Botones de acción — SIEMPRE visibles */}

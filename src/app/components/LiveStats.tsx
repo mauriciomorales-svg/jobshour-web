@@ -25,7 +25,7 @@ export default function LiveStats({ lat, lng, radius = 50 }: LiveStatsProps) {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const url = `https://jobshour.dondemorales.cl/api/v1/dashboard/live-stats?lat=${lat}&lng=${lng}&radius=${radius}`
+      const url = `/api/v1/dashboard/live-stats?lat=${lat}&lng=${lng}&radius=${radius}`
       console.log('📊 LiveStats: Iniciando fetch a:', url)
       
       try {

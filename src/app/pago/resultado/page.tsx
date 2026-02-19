@@ -19,7 +19,7 @@ function PagoResultadoContent() {
       return
     }
 
-    fetch(`https://jobshour.dondemorales.cl/api/v1/payments/flow/confirm?token=${token}`)
+    fetch(`/api/v1/payments/flow/confirm?token=${token}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {

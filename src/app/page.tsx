@@ -342,7 +342,7 @@ export default function Home() {
             
             if (!alreadyRated && sr.worker) {
               // Verificar si ya tiene reseña
-              fetch(`https://jobshour.dondemorales.cl/api/v1/workers/${sr.worker.id}/reviews`, {
+              fetch(`/api/v1/workers/${sr.worker.id}/reviews`, {
                 headers: {
                   Authorization: `Bearer ${token}`,
                 },
@@ -599,7 +599,7 @@ export default function Home() {
   // Nudge ticker: fetch random nudge every 12s
   useEffect(() => {
     const fetchNudge = () => {
-      fetch('https://jobshour.dondemorales.cl/api/v1/nudges/random')
+      fetch('/api/v1/nudges/random')
         .then(r => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return r.json();
@@ -625,7 +625,7 @@ export default function Home() {
 
   // Fetch categorías desde API v1
   useEffect(() => {
-    fetch('https://jobshour.dondemorales.cl/api/v1/categories')
+    fetch('/api/v1/categories')
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -689,9 +689,9 @@ export default function Home() {
     
     // Fetch workers y demandas en paralelo
     Promise.all([
-      fetch(`https://jobshour.dondemorales.cl/api/v1/experts/nearby?${params}`, { headers })
+      fetch(`/api/v1/experts/nearby?${params}`, { headers })
         .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
-      fetch(`https://jobshour.dondemorales.cl/api/v1/demand/nearby?${params}`, { headers })
+      fetch(`/api/v1/demand/nearby?${params}`, { headers })
         .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
         .catch(() => ({ data: [], meta: {} })) // Si falla, continuar sin demandas
     ])
@@ -810,7 +810,7 @@ export default function Home() {
 
       // Si es demanda dorada, usar endpoint de demandas
       if (point.pin_type === 'demand') {
-        const url = `https://jobshour.dondemorales.cl/api/v1/demand/${point.id}`
+        const url = `/api/v1/demand/${point.id}`
         console.log('📡 Fetching demand:', url)
         const r = await fetch(url, { headers })
         
@@ -859,7 +859,7 @@ export default function Home() {
         }
       } else {
         // Worker normal
-        const url = `https://jobshour.dondemorales.cl/api/v1/experts/${point.id}`
+        const url = `/api/v1/experts/${point.id}`
         console.log('📡 Fetching expert:', url)
         const r = await fetch(url, { headers })
         
@@ -930,7 +930,7 @@ export default function Home() {
     const apiStatus = next === 'intermediate' ? 'listening' : next
     setStatusLoading(true)
     try {
-      const res = await fetch('https://jobshour.dondemorales.cl/api/v1/worker/status', {
+      const res = await fetch('/api/v1/worker/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ status: apiStatus, lat: userLat || -37.67, lng: userLng || -72.57, categories: next === 'active' ? workerCategories : undefined }),
@@ -1004,7 +1004,7 @@ export default function Home() {
 
       {/* ── MAPA FULLSCREEN (always visible in background) ── */}
       <div className="absolute inset-0 pt-[180px] pb-[68px]">
-        <MapSection ref={mapRef} points={filtered} onPointClick={handlePointClick} onMapClick={handleMapClick} />
+        <MapSection ref={mapRef} points={filtered} onPointClick={handlePointClick} onMapClick={handleMapClick} highlightedId={highlightedRequestId} />
       </div>
 
       {/* ── HEADER MODERNO CON GRADIENTES ── */}
@@ -1135,7 +1135,7 @@ export default function Home() {
               </div>
               <div className="space-y-2">
                 <button
-                  onClick={() => { window.location.href = 'https://jobshour.dondemorales.cl/api/auth/google' }}
+                  onClick={() => { window.location.href = '/api/auth/google' }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-semibold transition hover:shadow-sm"
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -1147,7 +1147,7 @@ export default function Home() {
                   <span>Continuar con Google</span>
                 </button>
                 <button
-                  onClick={() => { window.location.href = 'https://jobshour.dondemorales.cl/api/auth/facebook' }}
+                  onClick={() => { window.location.href = '/api/auth/facebook' }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-semibold transition hover:shadow-sm"
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="#1877F2">
@@ -1231,10 +1231,12 @@ export default function Home() {
                     <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
                       selectedDetail.status === 'active' ? 'bg-green-100 text-green-700' :
                       selectedDetail.status === 'intermediate' ? 'bg-amber-100 text-amber-700' :
+                      selectedDetail.status === 'demand' ? 'bg-orange-100 text-orange-700' :
                       'bg-gray-100 text-gray-500'
                     }`}>
                       {selectedDetail.status === 'active' ? 'Disponible' :
-                       selectedDetail.status === 'intermediate' ? 'En escucha' : 'No disponible'}
+                       selectedDetail.status === 'intermediate' ? 'En escucha' :
+                       selectedDetail.status === 'demand' ? 'Demanda activa' : 'No disponible'}
                     </span>
                   </div>
 
@@ -1263,14 +1265,26 @@ export default function Home() {
 
                   {/* Action buttons */}
                   <div className="grid grid-cols-2 gap-2.5">
-                    {/* Ver perfil completo */}
-                    <button
-                      onClick={() => { setSelectedWorkerId(selectedDetail.id); setShowWorkerProfileDetail(true) }}
-                      className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-2xl text-sm font-bold transition active:scale-95"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                      Ver perfil
-                    </button>
+                    {/* Ver perfil / Cómo llegar según tipo */}
+                    {selectedDetail.status === 'demand' ? (
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${selectedDetail.pos.lat},${selectedDetail.pos.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 py-3 rounded-2xl text-sm font-bold transition active:scale-95"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        Cómo llegar
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => { setSelectedWorkerId(selectedDetail.id); setShowWorkerProfileDetail(true) }}
+                        className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-2xl text-sm font-bold transition active:scale-95"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        Ver perfil
+                      </button>
+                    )}
 
                     {/* CTA principal */}
                     {selectedDetail.status === 'inactive' ? (
@@ -1348,12 +1362,29 @@ export default function Home() {
               <h2 className="text-xl font-black text-white">Demandas</h2>
               <p className="text-xs text-slate-400">Solicitudes reales que puedes tomar ahora</p>
             </div>
-            <button
-              onClick={() => { setDashHidden(true); setActiveTab('map') }}
-              className="w-8 h-8 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center justify-center transition border border-slate-700"
-            >
-              <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  console.log('🔄 Forzando recarga del feed...')
+                  setPoints([]) // Limpiar puntos
+                  fetchNearby() // Recargar mapa
+                  // Recargar feed
+                  const event = new Event('reload-feed')
+                  window.dispatchEvent(event)
+                  toast('Feed recargado', 'info')
+                }}
+                className="w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center justify-center transition"
+                title="Recargar feed"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              </button>
+              <button
+                onClick={() => { setDashHidden(true); setActiveTab('map') }}
+                className="w-8 h-8 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center justify-center transition border border-slate-700"
+              >
+                <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
           </div>
 
           {/* Dashboard Feed Moderno */}
@@ -1397,7 +1428,7 @@ export default function Home() {
                   if (token) {
                     headers['Authorization'] = `Bearer ${token}`
                   }
-                  fetch(`https://jobshour.dondemorales.cl/api/v1/experts/${request.worker_id}`, { headers })
+                  fetch(`/api/v1/experts/${request.worker_id}`, { headers })
                     .then(r => {
                       if (!r.ok) {
                         throw new Error(`HTTP ${r.status}`)
@@ -1457,31 +1488,39 @@ export default function Home() {
                   if (!token) {
                     setShowLoginModal(true)
                     toast('Inicia sesión para tomar demandas', 'info')
-                    setDashHidden(true)
                     return
                   }
 
                   // Llamar al endpoint para tomar la demanda
-                  fetch(`https://jobshour.dondemorales.cl/api/v1/demand/${request.id}/take`, {
+                  console.log('📡 Enviando POST a /take_demand.php?id=' + request.id)
+                  fetch(`/take_demand.php?id=${request.id}`, {
                     method: 'POST',
                     headers: {
                       'Authorization': `Bearer ${token}`,
                       'Accept': 'application/json',
                     },
                   })
-                  .then(r => r.json())
+                  .then(r => {
+                    console.log('📥 Respuesta HTTP:', r.status, r.ok)
+                    return r.json()
+                  })
                   .then(data => {
+                    console.log('📦 Datos recibidos:', data)
                     if (data.status === 'success') {
                       toast('Demanda tomada', 'success', 'El cliente será notificado.')
                       
-                      // Recargar feed y mapa
+                      // Remover la tarjeta del feed y el pin del mapa inmediatamente
+                      const removeEvent = new CustomEvent('remove-feed-item', { detail: { id: request.id } })
+                      window.dispatchEvent(removeEvent)
+                      setPoints(prev => prev.filter(p => !(p.id === request.id && p.pin_type === 'demand')))
+                      setSelectedDetail(null)
+                      
+                      // Recargar feed y mapa para sincronizar con el servidor
                       setTimeout(() => {
                         fetchNearby()
-                        if (dashExpanded) {
-                          const event = new Event('reload-feed')
-                          window.dispatchEvent(event)
-                        }
-                      }, 1000)
+                        const event = new Event('reload-feed')
+                        window.dispatchEvent(event)
+                      }, 1500)
                       
                       setDashHidden(true)
                     } else {
@@ -1524,7 +1563,7 @@ export default function Home() {
                     if (token) {
                       headers['Authorization'] = `Bearer ${token}`
                     }
-                    const detailRes = await fetch(`https://jobshour.dondemorales.cl/api/v1/demand/${request.id}`, { headers })
+                    const detailRes = await fetch(`/api/v1/demand/${request.id}`, { headers })
                     
                     if (detailRes.ok) {
                       const detailData = await detailRes.json()
@@ -1544,44 +1583,22 @@ export default function Home() {
                 
                 // Cerrar dashboard
                 setDashHidden(true)
+                console.log('🗺️ Ver en mapa: targetLat=' + targetLat + ' targetLng=' + targetLng)
                 
-                // Mover el mapa - método simple y directo
-                setTimeout(async () => {
-                  // Intentar con mapRef primero
-                  if (mapRef.current?.flyTo) {
-                    try {
-                      const success = await mapRef.current.flyTo([targetLat, targetLng], 18)
-                      if (success) {
-                        setHighlightedRequestId(request.id)
-                        setTimeout(() => setHighlightedRequestId(null), 3000)
-                        return
-                      }
-                    } catch (e) {
-                      console.error('Error con mapRef.flyTo:', e)
-                    }
+                // Mover el mapa - esperar a que el dashboard se cierre y el mapa se redimensione
+                setTimeout(() => {
+                  const map = (window as any).__leafletMap
+                  console.log('🗺️ __leafletMap:', !!map)
+                  if (map && typeof map.flyTo === 'function') {
+                    map.invalidateSize()
+                    map.flyTo([targetLat, targetLng], 18, { duration: 1.5 })
+                    setHighlightedRequestId(request.id)
+                    setTimeout(() => setHighlightedRequestId(null), 3000)
+                    console.log('✅ flyTo ejecutado')
+                  } else {
+                    console.error('❌ No se encontró instancia del mapa')
                   }
-                  
-                  // Fallback: acceder directamente al mapa de Leaflet
-                  const container = document.querySelector('.leaflet-container') as any
-                  if (container) {
-                    const map = container._leaflet || container.__leaflet_map || 
-                               (container._leaflet_id && (window as any).L?.maps?.[container._leaflet_id])
-                    
-                    if (map) {
-                      try {
-                        if (typeof map.flyTo === 'function') {
-                          map.flyTo([targetLat, targetLng], 18, { duration: 1.5 })
-                        } else if (typeof map.setView === 'function') {
-                          map.setView([targetLat, targetLng], 18, { animate: true })
-                        }
-                        setHighlightedRequestId(request.id)
-                        setTimeout(() => setHighlightedRequestId(null), 3000)
-                      } catch (e) {
-                        console.error('Error moviendo mapa:', e)
-                      }
-                    }
-                  }
-                }, 300)
+                }, 400)
               }}
             />
           </div>
@@ -1868,7 +1885,7 @@ export default function Home() {
               <div className="px-6 py-4 space-y-2">
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-4">Iniciar sesión</p>
                 <button 
-                  onClick={() => window.location.href = 'https://jobshour.dondemorales.cl/api/auth/google'}
+                  onClick={() => window.location.href = '/api/auth/google'}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 font-medium transition"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -1880,7 +1897,7 @@ export default function Home() {
                   <span>Continuar con Google</span>
                 </button>
                 <button 
-                  onClick={() => window.location.href = 'https://jobshour.dondemorales.cl/api/auth/facebook'}
+                  onClick={() => window.location.href = '/api/auth/facebook'}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 font-medium transition"
                 >
                   <svg className="w-4 h-4" fill="#1877F2" viewBox="0 0 24 24">
@@ -2039,10 +2056,12 @@ export default function Home() {
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
                   selectedDetail.status === 'active' ? 'bg-green-100 text-green-800' :
                   selectedDetail.status === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                  selectedDetail.status === 'demand' ? 'bg-orange-100 text-orange-800' :
                   'bg-gray-100 text-gray-800'
                 }`}>
                   {selectedDetail.status === 'active' ? 'Disponible' :
                    selectedDetail.status === 'intermediate' ? 'A convenir' :
+                   selectedDetail.status === 'demand' ? 'Demanda activa' :
                    'No disponible'}
                 </span>
               </div>
@@ -2189,7 +2208,7 @@ export default function Home() {
 
       {/* ── BOTONES INFERIORES MODERNOS ── */}
       {/* ── WORKER STATUS PILL (encima del bottom tab) ── */}
-      {user && (
+      {(!user || (user && workerStatus !== 'guest')) && (
         <div className="fixed bottom-[68px] left-4 z-[91]">
           <WorkerStatusPill
             status={workerStatus}

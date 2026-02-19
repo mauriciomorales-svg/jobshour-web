@@ -24,6 +24,7 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
   const [error, setError] = useState('')
   const [location, setLocation] = useState<string>('Detectando ubicación...')
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [catSearch, setCatSearch] = useState('')
 
   useEffect(() => {
     if (isOpen) {
@@ -211,8 +212,15 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
             {/* Grid de Habilidades */}
             <div className="mb-6">
               <h3 className="text-sm font-bold text-gray-700 mb-3">Tus habilidades:</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {categories.map((cat) => {
+              <input
+                type="text"
+                value={catSearch}
+                onChange={(e) => setCatSearch(e.target.value)}
+                placeholder="🔍 Buscar categoría..."
+                className="w-full px-3 py-2 border rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              />
+              <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                {categories.filter(c => c.name.toLowerCase().includes(catSearch.toLowerCase())).map((cat) => {
                   const isSelected = selectedCategories.includes(cat.id)
                   return (
                     <motion.button

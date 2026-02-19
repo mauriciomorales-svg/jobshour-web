@@ -34,7 +34,7 @@ export default function FlowPaymentModal({
         return
       }
 
-      const response = await fetch('https://jobshour.dondemorales.cl/api/v1/payments/flow/init', {
+      const response = await fetch('/api/v1/payments/flow/init', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

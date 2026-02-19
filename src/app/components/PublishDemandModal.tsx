@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import CategoryPicker from './CategoryPicker'
 
 interface Category {
   id: number
@@ -43,6 +44,16 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
   const [itemsCount, setItemsCount] = useState('')
   const [loadType, setLoadType] = useState<'light' | 'medium' | 'heavy'>('medium')
   const [requiresVehicle, setRequiresVehicle] = useState(false)
+
+  // Programación y multi-worker
+  const [scheduledAt, setScheduledAt] = useState('')
+  const [workersNeeded, setWorkersNeeded] = useState(1)
+  const [recurrence, setRecurrence] = useState<'once' | 'daily' | 'weekly' | 'custom'>('once')
+  const [recurrenceDays, setRecurrenceDays] = useState<number[]>([])
+
+  // Imagen adjunta
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -118,6 +129,10 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
         ttl_minutes: ttlMinutes,
         type: demandType,
         category_type: demandType === 'ride_share' ? 'travel' : demandType === 'express_errand' ? 'errand' : 'fixed',
+        workers_needed: workersNeeded,
+        recurrence,
+        ...(scheduledAt ? { scheduled_at: new Date(scheduledAt).toISOString() } : {}),
+        ...(recurrence === 'custom' && recurrenceDays.length > 0 ? { recurrence_days: recurrenceDays } : {}),
       }
 
       // Agregar campos específicos según el tipo
@@ -149,14 +164,34 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
         }
       }
 
-      const res = await fetch('/api/v1/demand/publish', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      })
+      // Use FormData if there's an image, otherwise JSON
+      let fetchOptions: RequestInit
+      if (imageFile) {
+        const formData = new FormData()
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            if (typeof value === 'object' && key === 'payload') {
+              formData.append(key, JSON.stringify(value))
+            } else {
+              formData.append(key, String(value))
+            }
+          }
+        })
+        formData.append('image', imageFile)
+        fetchOptions = {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData,
+        }
+      } else {
+        fetchOptions = {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(payload),
+        }
+      }
+
+      const res = await fetch('/api/v1/demand/publish', fetchOptions)
 
       const data = await res.json()
       if (res.ok && data.status === 'success') {
@@ -233,16 +268,12 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
           {/* Categoría */}
           <div>
             <label className="block text-sm font-medium mb-2">Categoría</label>
-            <select
-              value={categoryId || ''}
-              onChange={(e) => setCategoryId(parseInt(e.target.value))}
-              className="w-full px-3 py-2 border rounded-lg"
-            >
-              <option value="">Selecciona...</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+            <CategoryPicker
+              categories={categories}
+              selectedId={categoryId}
+              onSelect={(id) => setCategoryId(id)}
+              placeholder="Buscar categoría..."
+            />
           </div>
 
           {/* Campos específicos para RIDE_SHARE */}
@@ -374,6 +405,37 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
             />
           </div>
 
+          {/* Imagen adjunta (opcional) */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Foto (opcional)</label>
+            {imagePreview ? (
+              <div className="relative">
+                <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg border" />
+                <button
+                  onClick={() => { setImageFile(null); setImagePreview(null) }}
+                  className="absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold hover:bg-red-600"
+                >×</button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-500">
+                <span>📷</span>
+                <span>Agregar foto del producto o lugar</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setImageFile(file)
+                      setImagePreview(URL.createObjectURL(file))
+                    }
+                  }}
+                />
+              </label>
+            )}
+          </div>
+
           {/* Precio */}
           <div>
             <label className="block text-sm font-medium mb-2">Precio Ofrecido (CLP)</label>
@@ -417,6 +479,89 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
               onChange={(e) => setTtlMinutes(parseInt(e.target.value) || 30)}
               className="w-full px-3 py-2 border rounded-lg"
             />
+          </div>
+
+          {/* Opciones avanzadas */}
+          <div className="space-y-3 bg-purple-50 p-3 rounded-lg">
+            <h3 className="font-bold text-sm text-purple-800">⚡ Opciones avanzadas</h3>
+
+            {/* Programar para después */}
+            <div>
+              <label className="block text-xs font-medium mb-1">📅 Programar para después (opcional)</label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+              />
+              {scheduledAt && (
+                <button onClick={() => setScheduledAt('')} className="text-xs text-red-500 mt-1 hover:underline">✕ Quitar programación (publicar ahora)</button>
+              )}
+            </div>
+
+            {/* Multi-worker */}
+            <div>
+              <label className="block text-xs font-medium mb-1">👥 ¿Cuántas personas necesitas?</label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setWorkersNeeded(Math.max(1, workersNeeded - 1))}
+                  className="w-8 h-8 rounded-lg bg-gray-200 text-gray-700 font-bold text-lg hover:bg-gray-300"
+                >−</button>
+                <span className="w-10 text-center font-bold text-lg">{workersNeeded}</span>
+                <button
+                  onClick={() => setWorkersNeeded(Math.min(20, workersNeeded + 1))}
+                  className="w-8 h-8 rounded-lg bg-purple-200 text-purple-700 font-bold text-lg hover:bg-purple-300"
+                >+</button>
+                <span className="text-xs text-gray-500 ml-2">
+                  {workersNeeded === 1 ? 'persona' : 'personas'}
+                </span>
+              </div>
+            </div>
+
+            {/* Recurrencia */}
+            <div>
+              <label className="block text-xs font-medium mb-1">🔄 ¿Se repite?</label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {([
+                  { value: 'once' as const, label: 'Una vez' },
+                  { value: 'daily' as const, label: 'Diario' },
+                  { value: 'weekly' as const, label: 'Semanal' },
+                  { value: 'custom' as const, label: 'Personalizado' },
+                ]).map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setRecurrence(opt.value)}
+                    className={`py-1.5 rounded-lg text-[10px] font-semibold transition ${
+                      recurrence === opt.value
+                        ? 'bg-purple-100 text-purple-700 ring-2 ring-purple-500'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {recurrence === 'custom' && (
+                <div className="flex gap-1 mt-2">
+                  {['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'].map((day, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setRecurrenceDays(prev =>
+                        prev.includes(i + 1) ? prev.filter(d => d !== i + 1) : [...prev, i + 1]
+                      )}
+                      className={`w-9 h-9 rounded-full text-[10px] font-bold transition ${
+                        recurrenceDays.includes(i + 1)
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Botón Publicar */}

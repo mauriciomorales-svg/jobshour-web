@@ -38,7 +38,7 @@ export default function ReviewsList({ workerId, showAverage = true, canRespond =
   const fetchReviews = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`https://jobshour.dondemorales.cl/api/v1/workers/${workerId}/reviews`)
+      const response = await fetch(`/api/v1/workers/${workerId}/reviews`)
       const data = await response.json()
 
       if (data.status === 'success' && Array.isArray(data.data)) {

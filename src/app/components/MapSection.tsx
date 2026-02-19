@@ -36,7 +36,7 @@ const STATUS_STYLES = {
   demand: { ring: '#d97706', dot: '#d97706', bg: 'linear-gradient(135deg, #d97706, #f59e0b)', opacity: '1', shadow: '0 8px 24px rgba(217,119,6,0.4)', grayscale: '' }, // Dorado OSCURO - Demanda activa (más oscuro/naranja que amarillo)
 }
 
-function createPointIcon(p: MapPoint) {
+function createPointIcon(p: MapPoint, isHighlighted = false) {
   // Pines dorados para demanda - con avatar del worker
   if (p.pin_type === 'demand') {
     const avatar = p.avatar || `https://i.pravatar.cc/100?u=${p.id}`
@@ -47,19 +47,28 @@ function createPointIcon(p: MapPoint) {
       </div>
     ` : ''
     
+    const highlightRing = isHighlighted ? `
+      <div style="position:absolute;inset:-12px;border-radius:999px;border:4px solid #ef4444;animation:pulse 1s infinite;pointer-events:none"></div>
+      <div style="position:absolute;inset:-20px;border-radius:999px;border:2px solid rgba(239,68,68,0.3);animation:pulse 1.5s infinite;pointer-events:none"></div>
+    ` : ''
+    const size = isHighlighted ? 60 : 48
+    const iconW = isHighlighted ? 180 : 160
+    const iconH = isHighlighted ? 100 : 82
+    
     return L.divIcon({
       className: 'leaflet-marker-icon-demand',
-      iconSize: [130, 82],
-      iconAnchor: [65, 82],
+      iconSize: [iconW, iconH],
+      iconAnchor: [iconW / 2, iconH],
       html: `
-        <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:opacity 0.3s;pointer-events:auto">
-          <div style="width:48px;height:48px;border-radius:999px;padding:2.5px;background:white;box-shadow:0 8px 24px rgba(245,158,11,0.5);position:relative;border:3px solid #f59e0b;pointer-events:none">
+        <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:opacity 0.3s;pointer-events:auto;${isHighlighted ? 'z-index:9999!important;' : ''}">
+          <div style="width:${size}px;height:${size}px;border-radius:999px;padding:2.5px;background:white;box-shadow:${isHighlighted ? '0 0 30px rgba(239,68,68,0.6),0 8px 24px rgba(245,158,11,0.5)' : '0 8px 24px rgba(245,158,11,0.5)'};position:relative;border:3px solid ${isHighlighted ? '#ef4444' : '#f59e0b'};pointer-events:none">
             <img src="${avatar}" style="width:100%;height:100%;border-radius:999px;object-fit:cover;pointer-events:none" />
             <div style="position:absolute;bottom:1px;right:1px;width:11px;height:11px;background:#f59e0b;border:2px solid white;border-radius:999px;animation:pulse 2s infinite;pointer-events:none"></div>
             ${urgentBadge}
+            ${highlightRing}
           </div>
-          <div style="background:linear-gradient(135deg,#f59e0b,#eab308);color:#ffffff;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:900;font-style:italic;margin-top:5px;box-shadow:0 4px 12px rgba(245,158,11,0.4);white-space:nowrap;border:2px solid white;letter-spacing:-0.02em;pointer-events:none">
-            💰 ${price}
+          <div style="background:${isHighlighted ? 'linear-gradient(135deg,#ef4444,#f59e0b)' : 'linear-gradient(135deg,#f59e0b,#eab308)'};color:#ffffff;padding:${isHighlighted ? '5px 14px' : '4px 12px'};border-radius:999px;font-size:${isHighlighted ? '13px' : '11px'};font-weight:900;font-style:italic;margin-top:5px;box-shadow:0 4px 12px rgba(245,158,11,0.4);white-space:nowrap;border:2px solid white;letter-spacing:-0.02em;pointer-events:none">
+            ${isHighlighted ? '📍 ' : ''}${(p.name || '').split(' ')[0]} · ${price}
           </div>
         </div>
       `,
@@ -132,18 +141,20 @@ function MapClickHandler({ onClick }: { onClick: () => void }) {
 }
 
 // Componente simple para mostrar marcadores sin clustering
-function MapMarkers({ points, onPointClick }: { points: MapPoint[]; onPointClick?: (p: MapPoint) => void }) {
+function MapMarkers({ points, onPointClick, highlightedId }: { points: MapPoint[]; onPointClick?: (p: MapPoint) => void; highlightedId?: number | null }) {
   return (
     <>
       {points.map((p, idx) => {
         if (!p.pos || typeof p.pos.lat !== 'number' || typeof p.pos.lng !== 'number' || isNaN(p.pos.lat) || isNaN(p.pos.lng)) {
           return null
         }
+        const isHighlighted = highlightedId === p.id && p.pin_type === 'demand'
         return (
           <Marker
-            key={`${p.pin_type || 'point'}-${p.id}-${idx}`}
+            key={`${p.pin_type || 'point'}-${p.id}-${idx}-${isHighlighted ? 'hl' : ''}`}
             position={[p.pos.lat, p.pos.lng]}
-            icon={createPointIcon(p)}
+            icon={createPointIcon(p, isHighlighted)}
+            zIndexOffset={isHighlighted ? 1000 : 0}
             eventHandlers={{
               click: (e) => {
                 // Prevenir que el evento se propague al mapa
@@ -180,7 +191,7 @@ function MapController({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
   return null
 }
 
-const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapPoint) => void | Promise<void>; onMapClick?: () => void; mapCenter?: { lat: number; lng: number; zoom: number } | null }>(({ points, onPointClick, onMapClick, mapCenter }, ref) => {
+const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapPoint) => void | Promise<void>; onMapClick?: () => void; mapCenter?: { lat: number; lng: number; zoom: number } | null; highlightedId?: number | null }>(({ points, onPointClick, onMapClick, mapCenter, highlightedId }, ref) => {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   // Usar ref para acceder siempre al valor más reciente de mapInstance
   const mapInstanceRef = useRef<L.Map | null>(null)
@@ -202,6 +213,7 @@ const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapP
     console.log('🗺️ MapSection: Mapa recibido y guardado en estado')
     setMapInstance(map)
     mapInstanceRef.current = map
+    ;(window as any).__leafletMap = map
   }, [])
   
   // Función auxiliar para obtener el mapa (siempre busca el más reciente)
@@ -235,6 +247,7 @@ const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapP
         // Función auxiliar para ejecutar flyTo en una instancia de mapa
         const executeFlyTo = (map: L.Map): boolean => {
           try {
+            map.invalidateSize()
             if (typeof map.flyTo === 'function') {
               map.flyTo(latlng, zoom, { duration: 1.5 })
               console.log('✅ flyTo ejecutado exitosamente')
@@ -308,7 +321,7 @@ const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapP
       <ZoomControl position="bottomright" />
       <MapController onMapReady={handleMapReady} />
       {onMapClick && <MapClickHandler onClick={onMapClick} />}
-      <MapMarkers points={points} onPointClick={onPointClick} />
+      <MapMarkers points={points} onPointClick={onPointClick} highlightedId={highlightedId} />
     </MapContainer>
   )
 })

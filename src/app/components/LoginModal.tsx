@@ -46,7 +46,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
   }
 
   const handleOAuth = (provider: 'google' | 'facebook') => {
-    window.location.href = `https://jobshour.dondemorales.cl/api/auth/${provider}`
+    window.location.href = `/api/auth/${provider}`
   }
 
   if (!isOpen) return null

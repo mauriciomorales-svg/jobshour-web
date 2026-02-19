@@ -14,6 +14,18 @@ const nextConfig = {
         source: '/api/:path*',
         destination: 'http://localhost:8095/api/:path*',
       },
+      {
+        source: '/broadcasting/auth',
+        destination: 'http://localhost:8095/broadcasting_auth.php',
+      },
+      {
+        source: '/take_demand.php',
+        destination: 'http://localhost:8095/take_demand.php',
+      },
+      {
+        source: '/cancel_request.php',
+        destination: 'http://localhost:8095/cancel_request.php',
+      },
     ]
   },
 }

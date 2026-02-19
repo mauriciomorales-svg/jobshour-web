@@ -45,6 +45,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
   const [showExperienceSelector, setShowExperienceSelector] = useState(false)
   const [feedback, setFeedback] = useState<{ msg: string; type: 'ok' | 'err' | 'info' } | null>(null)
   const [savingSkills, setSavingSkills] = useState(false)
+  const [skillSearch, setSkillSearch] = useState('')
   
   const cvInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -567,8 +568,16 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
                 <p className="text-xs text-gray-400">Intenta recargar la página</p>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {availableCategories.map((category) => {
+              <>
+              <input
+                type="text"
+                value={skillSearch}
+                onChange={(e) => setSkillSearch(e.target.value)}
+                placeholder="🔍 Buscar habilidad..."
+                className="w-full px-3 py-2 border rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-300"
+              />
+              <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto">
+                {availableCategories.filter(c => c.display_name?.toLowerCase().includes(skillSearch.toLowerCase()) || c.name?.toLowerCase().includes(skillSearch.toLowerCase())).map((category) => {
                   const isSelected = selectedSkills.includes(category.id)
                   return (
                     <motion.button
@@ -606,6 +615,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
                   )
                 })}
               </div>
+              </>
             )}
             
             {/* Botón Guardar cambios visible */}

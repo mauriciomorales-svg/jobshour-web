@@ -134,7 +134,7 @@ export default function LiveTrackingModal({
     // Polling como fallback (cada 5 segundos)
     const fetchWorkerLocation = async () => {
       try {
-        const response = await fetch(`https://jobshour.dondemorales.cl/api/v1/requests/${requestId}`, {
+        const response = await fetch(`/api/v1/requests/${requestId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',
