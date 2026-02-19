@@ -1010,36 +1010,43 @@ export default function Home() {
 
       {/* ── HEADER MODERNO CON GRADIENTES ── */}
       <div className="absolute top-0 left-0 right-0 z-[100] pointer-events-none">
-        {/* Header Bar con gradiente y blur */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3 pointer-events-auto shadow-sm">
+        {/* Header Bar con fondo slate oscuro */}
+        <div className="bg-slate-950/95 backdrop-blur-md border-b border-slate-800 px-4 py-2.5 pointer-events-auto">
           <div className="flex items-center justify-between">
             {/* Botón menú */}
             <button
               onClick={() => setShowSidebar(!showSidebar)}
-              className="w-9 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-700 transition active:scale-95"
+              className="w-9 h-9 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition active:scale-95"
               aria-label="Menú"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
 
-            {/* Logo JOBSHOURS - Azul con icono de rayo */}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-                </svg>
+            {/* Logo JOBSHOURS animado */}
+            <div className="flex items-baseline font-black tracking-tighter text-xl">
+              <span className="text-white">J</span>
+              <div className="relative mx-[2px] inline-flex h-[18px] w-[18px] -translate-y-[3px] items-center justify-center">
+                <div className="absolute inset-0 rounded-full border-[2px] border-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.3)]"></div>
+                <div className="absolute h-1/2 w-[2px] origin-bottom rounded-full bg-gradient-to-t from-teal-400 to-amber-300" style={{ bottom: '50%', animation: 'spin 3s linear infinite' }}></div>
+                <div className="z-10 h-[4px] w-[4px] rounded-full bg-amber-400"></div>
               </div>
-              <div className="flex items-baseline gap-0.5">
-                <span className="font-black text-blue-900 text-lg tracking-tight">JOBS</span>
-                <span className="font-black text-blue-500 text-lg tracking-tight">HOURS</span>
+              <span className="text-white">b</span>
+              <span className="text-teal-400">s</span>
+              <span className="mx-1"></span>
+              <span className="bg-gradient-to-br from-teal-300 to-teal-500 bg-clip-text text-transparent">H</span>
+              <div className="relative mx-[2px] inline-flex h-[18px] w-[18px] -translate-y-[3px] items-center justify-center">
+                <div className="absolute inset-0 rounded-full border-[2px] border-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.3)]"></div>
+                <div className="absolute h-1/2 w-[2px] origin-bottom rounded-full bg-gradient-to-t from-teal-400 to-amber-300" style={{ bottom: '50%', animation: 'spin 5s linear infinite' }}></div>
+                <div className="z-10 h-[4px] w-[4px] rounded-full bg-amber-400"></div>
               </div>
+              <span className="bg-gradient-to-br from-teal-300 to-teal-500 bg-clip-text text-transparent">urs</span>
             </div>
 
             {/* Auth button */}
             {!user ? (
               <button
                 onClick={() => setShowLoginModal(!showLoginModal)}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-sm"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-[0_0_12px_rgba(45,212,191,0.3)]"
               >
                 Ingresar
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
@@ -1047,69 +1054,70 @@ export default function Home() {
             ) : (
               <button
                 onClick={() => setShowSidebar(true)}
-                className="flex items-center gap-2 pr-3 pl-1 py-1 bg-gray-100 hover:bg-gray-200 rounded-xl transition active:scale-95"
+                className="flex items-center gap-2 pr-3 pl-1 py-1 bg-slate-800 hover:bg-slate-700 rounded-xl transition active:scale-95"
               >
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} className="w-7 h-7 rounded-lg object-cover" alt={user.firstName} />
                 ) : (
-                  <div className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center text-white font-black text-sm">
+                  <div className="w-7 h-7 rounded-lg bg-teal-500 flex items-center justify-center text-white font-black text-sm">
                     {user.firstName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="text-xs font-bold text-gray-700 max-w-[60px] truncate">{user.firstName}</span>
+                <span className="text-xs font-bold text-slate-300 max-w-[60px] truncate">{user.firstName}</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Barra de búsqueda moderna */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3 pointer-events-auto">
-          <div className="flex items-center bg-gray-50 rounded-xl px-4 py-2.5 border border-gray-200 shadow-sm">
-            <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            <input
-              type="text"
-              placeholder="Buscar trabajadores..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder:text-gray-400 ml-3"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600 ml-2 transition">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Contador workers verdes cercanos */}
-        {workerCount !== null && (
-          <div className="bg-white px-4 pb-1 pointer-events-auto">
-            <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 border border-green-200 rounded-full text-xs font-semibold text-green-700">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block" />
+        {/* Barra de búsqueda + contador */}
+        <div className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-2.5 pointer-events-auto">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center bg-slate-800 rounded-xl px-3.5 py-2 border border-slate-700">
+              <svg className="w-4 h-4 text-teal-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              <input
+                type="text"
+                placeholder="Buscar servicios cercanos..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent outline-none text-sm text-slate-200 placeholder:text-slate-500 ml-2.5"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="text-slate-500 hover:text-slate-300 ml-2 transition">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              )}
+            </div>
+            {workerCount !== null && (
+              <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 bg-teal-500/15 border border-teal-500/30 rounded-full text-xs font-bold text-teal-400">
+                <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse inline-block" />
                 {workerCount.label}
               </span>
-            </div>
+            )}
           </div>
+        </div>
+
+        {/* Spacer eliminado — contador ahora está integrado en la barra de búsqueda */}
+        {false && workerCount !== null && (
+          <div className="hidden"></div>
         )}
 
-        {/* Filtros de categorías modernos */}
-        <div className="bg-white px-4 pb-3 pointer-events-auto">
+        {/* Filtros de categorías */}
+        <div className="bg-slate-900/80 backdrop-blur-md px-4 py-2 pointer-events-auto border-b border-slate-800/50">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {categories.map(c => (
               <button
                 key={c.id}
                 onClick={() => handleCategoryClick(c.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
                   activeCategory === c.id
-                    ? 'bg-blue-100 text-blue-800 border border-blue-300 shadow-sm'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                    ? 'bg-teal-500/25 text-teal-300 border border-teal-400/40 shadow-[0_0_8px_rgba(45,212,191,0.15)]'
+                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700 border border-slate-700'
                 }`}
               >
-                <span className="text-base">{ICON_MAP[c.icon] || '📌'}</span>
+                <span className="text-sm">{ICON_MAP[c.icon] || '📌'}</span>
                 <span>{c.name}</span>
                 {c.active_count > 0 && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeCategory === c.id ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-600'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeCategory === c.id ? 'bg-teal-400/20 text-teal-300' : 'bg-slate-700 text-slate-500'}`}>
                     {c.active_count}
                   </span>
                 )}
