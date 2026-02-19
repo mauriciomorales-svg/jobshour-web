@@ -17,6 +17,7 @@ const WorkerFAB = dynamic(() => import('./components/WorkerFAB'), { ssr: false }
 const DashboardFeed = dynamic(() => import('./components/DashboardFeed'), { ssr: false })
 const CategoryManagement = dynamic(() => import('./components/CategoryManagement'), { ssr: false })
 const PublishDemandModal = dynamic(() => import('./components/PublishDemandModal'), { ssr: false })
+const MisSolicitudes = dynamic(() => import('./components/MisSolicitudes'), { ssr: false })
 const ReviewsList = dynamic(() => import('./components/ReviewsList'), { ssr: false })
 const RatingModal = dynamic(() => import('./components/RatingModal'), { ssr: false })
 // Temporalmente deshabilitado para debug
@@ -107,6 +108,7 @@ export default function Home() {
   const [tipIndex, setTipIndex] = useState(0)
   const [dashExpanded, setDashExpanded] = useState(false)
   const [dashHidden, setDashHidden] = useState(true)
+  const [showSolicitudesPanel, setShowSolicitudesPanel] = useState(false)
   const [widgetCycle, setWidgetCycle] = useState(0)
   const [user, setUser] = useState<{ id: number; name: string; firstName: string; avatarUrl: string | null; provider: string; token: string } | null>(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -909,9 +911,9 @@ export default function Home() {
   // Tab navigation handler
   const handleTabChange = useCallback((tab: TabKey) => {
     setActiveTab(tab)
-    if (tab === 'map') { setDashHidden(true); setActiveSection('map') }
-    if (tab === 'feed') { setDashHidden(false); setActiveSection('map') }
-    if (tab === 'requests') { setDashHidden(false); setActiveSection('map') }
+    if (tab === 'map') { setDashHidden(true); setShowSolicitudesPanel(false); setActiveSection('map') }
+    if (tab === 'feed') { setDashHidden(false); setShowSolicitudesPanel(false); setActiveSection('map') }
+    if (tab === 'requests') { setDashHidden(true); setShowSolicitudesPanel(true); setActiveSection('map') }
     if (tab === 'profile') {
       if (!user) { setShowLoginModal(true); return }
       setActiveSection('profile')
@@ -1340,13 +1342,15 @@ export default function Home() {
       <div className={`fixed inset-0 z-[150] transition-all duration-500 ease-out ${dashHidden ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'}`}>
         <div className="bg-slate-900 h-full w-full overflow-hidden flex flex-col shadow-2xl">
           
-          {/* Header con título y X para cerrar */}
+          {/* Header */}
           <div className="sticky top-0 bg-slate-900 px-4 pt-4 pb-3 border-b border-slate-700/50 z-10 flex items-center justify-between">
-            <h2 className="text-xl font-black text-white">Feed de Oportunidades</h2>
+            <div>
+              <h2 className="text-xl font-black text-white">Demandas</h2>
+              <p className="text-xs text-slate-400">Solicitudes reales que puedes tomar ahora</p>
+            </div>
             <button
-              onClick={() => setDashHidden(true)}
+              onClick={() => { setDashHidden(true); setActiveTab('map') }}
               className="w-8 h-8 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center justify-center transition border border-slate-700"
-              title="Cerrar dashboard"
             >
               <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
@@ -1583,6 +1587,17 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* ══ PANEL MIS SOLICITUDES ══ */}
+      {showSolicitudesPanel && (
+        <div className="fixed inset-0 z-[150]">
+          <MisSolicitudes
+            user={user}
+            onLoginRequest={() => { setShowSolicitudesPanel(false); setShowLoginModal(true) }}
+            onClose={() => { setShowSolicitudesPanel(false); setActiveTab('map') }}
+          />
+        </div>
+      )}
 
       {/* ── SIDEBAR PANEL (Diseño de la imagen) ── */}
       {showSidebar && (
