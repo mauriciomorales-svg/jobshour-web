@@ -1121,8 +1121,8 @@ export default function Home() {
       {/* ── LOGIN MODAL DROPDOWN ── */}
       {showLoginModal && !user && (
         <>
-          <div className="fixed inset-0 z-[150]" onClick={() => setShowLoginModal(false)} />
-          <div className="absolute top-14 right-3 z-[151] w-72 animate-slide-up">
+          <div className="fixed inset-0 z-[298] bg-black/40 backdrop-blur-sm" onClick={() => setShowLoginModal(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[299] w-80 animate-slide-up">
             <div className="bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.18)] border border-slate-100 p-5">
               <div className="text-center mb-4">
                 <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">

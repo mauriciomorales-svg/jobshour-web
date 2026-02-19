@@ -65,7 +65,7 @@ export default function DashboardFeed({ userLat, userLng, onCardClick, highlight
 
     try {
       const currentCursor = reset ? 0 : cursorRef.current
-      const url = `https://jobshour.dondemorales.cl/api/v1/dashboard/feed?lat=${userLat}&lng=${userLng}&cursor=${currentCursor}&_t=${Date.now()}`
+      const url = `/api/v1/dashboard/feed?lat=${userLat}&lng=${userLng}&cursor=${currentCursor}&_t=${Date.now()}`
       
       const res = await fetch(url)
       if (!res.ok) {
