@@ -133,6 +133,7 @@ export default function Home() {
 
   const [userLat, setUserLat] = useState<number>(-37.6672) // Latitud del usuario
   const [userLng, setUserLng] = useState<number>(-72.5730) // Longitud del usuario
+  const [workerCount, setWorkerCount] = useState<{ count: number; label: string } | null>(null)
   const chatNotifySeenIdsRef = useRef<Set<number>>(new Set())
   const chatNotifySubscribedIdsRef = useRef<Set<number>>(new Set())
   const mapRef = useRef<{ flyTo: (latlng: [number, number], zoom: number) => Promise<boolean> } | null>(null)
@@ -489,6 +490,8 @@ export default function Home() {
             pos: e.lat && e.lng ? { lat: e.lat, lng: e.lng } : p.pos,
           }
         }))
+        // Invalidar cache del contador cuando cambia un worker
+        fetchWorkerCount(userLat, userLng)
       })
     })
 
@@ -498,7 +501,25 @@ export default function Home() {
         try { echo.leave('workers') } catch { /* ignore */ }
       }
     }
+  }, [userLat, userLng])
+
+  // Contador workers verdes cercanos — polling cada 45s + cacheado en backend
+  const fetchWorkerCount = useCallback(async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(`/api/v1/experts/count?lat=${lat}&lng=${lng}&radius=10`)
+      if (!res.ok) return
+      const data = await res.json()
+      setWorkerCount({ count: data.count, label: data.label })
+    } catch {
+      // silencioso — no romper UI
+    }
   }, [])
+
+  useEffect(() => {
+    fetchWorkerCount(userLat, userLng)
+    const interval = setInterval(() => fetchWorkerCount(userLat, userLng), 45_000)
+    return () => clearInterval(interval)
+  }, [userLat, userLng, fetchWorkerCount])
 
   useEffect(() => {
     if (!user?.id) return
@@ -1011,6 +1032,18 @@ export default function Home() {
             )}
           </div>
         </div>
+
+        {/* Contador workers verdes cercanos */}
+        {workerCount !== null && (
+          <div className="bg-white px-4 pb-1 pointer-events-auto">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 border border-green-200 rounded-full text-xs font-semibold text-green-700">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block" />
+                {workerCount.label}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Filtros de categorías modernos */}
         <div className="bg-white px-4 pb-3 pointer-events-auto">
