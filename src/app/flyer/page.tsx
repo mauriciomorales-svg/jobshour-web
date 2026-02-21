@@ -12,7 +12,7 @@ export default function FlyerPage() {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #1e293b; font-family: 'Inter', sans-serif; }
         .flyer {
-          width: 210mm; min-height: 297mm;
+          width: 216mm; min-height: 279mm;
           background: linear-gradient(160deg, #0f172a 0%, #0f2a2a 50%, #0f172a 100%);
           color: white; display: flex; flex-direction: column;
           margin: 0 auto; position: relative; overflow: hidden;
@@ -50,7 +50,8 @@ export default function FlyerPage() {
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
           body { background: #0f172a !important; margin: 0; }
           .print-btn { display: none !important; }
-          .flyer { width: 210mm; min-height: 297mm; margin: 0; }
+          .flyer { width: 216mm; min-height: 279mm; margin: 0; }
+          @page { size: letter; margin: 0; }
         }
       `}</style>
 
