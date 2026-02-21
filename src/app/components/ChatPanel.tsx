@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import ChatImageUpload from './ChatImageUpload'
 import { apiFetch } from '@/lib/api'
+import dynamic from 'next/dynamic'
+const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
 
 interface ChatMessage {
   id: number
@@ -374,6 +376,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose }: Props) 
               className="flex-1 bg-gray-100 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition placeholder:text-gray-400 border border-transparent focus:border-blue-200"
               maxLength={1000}
             />
+            <VoiceInput onTranscript={(t) => setNewMsg(prev => prev ? prev + ' ' + t : t)} />
             <button
               onClick={handleSend}
               disabled={sending || (!newMsg.trim() && !selectedImage)}

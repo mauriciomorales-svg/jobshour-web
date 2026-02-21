@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
+import dynamic from 'next/dynamic'
+const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
 import CategoryPicker from './CategoryPicker'
 
 interface Category {
@@ -252,13 +254,18 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
           {/* Descripción */}
           <div>
             <label className="block text-sm font-semibold mb-2">¿Qué necesitas? <span className="text-red-500">*</span></label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe brevemente lo que necesitas..."
-              className="w-full h-24 px-3 py-2 border rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
-              maxLength={500}
-            />
+            <div className="relative">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe brevemente lo que necesitas..."
+                className="w-full h-24 px-3 py-2 pr-10 border rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
+                maxLength={500}
+              />
+              <div className="absolute bottom-2 right-2">
+                <VoiceInput onTranscript={(t) => setDescription(prev => prev ? prev + ' ' + t : t)} />
+              </div>
+            </div>
           </div>
 
           {/* Precio */}
