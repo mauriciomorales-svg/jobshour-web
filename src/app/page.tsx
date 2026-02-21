@@ -2156,7 +2156,7 @@ export default function Home() {
       {showChat && activeRequestId && (
         <ChatPanel
           requestId={activeRequestId}
-          currentUserId={0}
+          currentUserId={user?.id ?? 0}
           onClose={() => setShowChat(false)}
           requestDescription={chatContext.description}
           otherPersonName={chatContext.name}
