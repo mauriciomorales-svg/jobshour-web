@@ -39,9 +39,11 @@ export default function AddressAutocomplete({ value, onChange, onSelect, placeho
     setLoading(true)
     try {
       const extraParams = searchType === 'amenity' ? '&featuretype=settlement&featuretype=amenity' : ''
-      // viewbox: Biobío + La Araucanía (Los Ángeles, Nacimiento, Angol, Renaico, Temuco)
+      // viewbox: Biobío + La Araucanía
       const viewbox = '&viewbox=-74.0,-36.0,-71.0,-40.0&bounded=1'
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=cl&limit=6&addressdetails=1${extraParams}${viewbox}`, {
+      // Agregar contexto geográfico para mejorar resultados en ciudades pequeñas
+      const qWithContext = searchType === 'address' ? `${q}, Chile` : q
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(qWithContext)}&countrycodes=cl&limit=8&addressdetails=1${extraParams}${viewbox}`, {
         headers: { 'Accept-Language': 'es' }
       })
       const data = await res.json()
@@ -58,10 +60,17 @@ export default function AddressAutocomplete({ value, onChange, onSelect, placeho
     debounceRef.current = setTimeout(() => search(v), 400)
   }
 
+  const formatSuggestion = (s: Suggestion): string => {
+    if (searchType === 'amenity') return s.display_name.split(',')[0].trim()
+    const addr = s.address || {}
+    const road = addr.road || ''
+    const city = addr.city || addr.town || addr.village || addr.suburb || ''
+    if (road && city) return `${road}, ${city}`
+    return s.display_name.split(',').slice(0, 3).join(',').trim()
+  }
+
   const handleSelect = (s: Suggestion) => {
-    const label = searchType === 'amenity'
-      ? s.display_name.split(',')[0].trim()
-      : s.display_name.split(',').slice(0, 3).join(',').trim()
+    const label = formatSuggestion(s)
     onChange(label)
     onSelect?.(label, parseFloat(s.lat), parseFloat(s.lon))
     setSuggestions([])
@@ -136,17 +145,23 @@ export default function AddressAutocomplete({ value, onChange, onSelect, placeho
 
       {open && suggestions.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-          {suggestions.map((s, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => handleSelect(s)}
-              className="w-full text-left px-3 py-2.5 text-sm hover:bg-amber-50 border-b border-gray-100 last:border-0 transition"
-            >
-              <span className="font-medium text-gray-800">{s.display_name.split(',')[0]}</span>
-              <span className="text-gray-400 text-xs block truncate">{s.display_name.split(',').slice(1, 3).join(',')}</span>
-            </button>
-          ))}
+          {suggestions.map((s, i) => {
+            const addr = s.address || {}
+            const road = addr.road || s.display_name.split(',')[0]
+            const city = addr.city || addr.town || addr.village || addr.suburb || ''
+            const state = addr.state || ''
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => handleSelect(s)}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-amber-50 border-b border-gray-100 last:border-0 transition"
+              >
+                <span className="font-medium text-gray-800">{road}</span>
+                <span className="text-gray-400 text-xs block truncate">{[city, state].filter(Boolean).join(', ')}</span>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

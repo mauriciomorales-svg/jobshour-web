@@ -61,6 +61,20 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
   const [rideDeliveryAddress, setRideDeliveryAddress] = useState('')
   const [departureTime, setDepartureTime] = useState('')
   const [seats, setSeats] = useState(1)
+  const [distanceKm, setDistanceKm] = useState<number | null>(null)
+
+  // Calcular distancia aproximada al worker usando GPS del usuario
+  useEffect(() => {
+    if (!expert.pos?.lat || !expert.pos?.lng) return
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const R = 6371
+      const dLat = (expert.pos!.lat - pos.coords.latitude) * Math.PI / 180
+      const dLng = (expert.pos!.lng - pos.coords.longitude) * Math.PI / 180
+      const a = Math.sin(dLat/2)**2 + Math.cos(pos.coords.latitude * Math.PI/180) * Math.cos(expert.pos!.lat * Math.PI/180) * Math.sin(dLng/2)**2
+      setDistanceKm(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)))
+    }, () => {}, { enableHighAccuracy: false, timeout: 5000 })
+  }, [expert.pos])
   
   const isRecados = expert.category?.icon === 'package'
   const hasActiveRoute = expert.active_route && expert.active_route.destination
@@ -304,6 +318,9 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             <div className="text-right shrink-0">
               <p className="text-teal-400 font-black text-base">${expert.hourly_rate.toLocaleString('es-CL')}</p>
               <p className="text-slate-500 text-[10px]">por hora</p>
+              {distanceKm !== null && (
+                <p className="text-slate-400 text-[10px] mt-0.5">📍 ~{distanceKm < 1 ? `${Math.round(distanceKm*1000)}m` : `${distanceKm.toFixed(1)}km`}</p>
+              )}
             </div>
           </div>
 
@@ -375,8 +392,17 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
                 </div>
                 <span className="text-sm font-semibold">Requiere vehículo</span>
               </button>
-              <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Dirección de entrega</label>
-                <AddressAutocomplete value={deliveryAddress} onChange={setDeliveryAddress} placeholder="Calle, número, comuna" /></div>
+              <div>
+                <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Dirección de entrega</label>
+                <input type="text" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="Ej: Los Robles 123, Renaico" className={inputCls} />
+                {deliveryAddress.trim().length > 3 && (
+                  <a href={`https://maps.google.com/?q=${encodeURIComponent(deliveryAddress)}`} target="_blank" rel="noopener noreferrer"
+                    className="mt-1.5 flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    Ver en Google Maps
+                  </a>
+                )}
+              </div>
             </div>
           )}
 
@@ -396,8 +422,17 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
               </div>
               <div><label className="text-xs font-bold text-slate-400 mb-1.5 block">Peso aproximado (kg)</label>
                 <input type="number" value={cargaPeso} onChange={e => setCargaPeso(e.target.value)} placeholder="Ej: 2.5" step="0.1" className={inputCls} /></div>
-              <div><label className="text-xs font-bold text-slate-400 mb-1.5 block">Dirección de entrega</label>
-                <AddressAutocomplete value={deliveryAddress} onChange={setDeliveryAddress} placeholder="Calle, número, comuna" /></div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 mb-1.5 block">Dirección de entrega</label>
+                <input type="text" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="Ej: Los Robles 123, Renaico" className={inputCls} />
+                {deliveryAddress.trim().length > 3 && (
+                  <a href={`https://maps.google.com/?q=${encodeURIComponent(deliveryAddress)}`} target="_blank" rel="noopener noreferrer"
+                    className="mt-1.5 flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    Ver en Google Maps
+                  </a>
+                )}
+              </div>
             </div>
           )}
 
