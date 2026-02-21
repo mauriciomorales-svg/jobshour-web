@@ -30,7 +30,7 @@ export function getEcho(): Echo<any> {
       key: process.env.NEXT_PUBLIC_PUSHER_KEY ?? '9a309a9f35c89457ea2c',
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? 'us2',
       forceTLS: true,
-      authEndpoint: process.env.NEXT_PUBLIC_ECHO_AUTH_ENDPOINT ?? 'https://jobshour.dondemorales.cl/api/broadcasting/auth',
+      authEndpoint: process.env.NEXT_PUBLIC_ECHO_AUTH_ENDPOINT ?? (typeof window !== 'undefined' && window.location.protocol === 'file:' ? 'https://jobshour.dondemorales.cl/api/broadcasting/auth' : '/api/broadcasting/auth'),
       auth: {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       },
