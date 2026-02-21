@@ -18,15 +18,9 @@ export async function openExternalBrowser(url: string): Promise<void> {
   const absoluteUrl = url.startsWith('http') ? url : `${BACKEND_URL}${url}`
 
   if (isCapacitor()) {
-    // Usar el plugin nativo OAuthHelperPlugin que abre Chrome Custom Tabs
-    const cap = (window as any).Capacitor
-    if (cap && cap.Plugins && cap.Plugins.OAuthHelper) {
-      await cap.Plugins.OAuthHelper.openExternalBrowser({ url: absoluteUrl })
-    } else {
-      // Fallback al plugin Browser de Capacitor
-      const { Browser } = await import('@capacitor/browser')
-      await Browser.open({ url: absoluteUrl })
-    }
+    // Usar Browser de Capacitor para que el deep link cierre el Custom Tab automáticamente
+    const { Browser } = await import('@capacitor/browser')
+    await Browser.open({ url: absoluteUrl })
   } else {
     window.location.href = absoluteUrl
   }

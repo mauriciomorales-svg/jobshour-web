@@ -9,7 +9,9 @@ function MobileSuccessContent() {
 
   useEffect(() => {
     if (!authKey) return
-    // Pasar la key directamente en el deep link - no usar localStorage (contextos distintos)
+    // Guardar key en localStorage para que browserFinished la recupere
+    try { localStorage.setItem('pending_auth_key', authKey) } catch(e) {}
+    // Intentar deep link para cerrar el Custom Tab automáticamente
     setTimeout(() => {
       window.location.href = 'jobshour://auth-success?key=' + encodeURIComponent(authKey)
     }, 800)

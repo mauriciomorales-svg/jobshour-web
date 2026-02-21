@@ -185,7 +185,7 @@ export default function Home() {
   // Fetch user profile from API
   const fetchUserProfile = useCallback(async (token: string) => {
     try {
-      const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+      const r = await fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
       if (!r.ok) { 
         localStorage.removeItem('auth_token')
         setUser(null)
@@ -252,7 +252,7 @@ export default function Home() {
   // Fetch worker data including categories
   const fetchWorkerData = useCallback(async (token: string) => {
     try {
-      const res = await fetch('/api/v1/worker/me', {
+      const res = await fetch(`${API_BASE}/api/v1/worker/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -353,7 +353,7 @@ export default function Home() {
         const savedEmail = localStorage.getItem('saved_email')
         const savedPassword = localStorage.getItem('saved_password')
         if (savedEmail && savedPassword) {
-          fetch('/api/auth/login', {
+          fetch(`${API_BASE}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: savedEmail, password: savedPassword })
@@ -392,7 +392,7 @@ export default function Home() {
     }
 
     const sync = () => {
-      fetch('/api/v1/requests/mine', {
+      fetch(`${API_BASE}/api/v1/requests/mine`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -684,7 +684,7 @@ export default function Home() {
   // Nudge ticker: fetch random nudge every 12s
   useEffect(() => {
     const fetchNudge = () => {
-      fetch('/api/v1/nudges/random')
+      fetch(`${API_BASE}/api/v1/nudges/random`)
         .then(r => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return r.json();
@@ -710,7 +710,7 @@ export default function Home() {
 
   // Fetch categorías desde API v1
   useEffect(() => {
-    fetch('/api/v1/categories')
+    fetch(`${API_BASE}/api/v1/categories`)
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -731,26 +731,28 @@ export default function Home() {
   })
   
   const fetchNearby = useCallback((categoryId?: number | null) => {
-    // Throttle simple: máximo una llamada cada 2 segundos
+    // Throttle: máximo una llamada cada 2 segundos
     const now = Date.now()
     const timeSinceLastCall = now - fetchNearbyRef.current.lastCall
     const throttleMs = 2000
-    
-    if (fetchNearbyRef.current.timeoutId) {
-      return // Ya hay una llamada pendiente
-    }
-    
-    if (timeSinceLastCall < throttleMs) {
+
+    if (timeSinceLastCall < throttleMs && fetchNearbyRef.current.lastCall !== 0) {
+      if (fetchNearbyRef.current.timeoutId) clearTimeout(fetchNearbyRef.current.timeoutId)
       const delay = throttleMs - timeSinceLastCall
       console.log(`⏭️ fetchNearby: throttling ${Math.round(delay)}ms`)
       fetchNearbyRef.current.timeoutId = setTimeout(() => {
-        fetchNearbyRef.current.lastCall = Date.now()
         fetchNearbyRef.current.timeoutId = null
+        fetchNearbyRef.current.lastCall = 0
         fetchNearby(categoryId)
       }, delay)
       return
     }
-    
+
+    if (fetchNearbyRef.current.timeoutId) {
+      clearTimeout(fetchNearbyRef.current.timeoutId)
+      fetchNearbyRef.current.timeoutId = null
+    }
+
     fetchNearbyRef.current.lastCall = now
     
     setLoading(true)
@@ -847,7 +849,8 @@ export default function Home() {
     }
   }, [])
 
-  useEffect(() => { fetchNearby() }, [fetchNearby])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchNearby() }, [])
 
   // Filtro local por búsqueda de texto Y estado del usuario
   const filtered = (() => {
@@ -1019,7 +1022,7 @@ export default function Home() {
     const apiStatus = next === 'intermediate' ? 'listening' : next
     setStatusLoading(true)
     try {
-      const res = await fetch('/api/v1/worker/status', {
+      const res = await fetch(`${API_BASE}/api/v1/worker/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ status: apiStatus, lat: userLat || -37.67, lng: userLng || -72.57, categories: next === 'active' ? workerCategories : undefined }),
@@ -1241,7 +1244,9 @@ export default function Home() {
                     e.preventDefault()
                     e.stopPropagation()
                     const { openExternalBrowser } = await import('@/lib/capacitor')
-                    await openExternalBrowser('https://jobshour.dondemorales.cl/api/auth/google?mobile=true')
+                    const isNative = (await import('@capacitor/core')).Capacitor.isNativePlatform()
+                    const url = isNative ? 'https://jobshour.dondemorales.cl/api/auth/google?mobile=true' : 'https://jobshour.dondemorales.cl/api/auth/google'
+                    await openExternalBrowser(url)
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-semibold transition hover:shadow-sm"
                 >
@@ -2097,7 +2102,7 @@ export default function Home() {
               <div className="px-5 py-6 space-y-3">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Iniciar sesión</p>
                 <button 
-                  onClick={async (e) => { e.preventDefault(); const { openExternalBrowser } = await import('@/lib/capacitor'); await openExternalBrowser('https://jobshour.dondemorales.cl/api/auth/google?mobile=true') }}
+                  onClick={async (e) => { e.preventDefault(); const { openExternalBrowser } = await import('@/lib/capacitor'); const isNative = (await import('@capacitor/core')).Capacitor.isNativePlatform(); const url = isNative ? 'https://jobshour.dondemorales.cl/api/auth/google?mobile=true' : 'https://jobshour.dondemorales.cl/api/auth/google'; await openExternalBrowser(url) }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-sm text-slate-300 font-semibold transition"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -2314,7 +2319,7 @@ export default function Home() {
             if (user) {
               const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
               if (token) {
-                fetch('/api/v1/requests/mine', {
+                fetch(`${API_BASE}/api/v1/requests/mine`, {
                   headers: { Authorization: `Bearer ${token}` },
                 })
                   .then(r => r.json())
