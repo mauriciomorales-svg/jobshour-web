@@ -1,9 +1,33 @@
 'use client'
 import { QRCodeSVG } from 'qrcode.react'
+import { useRef, useState } from 'react'
 
 const LANDING_URL = 'https://jobshour.dondemorales.cl/landing'
 
 export default function FlyerPage() {
+  const flyerRef = useRef<HTMLDivElement>(null)
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownload = async () => {
+    if (!flyerRef.current) return
+    setDownloading(true)
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(flyerRef.current, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: '#0f172a',
+        logging: false,
+      })
+      const link = document.createElement('a')
+      link.download = 'jobshour-flyer.png'
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    } catch (e) {
+      alert('Error al generar imagen')
+    }
+    setDownloading(false)
+  }
 
   return (
     <>
@@ -52,10 +76,13 @@ export default function FlyerPage() {
           .print-btn { display: none !important; }
           .flyer { width: 216mm; min-height: 279mm; margin: 0; }
           @page { size: letter; margin: 0; }
+          @page :first { margin: 0; }
+          html { margin: 0; }
+          head, header, footer { display: none !important; }
         }
       `}</style>
 
-      <div className="flyer">
+      <div className="flyer" ref={flyerRef}>
         <div className="header">
           <div className="logo-box">
             <svg width="44" height="44" viewBox="0 0 1024 1024" fill="none">
@@ -116,7 +143,12 @@ export default function FlyerPage() {
         </div>
       </div>
 
-      <button className="print-btn" onClick={() => window.print()}>🖨️ Imprimir flyer</button>
+      <div style={{position:'fixed',bottom:24,right:24,display:'flex',flexDirection:'column',gap:10,zIndex:100}}>
+        <button className="print-btn" style={{position:'static'}} onClick={() => window.print()}>🖨️ Imprimir</button>
+        <button className="print-btn" style={{position:'static',background:'#6366f1'}} onClick={handleDownload} disabled={downloading}>
+          {downloading ? '⏳ Generando...' : '⬇️ Descargar PNG'}
+        </button>
+      </div>
     </>
   )
 }
