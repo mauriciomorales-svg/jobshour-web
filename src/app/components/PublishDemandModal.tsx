@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 import CategoryPicker from './CategoryPicker'
 
 interface Category {
@@ -60,11 +61,10 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  // Asignar categoría automáticamente según tipo
+  // Asignar categoría automáticamente según tipo (usar primera disponible si no hay match)
   useEffect(() => {
-    if (demandType === 'ride_share') setCategoryId(12)       // Movilidad Vecinal
-    else if (demandType === 'express_errand') setCategoryId(11) // Mandados y Vueltas
-    else setCategoryId(null)
+    if (demandType === 'fixed_job') setCategoryId(null)
+    // Para ride_share y express_errand, dejar que el usuario elija
   }, [demandType])
 
   useEffect(() => {
@@ -204,7 +204,7 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
         }
       }
 
-      const res = await fetch('/api/v1/demand/publish', fetchOptions)
+      const res = await apiFetch('/api/v1/demand/publish', fetchOptions)
 
       const data = await res.json()
       if (res.ok && data.status === 'success') {
@@ -225,414 +225,131 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
     }
   }
 
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
   return (
     <div className="fixed inset-0 z-[400] bg-black/50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold">Publicar Demanda</h2>
+          <h2 className="text-xl font-bold">¿Qué necesitas?</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
         </div>
 
         <div className="p-4 space-y-4">
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
+          {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">{error}</div>}
 
-          {/* Tipo de Demanda */}
+          {/* Categoría */}
           <div>
-            <label className="block text-sm font-medium mb-2">Tipo de Servicio</label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => setDemandType('fixed_job')}
-                className={`py-2 px-3 rounded-lg text-xs font-semibold transition ${
-                  demandType === 'fixed_job' 
-                    ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500' 
-                    : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                🔧 Trabajo
-              </button>
-              <button
-                onClick={() => setDemandType('ride_share')}
-                className={`py-2 px-3 rounded-lg text-xs font-semibold transition ${
-                  demandType === 'ride_share' 
-                    ? 'bg-green-100 text-green-700 ring-2 ring-green-500' 
-                    : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                🚗 Viaje
-              </button>
-              <button
-                onClick={() => setDemandType('express_errand')}
-                className={`py-2 px-3 rounded-lg text-xs font-semibold transition ${
-                  demandType === 'express_errand' 
-                    ? 'bg-orange-100 text-orange-700 ring-2 ring-orange-500' 
-                    : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                📦 Compra
-              </button>
-            </div>
+            <label className="block text-sm font-semibold mb-2">Categoría <span className="text-red-500">*</span></label>
+            <CategoryPicker
+              categories={categories}
+              selectedId={categoryId}
+              onSelect={(id) => setCategoryId(id)}
+              placeholder="¿Qué tipo de servicio?"
+            />
           </div>
-
-          {/* Categoría - solo para trabajos fijos */}
-          {demandType === 'fixed_job' && (
-            <div>
-              <label className="block text-sm font-medium mb-2">Categoría</label>
-              <CategoryPicker
-                categories={categories}
-                selectedId={categoryId}
-                onSelect={(id) => setCategoryId(id)}
-                placeholder="Buscar categoría..."
-              />
-            </div>
-          )}
-
-          {/* Campos específicos para RIDE_SHARE */}
-          {demandType === 'ride_share' && (
-            <div className="space-y-3">
-              {/* Selector Chofer / Pasajero */}
-              <div>
-                <label className="block text-sm font-semibold mb-2">¿Cuál es tu rol?</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setTravelRole('passenger')}
-                    className={`flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 transition font-semibold text-sm ${
-                      travelRole === 'passenger'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-500'
-                    }`}
-                  >
-                    <span className="text-2xl">🙋</span>
-                    <span>Soy Pasajero</span>
-                    <span className="text-[10px] font-normal opacity-70">Busco quien me lleve</span>
-                  </button>
-                  <button
-                    onClick={() => setTravelRole('driver')}
-                    className={`flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 transition font-semibold text-sm ${
-                      travelRole === 'driver'
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-500'
-                    }`}
-                  >
-                    <span className="text-2xl">🚗</span>
-                    <span>Soy Chofer</span>
-                    <span className="text-[10px] font-normal opacity-70">Publico mi ruta</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Formulario Pasajero */}
-              {travelRole === 'passenger' && (
-                <div className="space-y-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
-                  <h3 className="font-bold text-sm text-blue-800">🙋 Necesito transporte</h3>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">¿Desde dónde sales?</label>
-                    <input type="text" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)}
-                      placeholder="Ej: Renaico, Plaza" className="w-full px-3 py-2 border rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">¿A dónde vas?</label>
-                    <input type="text" value={deliveryAddress} onChange={(e) => { setDeliveryAddress(e.target.value); setDestinationName(e.target.value) }}
-                      placeholder="Ej: Angol, Hospital" className="w-full px-3 py-2 border rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">¿Cuándo necesitas salir?</label>
-                    <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Asientos que necesitas</label>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => setSeats(Math.max(1, seats - 1))} className="w-8 h-8 rounded-lg bg-blue-200 text-blue-700 font-bold text-lg">−</button>
-                      <span className="w-8 text-center font-bold text-lg">{seats}</span>
-                      <button onClick={() => setSeats(Math.min(8, seats + 1))} className="w-8 h-8 rounded-lg bg-blue-200 text-blue-700 font-bold text-lg">+</button>
-                      <span className="text-xs text-gray-500">{seats === 1 ? 'asiento' : 'asientos'}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Formulario Chofer */}
-              {travelRole === 'driver' && (
-                <div className="space-y-3 bg-emerald-50 p-3 rounded-xl border border-emerald-100">
-                  <h3 className="font-bold text-sm text-emerald-800">🚗 Publico mi ruta</h3>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Punto de salida</label>
-                    <input type="text" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)}
-                      placeholder="Ej: Renaico, frente a la plaza" className="w-full px-3 py-2 border rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Destino final</label>
-                    <input type="text" value={deliveryAddress} onChange={(e) => { setDeliveryAddress(e.target.value); setDestinationName(e.target.value) }}
-                      placeholder="Ej: Angol, Terminal" className="w-full px-3 py-2 border rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Hora de salida</label>
-                    <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Asientos disponibles</label>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => setSeats(Math.max(1, seats - 1))} className="w-8 h-8 rounded-lg bg-emerald-200 text-emerald-700 font-bold text-lg">−</button>
-                      <span className="w-8 text-center font-bold text-lg">{seats}</span>
-                      <button onClick={() => setSeats(Math.min(8, seats + 1))} className="w-8 h-8 rounded-lg bg-emerald-200 text-emerald-700 font-bold text-lg">+</button>
-                      <span className="text-xs text-gray-500">{seats === 1 ? 'asiento libre' : 'asientos libres'}</span>
-                    </div>
-                  </div>
-                  <div className="bg-emerald-100 rounded-lg p-2 text-xs text-emerald-700">
-                    💡 Los pasajeros que necesiten ir en tu ruta verán tu publicación y podrán solicitar unirse.
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Campos específicos para EXPRESS_ERRAND */}
-          {demandType === 'express_errand' && (
-            <div className="space-y-3 bg-orange-50 p-3 rounded-lg">
-              <h3 className="font-bold text-sm text-orange-800">Detalles de la Compra</h3>
-              
-              <div>
-                <label className="block text-xs font-medium mb-1">Nombre del Negocio</label>
-                <input
-                  type="text"
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  placeholder="Ej: Supermercado Angol"
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1">Cantidad de Artículos</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={itemsCount}
-                  onChange={(e) => setItemsCount(e.target.value)}
-                  placeholder="Ej: 15"
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1">Tipo de Carga</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['light', 'medium', 'heavy'] as const).map(type => (
-                    <button
-                      key={type}
-                      onClick={() => setLoadType(type)}
-                      className={`py-2 rounded-lg text-xs font-semibold transition ${
-                        loadType === type 
-                          ? 'bg-orange-100 text-orange-700 ring-2 ring-orange-500' 
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {type === 'light' ? 'Ligera' : type === 'medium' ? 'Media' : 'Pesada'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={requiresVehicle}
-                  onChange={(e) => setRequiresVehicle(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <label className="text-xs">Requiere vehículo</label>
-              </div>
-            </div>
-          )}
 
           {/* Descripción */}
           <div>
-            <label className="block text-sm font-medium mb-2">Descripción</label>
+            <label className="block text-sm font-semibold mb-2">¿Qué necesitas? <span className="text-red-500">*</span></label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={demandType === 'ride_share' 
-                ? "Detalles adicionales del viaje..." 
-                : demandType === 'express_errand'
-                ? "Lista de productos o detalles de la compra..."
-                : "Describe lo que necesitas..."}
-              className="w-full h-24 px-3 py-2 border rounded-lg text-sm resize-none"
+              placeholder="Describe brevemente lo que necesitas..."
+              className="w-full h-24 px-3 py-2 border rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
               maxLength={500}
             />
           </div>
 
-          {/* Imagen adjunta (opcional) */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Foto (opcional)</label>
-            {imagePreview ? (
-              <div className="relative">
-                <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg border" />
-                <button
-                  onClick={() => { setImageFile(null); setImagePreview(null) }}
-                  className="absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold hover:bg-red-600"
-                >×</button>
-              </div>
-            ) : (
-              <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-500">
-                <span>📷</span>
-                <span>Agregar foto del producto o lugar</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      setImageFile(file)
-                      setImagePreview(URL.createObjectURL(file))
-                    }
-                  }}
-                />
-              </label>
-            )}
-          </div>
-
           {/* Precio */}
           <div>
-            <label className="block text-sm font-medium mb-2">Precio Ofrecido (CLP)</label>
+            <label className="block text-sm font-semibold mb-2">Precio ofrecido (CLP)</label>
             <input
               type="number"
               value={offeredPrice}
               onChange={(e) => setOfferedPrice(e.target.value)}
-              placeholder="Ej: 5000"
-              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="Ej: 5000 (opcional)"
+              className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
 
-          {/* Urgencia */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Urgencia</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['low', 'medium', 'high'] as const).map(level => (
-                <button
-                  key={level}
-                  onClick={() => setUrgency(level)}
-                  className={`py-2 rounded-lg text-xs font-semibold transition ${
-                    urgency === level 
-                      ? 'bg-red-100 text-red-700 ring-2 ring-red-500' 
-                      : 'bg-gray-100 text-gray-500'
-                  }`}
-                >
-                  {level === 'low' ? 'Baja' : level === 'medium' ? 'Media' : 'Alta'}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Opciones avanzadas colapsables */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold"
+          >
+            <span>⚙️ Opciones avanzadas</span>
+            <span>{showAdvanced ? '▲' : '▼'}</span>
+          </button>
 
-          {/* TTL */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Visible por (minutos)</label>
-            <input
-              type="number"
-              min="5"
-              max="120"
-              value={ttlMinutes}
-              onChange={(e) => setTtlMinutes(parseInt(e.target.value) || 30)}
-              className="w-full px-3 py-2 border rounded-lg"
-            />
-          </div>
-
-          {/* Opciones avanzadas */}
-          <div className="space-y-3 bg-purple-50 p-3 rounded-lg">
-            <h3 className="font-bold text-sm text-purple-800">⚡ Opciones avanzadas</h3>
-
-            {/* Programar para después */}
-            <div>
-              <label className="block text-xs font-medium mb-1">📅 Programar para después (opcional)</label>
-              <input
-                type="datetime-local"
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
-                className="w-full px-3 py-2 border rounded-lg text-sm"
-              />
-              {scheduledAt && (
-                <button onClick={() => setScheduledAt('')} className="text-xs text-red-500 mt-1 hover:underline">✕ Quitar programación (publicar ahora)</button>
-              )}
-            </div>
-
-            {/* Multi-worker */}
-            <div>
-              <label className="block text-xs font-medium mb-1">👥 ¿Cuántas personas necesitas?</label>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setWorkersNeeded(Math.max(1, workersNeeded - 1))}
-                  className="w-8 h-8 rounded-lg bg-gray-200 text-gray-700 font-bold text-lg hover:bg-gray-300"
-                >−</button>
-                <span className="w-10 text-center font-bold text-lg">{workersNeeded}</span>
-                <button
-                  onClick={() => setWorkersNeeded(Math.min(20, workersNeeded + 1))}
-                  className="w-8 h-8 rounded-lg bg-purple-200 text-purple-700 font-bold text-lg hover:bg-purple-300"
-                >+</button>
-                <span className="text-xs text-gray-500 ml-2">
-                  {workersNeeded === 1 ? 'persona' : 'personas'}
-                </span>
-              </div>
-            </div>
-
-            {/* Recurrencia */}
-            <div>
-              <label className="block text-xs font-medium mb-1">🔄 ¿Se repite?</label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {([
-                  { value: 'once' as const, label: 'Una vez' },
-                  { value: 'daily' as const, label: 'Diario' },
-                  { value: 'weekly' as const, label: 'Semanal' },
-                  { value: 'custom' as const, label: 'Personalizado' },
-                ]).map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setRecurrence(opt.value)}
-                    className={`py-1.5 rounded-lg text-[10px] font-semibold transition ${
-                      recurrence === opt.value
-                        ? 'bg-purple-100 text-purple-700 ring-2 ring-purple-500'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              {recurrence === 'custom' && (
-                <div className="flex gap-1 mt-2">
-                  {['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'].map((day, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setRecurrenceDays(prev =>
-                        prev.includes(i + 1) ? prev.filter(d => d !== i + 1) : [...prev, i + 1]
-                      )}
-                      className={`w-9 h-9 rounded-full text-[10px] font-bold transition ${
-                        recurrenceDays.includes(i + 1)
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {day}
+          {showAdvanced && (
+            <div className="space-y-4 border border-slate-200 rounded-xl p-3">
+              {/* Tipo */}
+              <div>
+                <label className="block text-xs font-semibold mb-2 text-slate-500">Tipo de servicio</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([['fixed_job','🔧 Trabajo'],['ride_share','🚗 Viaje'],['express_errand','📦 Compra']] as const).map(([val, label]) => (
+                    <button key={val} onClick={() => setDemandType(val as DemandType)}
+                      className={`py-2 rounded-lg text-xs font-semibold transition ${demandType === val ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-400' : 'bg-gray-100 text-gray-500'}`}>
+                      {label}
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Campos ride_share */}
+              {demandType === 'ride_share' && (
+                <div className="space-y-2">
+                  <input type="text" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)} placeholder="Origen" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <input type="text" value={deliveryAddress} onChange={(e) => { setDeliveryAddress(e.target.value); setDestinationName(e.target.value) }} placeholder="Destino" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
               )}
+
+              {/* Campos express_errand */}
+              {demandType === 'express_errand' && (
+                <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Nombre del negocio" className="w-full px-3 py-2 border rounded-lg text-sm" />
+              )}
+
+              {/* Urgencia */}
+              <div>
+                <label className="block text-xs font-semibold mb-2 text-slate-500">Urgencia</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['low','medium','high'] as const).map(level => (
+                    <button key={level} onClick={() => setUrgency(level)}
+                      className={`py-2 rounded-lg text-xs font-semibold transition ${urgency === level ? 'bg-red-100 text-red-700 ring-2 ring-red-400' : 'bg-gray-100 text-gray-500'}`}>
+                      {level === 'low' ? 'Baja' : level === 'medium' ? 'Media' : 'Alta'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Foto */}
+              <div>
+                <label className="block text-xs font-semibold mb-2 text-slate-500">Foto (opcional)</label>
+                {imagePreview ? (
+                  <div className="relative">
+                    <img src={imagePreview} alt="Preview" className="w-full h-32 object-cover rounded-lg border" />
+                    <button onClick={() => { setImageFile(null); setImagePreview(null) }} className="absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold">×</button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer text-sm text-gray-500">
+                    <span>📷 Agregar foto</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)) } }} />
+                  </label>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Botón Publicar */}
           <button
             onClick={handlePublish}
             disabled={saving || !categoryId || !description.trim()}
-            className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? 'Publicando...' : 'Publicar Demanda'}
+            {saving ? 'Publicando...' : '✨ Publicar'}
           </button>
         </div>
       </div>
