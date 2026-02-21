@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 import dynamic from 'next/dynamic'
 
 const LiveTrackingModal = dynamic(() => import('./LiveTrackingModal'), { ssr: false })
@@ -46,7 +47,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
   const fetchRequests = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/v1/requests/worker/${workerId}`, {
+      const res = await apiFetch(`/api/v1/requests/worker/${workerId}`, {
         headers: { Authorization: `Bearer ${userToken}` }
       })
       const data = await res.json()
@@ -60,7 +61,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
   const handleRespond = async (requestId: number, action: 'accept' | 'reject', reason?: string) => {
     setActionLoading(requestId)
     try {
-      await fetch(`/api/v1/requests/${requestId}/respond`, {
+      await apiFetch(`/api/v1/requests/${requestId}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

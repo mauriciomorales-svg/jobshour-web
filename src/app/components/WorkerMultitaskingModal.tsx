@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Category {
@@ -41,7 +42,7 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/v1/categories')
+      const res = await apiFetch('/api/v1/categories')
       const data = await res.json()
       const cats = data.data || []
       setCategories(cats)
@@ -110,7 +111,7 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
 
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-      const res = await fetch('/api/v1/worker/status', {
+      const res = await apiFetch('/api/v1/worker/status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

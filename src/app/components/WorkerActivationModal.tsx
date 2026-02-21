@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 import CategoryPicker from './CategoryPicker'
 
 interface Category {
@@ -30,7 +31,7 @@ export default function WorkerActivationModal({ isOpen, onClose, onSuccess }: Pr
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/v1/categories')
+      const res = await apiFetch('/api/v1/categories')
       const data = await res.json()
       setCategories(data.data || [])
       if (data.data && data.data.length > 0) {
@@ -59,7 +60,7 @@ export default function WorkerActivationModal({ isOpen, onClose, onSuccess }: Pr
       async (position) => {
         try {
           const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-          const res = await fetch('/api/v1/worker/status', {
+          const res = await apiFetch('/api/v1/worker/status', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

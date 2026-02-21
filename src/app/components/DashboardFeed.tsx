@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { apiFetch } from '@/lib/api'
 import ServiceCard from './ServiceCard'
 import LiveStats from './LiveStats'
 import { motion } from 'framer-motion'
@@ -68,7 +69,7 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
       const currentCursor = reset ? 0 : cursorRef.current
       const url = `/api/v1/dashboard/feed?lat=${userLat}&lng=${userLng}&cursor=${currentCursor}&_t=${Date.now()}`
       
-      const res = await fetch(url)
+      const res = await apiFetch(url)
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`)
       }

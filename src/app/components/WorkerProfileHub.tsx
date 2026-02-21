@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { apiFetch } from '@/lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import ExperienceSelector from './ExperienceSelector'
@@ -61,7 +62,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
   const fetchWorkerData = async () => {
     try {
       const token = localStorage.getItem('auth_token')
-      const res = await fetch('/api/v1/worker/me', {
+      const res = await apiFetch('/api/v1/worker/me', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -82,7 +83,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
       }
       
       // Cargar experiencias
-      const expRes = await fetch('/api/v1/worker/experiences', {
+      const expRes = await apiFetch('/api/v1/worker/experiences', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (expRes.ok) {
@@ -96,7 +97,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/v1/categories')
+      const res = await apiFetch('/api/v1/categories')
       if (res.ok) {
         const data = await res.json()
         // La API puede devolver array directo o envuelto en data
@@ -133,7 +134,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
     
     try {
       const token = localStorage.getItem('auth_token')
-      const res = await fetch('/api/v1/worker/cv', {
+      const res = await apiFetch('/api/v1/worker/cv', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -158,7 +159,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
     // Sincronizar con backend
     try {
       const token = localStorage.getItem('auth_token')
-      const res = await fetch('/api/v1/worker/categories', {
+      const res = await apiFetch('/api/v1/worker/categories', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -173,7 +174,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(async (position) => {
             try {
-              await fetch('/api/v1/worker/status', {
+              await apiFetch('/api/v1/worker/status', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -202,7 +203,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
   const saveBioTarjeta = async () => {
     try {
       const token = localStorage.getItem('auth_token')
-      await fetch('/api/v1/worker/bio-tarjeta', {
+      await apiFetch('/api/v1/worker/bio-tarjeta', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -218,7 +219,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
   const handleAddExperience = async (experience: { title: string; description?: string; years?: number }) => {
     try {
       const token = localStorage.getItem('auth_token')
-      const res = await fetch('/api/v1/worker/experiences', {
+      const res = await apiFetch('/api/v1/worker/experiences', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -239,7 +240,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
   const handleDeleteExperience = async (experienceId: number) => {
     try {
       const token = localStorage.getItem('auth_token')
-      await fetch(`/api/v1/worker/experiences/${experienceId}`, {
+      await apiFetch(`/api/v1/worker/experiences/${experienceId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -264,7 +265,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
     
     try {
       const token = localStorage.getItem('auth_token')
-      const res = await fetch('/api/v1/worker/video', {
+      const res = await apiFetch('/api/v1/worker/video', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -625,7 +626,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
                   onClick={async () => {
                     try {
                       const token = localStorage.getItem('auth_token')
-                      const res = await fetch('/api/v1/worker/categories', {
+                      const res = await apiFetch('/api/v1/worker/categories', {
                         method: 'POST',
                         headers: {
                           'Authorization': `Bearer ${token}`,

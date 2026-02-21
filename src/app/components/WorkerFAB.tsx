@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 
 interface Props {
   user: any
@@ -27,7 +28,7 @@ export default function WorkerFAB({ user, onActivate, onShowLogin, onRequireCate
   const checkWorkerStatus = async () => {
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-      const res = await fetch('/api/auth/me', {
+      const res = await apiFetch('/api/auth/me', {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       })
       const data = await res.json()
@@ -81,7 +82,7 @@ export default function WorkerFAB({ user, onActivate, onShowLogin, onRequireCate
       if (!navigator.geolocation) return
 
       navigator.geolocation.getCurrentPosition(async (position) => {
-        const res = await fetch('/api/v1/worker/status', {
+        const res = await apiFetch('/api/v1/worker/status', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
