@@ -134,7 +134,7 @@ function ActionButtons({ request, onRequestService, onOpenChat, onGoToLocation }
         {onGoToLocation && (
           <button
             onClick={(e) => { e.stopPropagation(); onGoToLocation(request) }}
-            className="flex items-center justify-center gap-1 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] font-bold transition active:scale-95"
+            className="flex items-center justify-center gap-1 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             Mapa
@@ -146,7 +146,7 @@ function ActionButtons({ request, onRequestService, onOpenChat, onGoToLocation }
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center justify-center gap-1 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-[10px] font-bold transition active:scale-95"
+            className="flex items-center justify-center gap-1 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition active:scale-95"
           >
             �️ Llegar
           </a>
@@ -154,7 +154,7 @@ function ActionButtons({ request, onRequestService, onOpenChat, onGoToLocation }
         {onOpenChat && (
           <button
             onClick={(e) => { e.stopPropagation(); onOpenChat(request) }}
-            className="flex items-center justify-center gap-1 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] font-bold transition active:scale-95"
+            className="flex items-center justify-center gap-1 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95"
           >
             💬 Chat
           </button>
@@ -164,7 +164,7 @@ function ActionButtons({ request, onRequestService, onOpenChat, onGoToLocation }
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center justify-center gap-1 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-xl text-[10px] font-bold transition active:scale-95"
+          className="flex items-center justify-center gap-1 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-xl text-sm font-bold transition active:scale-95"
         >
           📲 Compartir
         </a>
@@ -228,13 +228,13 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, cu
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="text-white font-bold text-sm truncate">{request.client.name}</p>
+              <p className="text-white font-bold text-base truncate">{request.client.name}</p>
               {isOwnDemand && (
                 <span className="shrink-0 text-[9px] font-black bg-white/20 text-white px-1.5 py-0.5 rounded-full">(yo)</span>
               )}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{background: request.category?.color || '#f59e0b', color: 'white'}}>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{background: request.category?.color || '#f59e0b', color: 'white'}}>
                 {request.category?.name || cfg.label}
               </span>
               <span className="text-white/50 text-xs">{formatTimeAgo(request.created_at)}</span>
@@ -248,7 +248,7 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, cu
 
         {/* Descripción */}
         {request.description && (
-          <p className="text-white/90 text-sm leading-snug mb-2 line-clamp-2">{request.description}</p>
+          <p className="text-white/90 text-base leading-snug mb-2 line-clamp-2">{request.description}</p>
         )}
 
         {/* Imagen adjunta */}
@@ -262,7 +262,7 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, cu
         <PayloadChips request={request} />
 
         {/* Dirección + Ruta + Distancia */}
-        <div className="mt-3 bg-black/20 rounded-xl p-2.5 text-xs text-white/80 space-y-1.5">
+        <div className="mt-3 bg-black/20 rounded-xl p-2.5 text-sm text-white/80 space-y-1.5">
           {/* Origen → Destino para viajes y mandados */}
           {request.pickup_address && request.delivery_address ? (
             <div className="space-y-1">

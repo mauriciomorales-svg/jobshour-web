@@ -11,6 +11,7 @@ const ChatPanel = dynamic(() => import('./components/ChatPanel'), { ssr: false }
 const WorkerProfileHub = dynamic(() => import('./components/WorkerProfileHub'), { ssr: false })
 const WorkerProfile = dynamic(() => import('./components/WorkerProfile'), { ssr: false })
 const OnboardingWizard = dynamic(() => import('./components/OnboardingWizard'), { ssr: false })
+const OnboardingSlides = dynamic(() => import('./components/OnboardingSlides'), { ssr: false })
 const WorkerJobs = dynamic(() => import('./components/WorkerJobs'), { ssr: false })
 const Friends = dynamic(() => import('./components/Friends'), { ssr: false })
 const VerificationCard = dynamic(() => import('./components/VerificationCard'), { ssr: false })
@@ -19,6 +20,7 @@ const DashboardFeed = dynamic(() => import('./components/DashboardFeed'), { ssr:
 const CategoryManagement = dynamic(() => import('./components/CategoryManagement'), { ssr: false })
 const PublishDemandModal = dynamic(() => import('./components/PublishDemandModal'), { ssr: false })
 const MisSolicitudes = dynamic(() => import('./components/MisSolicitudes'), { ssr: false })
+const ChatHistory = dynamic(() => import('./components/ChatHistory'), { ssr: false })
 const ReviewsList = dynamic(() => import('./components/ReviewsList'), { ssr: false })
 const RatingModal = dynamic(() => import('./components/RatingModal'), { ssr: false })
 // Temporalmente deshabilitado para debug
@@ -30,6 +32,7 @@ import { MapPoint } from './components/MapSection'
 import ToastContainer from './components/Toast'
 import BottomTabBar, { TabKey } from './components/BottomTabBar'
 import WorkerStatusPill from './components/WorkerStatusPill'
+import OfflineBanner from './components/OfflineBanner'
 
 interface ExpertDetail {
   id: number
@@ -109,7 +112,7 @@ export default function Home() {
   const [activeRequestId, setActiveRequestId] = useState<number | null>(null)
   const [activeChatRequestIds, setActiveChatRequestIds] = useState<number[]>([])
   const [showChat, setShowChat] = useState(false)
-  const [chatContext, setChatContext] = useState<{ description?: string; name?: string; avatar?: string | null }>({})
+  const [chatContext, setChatContext] = useState<{ description?: string; name?: string; avatar?: string | null; myRole?: 'cliente' | 'trabajador'; isSelf?: boolean }>({})
   const [nudge, setNudge] = useState<string | null>(null)
   const [nudgeFade, setNudgeFade] = useState(true)
   const [demandAlert, setDemandAlert] = useState<string | null>(null)
@@ -135,12 +138,33 @@ export default function Home() {
   const [showCategoryRequiredModal, setShowCategoryRequiredModal] = useState(false)
   const [workerCategories, setWorkerCategories] = useState<number[]>([]) // Categorías del worker
   const [showLocationPrompt, setShowLocationPrompt] = useState(false)
+  const [showWelcomeSlides, setShowWelcomeSlides] = useState(false)
+  const [showPublishSuccess, setShowPublishSuccess] = useState(false)
+  const [notifBadge, setNotifBadge] = useState(0)
+  const [chatBadge, setChatBadge] = useState(0)
+  const [showChatHistory, setShowChatHistory] = useState(false)
   // const [showTravelModeModal, setShowTravelModeModal] = useState(false)
   const [workerStatus, setWorkerStatus] = useState<'guest' | 'inactive' | 'intermediate' | 'active'>('guest') // Estados del trabajador
   const workerStatusRef = useRef<'guest' | 'inactive' | 'intermediate' | 'active'>('guest')
   const [activeTab, setActiveTab] = useState<TabKey>('map')
   const [statusLoading, setStatusLoading] = useState(false)
   const { toasts, toast, removeToast } = useToast()
+
+  const playNotifSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.setValueAtTime(880, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15)
+      gain.gain.setValueAtTime(0.3, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.3)
+    } catch { /* ignore */ }
+  }
 
   // Registrar token FCM cuando el usuario está logueado
   const authTokenForFcm = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
@@ -164,6 +188,12 @@ export default function Home() {
     return () => {
       delete (window as any).mapRef
     }
+  }, [])
+
+  // Onboarding de primera vez
+  useEffect(() => {
+    const seen = localStorage.getItem('welcome_slides_done')
+    if (!seen) setShowWelcomeSlides(true)
   }, [])
   const [highlightedRequestId, setHighlightedRequestId] = useState<number | null>(null)
 
@@ -484,6 +514,7 @@ export default function Home() {
 
       const notify = (title: string, body?: string) => {
         toast(title, 'info', body, 7000)
+        setNotifBadge(prev => prev + 1)
         if (hideTimer) clearTimeout(hideTimer)
 
         try {
@@ -525,20 +556,34 @@ export default function Home() {
         .listen('.request.new', (e: any) => {
           console.log('[Notifications] .request.new', e)
           const reqId = e?.id
-          if (typeof reqId === 'number') {
-            setActiveRequestId(reqId)
-          }
-          notify('Nueva solicitud', e?.description ? String(e.description) : 'Tienes una nueva solicitud')
+          if (typeof reqId === 'number') setActiveRequestId(reqId)
+          const clientName = e?.client?.name || e?.client_name || ''
+          const desc = e?.description ? String(e.description).slice(0, 60) : ''
+          notify(
+            `🔔 Nueva solicitud${clientName ? ` de ${clientName}` : ''}`,
+            desc || 'Alguien quiere contratarte'
+          )
+          playNotifSound()
         })
         .listen('.request.updated', (e: any) => {
           console.log('[Notifications] .request.updated (worker)', e)
-          notify('Solicitud actualizada', e?.status ? `Estado: ${e.status}` : 'Una solicitud fue actualizada')
+          const statusMap: Record<string, string> = {
+            cancelled: '❌ Solicitud cancelada por el cliente',
+            completed: '🎉 Servicio marcado como completado',
+          }
+          notify('Solicitud actualizada', statusMap[e?.status] || `Estado: ${e?.status ?? 'actualizado'}`)
         })
 
       userChannel
         .listen('.request.updated', (e: any) => {
           console.log('[Notifications] .request.updated (user)', e)
-          notify('Actualización de solicitud', e?.status ? `Estado: ${e.status}` : 'Tu solicitud fue actualizada')
+          const statusMap: Record<string, string> = {
+            accepted: '✅ ¡Tu solicitud fue aceptada!',
+            rejected: '❌ Tu solicitud fue rechazada',
+            completed: '🎉 Servicio completado. ¡Califica al trabajador!',
+            cancelled: '🚫 Solicitud cancelada',
+          }
+          notify('Actualización de solicitud', statusMap[e?.status] || `Estado: ${e?.status ?? 'actualizado'}`)
         })
     })
 
@@ -638,15 +683,23 @@ export default function Home() {
         if (senderId === user.id) return
 
         const shouldNotify = !showChat || (typeof document !== 'undefined' && document.hidden)
+
+        const senderName = msg?.sender_name ? String(msg.sender_name) : ''
+        const text = msg?.body ? String(msg.body).slice(0, 80) : 'Nuevo mensaje'
+        const title = senderName ? `💬 ${senderName}` : '💬 Nuevo mensaje'
+
+        // Siempre incrementar badge aunque el chat esté abierto
+        setChatBadge(prev => prev + 1)
+
         if (!shouldNotify) return
 
-        const text = msg?.body ? String(msg.body) : 'Nuevo mensaje'
-        console.log('[ChatNotify] message.new', { id: msgId })
-        toast('Nuevo mensaje', 'info', text, 5000)
+        console.log('[ChatNotify] message.new', { id: msgId, sender: senderName })
+        toast(title, 'info', text, 5000)
+        playNotifSound()
 
         try {
           if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification('Nuevo mensaje', { body: text, icon: '/icon-192x192.png' })
+            new Notification(title, { body: text, icon: '/icon-192x192.png' })
           }
         } catch {
           // ignore
@@ -853,6 +906,13 @@ export default function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchNearby() }, [])
 
+  // Listener para abrir PublishDemand desde el estado vacío del feed
+  useEffect(() => {
+    const handler = () => setShowPublishDemand(true)
+    window.addEventListener('open-publish-demand', handler)
+    return () => window.removeEventListener('open-publish-demand', handler)
+  }, [])
+
   // Filtro local por búsqueda de texto Y estado del usuario
   const filtered = (() => {
     let result = points
@@ -1006,7 +1066,7 @@ export default function Home() {
     setActiveTab(tab)
     if (tab === 'map') { setDashHidden(true); setShowSolicitudesPanel(false); setActiveSection('map') }
     if (tab === 'feed') { setDashHidden(false); setShowSolicitudesPanel(false); setActiveSection('map') }
-    if (tab === 'requests') { setDashHidden(true); setShowSolicitudesPanel(true); setActiveSection('map') }
+    if (tab === 'requests') { setDashHidden(true); setShowSolicitudesPanel(true); setActiveSection('map'); setChatBadge(0) }
     if (tab === 'profile') {
       if (!user) { setShowLoginModal(true); return }
       setActiveSection('profile')
@@ -1087,7 +1147,9 @@ export default function Home() {
           categories={categories}
           onClose={() => setShowPublishDemand(false)}
           onPublished={() => {
-            // Mostrar feedback visual
+            setShowPublishDemand(false)
+            setShowPublishSuccess(true)
+            setTimeout(() => setShowPublishSuccess(false), 3000)
             toast('Demanda publicada', 'success', 'Aparecerá en el mapa en unos segundos.')
             
             // Recargar feed y mapa después de publicar
@@ -1115,11 +1177,16 @@ export default function Home() {
           <div className="flex items-center justify-between">
             {/* Botón menú */}
             <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className="w-9 h-9 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition active:scale-95"
+              onClick={() => { setShowSidebar(!showSidebar); setNotifBadge(0) }}
+              className="relative w-9 h-9 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition active:scale-95"
               aria-label="Menú"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+              {notifBadge > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg">
+                  {notifBadge > 9 ? '9+' : notifBadge}
+                </span>
+              )}
             </button>
 
             {/* Logo JOBSHOURS — Jobs blanco + H-reloj-urs teal */}
@@ -1578,8 +1645,8 @@ export default function Home() {
           {/* Dashboard Feed Moderno */}
           <div className="flex-1 overflow-y-auto">
             <DashboardFeed
-              userLat={-37.6672}
-              userLng={-72.5730}
+              userLat={userLat}
+              userLng={userLng}
               currentUserId={user?.id}
               onCardClick={(request) => {
                 // Fly to map location
@@ -1802,7 +1869,13 @@ export default function Home() {
             user={user}
             onLoginRequest={() => { setShowSolicitudesPanel(false); setShowLoginModal(true) }}
             onClose={() => { setShowSolicitudesPanel(false); setActiveTab('map') }}
-            onOpenChat={(requestId) => { setShowSolicitudesPanel(false); setActiveRequestId(requestId); setShowChat(true) }}
+            onOpenChat={(requestId, otherName, otherAvatar, myRole, isSelf) => {
+              setShowSolicitudesPanel(false)
+              setActiveRequestId(requestId)
+              setChatContext({ name: otherName, avatar: otherAvatar, myRole, isSelf })
+              setShowChat(true)
+              setChatBadge(0)
+            }}
           />
         </div>
       )}
@@ -1915,7 +1988,7 @@ export default function Home() {
                 {/* Perfil con gradiente teal */}
                 <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-slate-900 px-5 py-5 border-b border-slate-700/50">
                   <div className="flex items-center gap-4">
-                    <div className="relative">
+                    <div className="relative group">
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} className="w-14 h-14 rounded-full object-cover border-2 border-teal-400/50 shadow-[0_0_15px_rgba(45,212,191,0.2)]" alt={user.firstName} />
                       ) : (
@@ -1923,6 +1996,33 @@ export default function Home() {
                           <span className="text-white text-xl font-black">{user.firstName.charAt(0)}</span>
                         </div>
                       )}
+                      {/* Botón editar foto */}
+                      <label className="absolute inset-0 rounded-full cursor-pointer flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all">
+                        <svg className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+                          if (!token) return
+                          const fd = new FormData()
+                          fd.append('avatar', file)
+                          try {
+                            const res = await fetch('https://jobshour.dondemorales.cl/api/v1/profile/avatar', {
+                              method: 'POST',
+                              headers: { Authorization: `Bearer ${token}` },
+                              body: fd,
+                            })
+                            const data = await res.json()
+                            if (data.avatar_url) {
+                              setUser(prev => prev ? { ...prev, avatarUrl: data.avatar_url } : prev)
+                              toast('Foto actualizada', 'success')
+                            }
+                          } catch { toast('Error al subir foto', 'error') }
+                        }} />
+                      </label>
                       <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 border-2 border-slate-800 rounded-full ${
                         workerStatus === 'active' ? 'bg-teal-400' : workerStatus === 'intermediate' ? 'bg-sky-400' : 'bg-slate-500'
                       }`}></div>
@@ -2005,6 +2105,18 @@ export default function Home() {
                 {/* Menú Secundario */}
                 <div className="px-4 py-3 space-y-0.5">
                   <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-2">Social</p>
+
+                  <button
+                    onClick={() => { setShowChatHistory(true); setShowSidebar(false) }}
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
+                  >
+                    <div className="w-9 h-9 bg-blue-500/15 rounded-lg flex items-center justify-center group-hover:bg-blue-500/25 transition">
+                      <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition">Conversaciones</span>
+                  </button>
 
                   <button 
                     onClick={() => { setShowFriends(true); setShowSidebar(false) }}
@@ -2156,6 +2268,8 @@ export default function Home() {
       {showChat && activeRequestId && (
         <ChatPanel
           requestId={activeRequestId}
+          myRole={chatContext.myRole}
+          isSelf={chatContext.isSelf}
           currentUserId={user?.id ?? 0}
           onClose={() => setShowChat(false)}
           requestDescription={chatContext.description}
@@ -2444,7 +2558,7 @@ export default function Home() {
       <BottomTabBar
         active={activeTab}
         onChange={handleTabChange}
-        requestsBadge={activeChatRequestIds.length}
+        requestsBadge={chatBadge > 0 ? chatBadge : activeChatRequestIds.length}
         demandsBadge={points.filter(p => p.pin_type === 'demand').length}
         isWorker={workerStatus !== 'guest' && workerStatus !== 'inactive'}
       />
@@ -2567,6 +2681,50 @@ export default function Home() {
 
       {/* ── TOAST NOTIFICATIONS ── */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+      {/* ── OFFLINE BANNER ── */}
+      <OfflineBanner />
+
+      {/* ── HISTORIAL DE CHATS ── */}
+      {showChatHistory && (
+        <ChatHistory
+          onClose={() => setShowChatHistory(false)}
+          onOpenChat={(requestId, ctx) => {
+            setShowChatHistory(false)
+            setActiveRequestId(requestId)
+            setChatContext(ctx)
+            setShowChat(true)
+          }}
+        />
+      )}
+
+      {/* ── ONBOARDING SLIDES (primera vez) ── */}
+      {showWelcomeSlides && (
+        <OnboardingSlides onDone={() => {
+          localStorage.setItem('welcome_slides_done', 'true')
+          setShowWelcomeSlides(false)
+        }} />
+      )}
+
+      {/* ── ANIMACIÓN ÉXITO PUBLICAR DEMANDA ── */}
+      {showPublishSuccess && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center pointer-events-none">
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 1.2, opacity: 0 }}
+            className="flex flex-col items-center gap-4"
+          >
+            <div className="w-24 h-24 bg-amber-500 rounded-full flex items-center justify-center shadow-2xl shadow-amber-500/50">
+              <span className="text-5xl">✨</span>
+            </div>
+            <div className="text-center">
+              <p className="text-white font-black text-xl drop-shadow-lg">¡Demanda publicada!</p>
+              <p className="text-white/70 text-sm mt-1">Los trabajadores cercanos la verán ahora</p>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

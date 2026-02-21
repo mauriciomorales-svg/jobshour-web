@@ -78,8 +78,8 @@ export default function RatingModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[800] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-[800] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6">
           <div className="flex items-center gap-3">
@@ -99,7 +99,7 @@ export default function RatingModal({
         <div className="p-6 space-y-4">
           {/* Estrellas */}
           <div className="text-center">
-            <p className="text-gray-700 font-semibold mb-4">¿Cómo calificarías este servicio?</p>
+            <p className="text-slate-300 font-semibold mb-4">¿Cómo calificarías este servicio?</p>
             <div className="flex items-center justify-center gap-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -114,7 +114,7 @@ export default function RatingModal({
                     className={`w-12 h-12 ${
                       star <= (hoveredStar || stars)
                         ? 'text-yellow-400 fill-current'
-                        : 'text-gray-300'
+                        : 'text-slate-600'
                     }`}
                     fill="currentColor"
                     viewBox="0 0 20 20"
@@ -125,7 +125,7 @@ export default function RatingModal({
               ))}
             </div>
             {stars > 0 && (
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-sm text-slate-400 mt-2">
                 {stars === 1 && '😞 Muy malo'}
                 {stars === 2 && '😐 Malo'}
                 {stars === 3 && '😊 Regular'}
@@ -137,35 +137,35 @@ export default function RatingModal({
 
           {/* Comentario */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Comentario (mínimo 10 caracteres) *
             </label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Cuéntanos sobre tu experiencia con este servicio..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none resize-none"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-xl focus:border-yellow-400 outline-none resize-none"
               rows={4}
               maxLength={500}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               {comment.length}/500 caracteres
             </p>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 flex gap-3">
+        <div className="p-6 border-t border-slate-700 flex gap-3">
           <button
             onClick={onClose}
             disabled={submitting}
-            className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition disabled:opacity-50"
+            className="flex-1 px-4 py-3 bg-slate-800 text-slate-300 rounded-xl font-bold hover:bg-slate-700 transition disabled:opacity-50"
           >
             Cancelar
           </button>

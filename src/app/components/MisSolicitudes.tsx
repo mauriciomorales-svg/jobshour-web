@@ -3,6 +3,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
+import dynamic from 'next/dynamic'
+const RatingModal = dynamic(() => import('./RatingModal'), { ssr: false })
+const PaymentModal = dynamic(() => import('./PaymentModal'), { ssr: false })
 
 interface Solicitud {
   id: number
@@ -16,6 +19,8 @@ interface Solicitud {
   fuzzed_latitude?: number
   fuzzed_longitude?: number
   type?: string
+  payment_status?: 'pending' | 'completed' | 'failed' | null
+  final_price?: number | null
   payload?: { image?: string; seats?: number; departure_time?: string; destination_name?: string; store_name?: string; items_count?: number; load_type?: string; requires_vehicle?: boolean }
   scheduled_at?: string | null
   workers_needed?: number
@@ -32,7 +37,7 @@ interface Props {
   user: any | null
   onLoginRequest: () => void
   onClose: () => void
-  onOpenChat?: (requestId: number) => void
+  onOpenChat?: (requestId: number, otherName: string, otherAvatar: string | null, myRole: 'cliente' | 'trabajador', isSelf: boolean) => void
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
@@ -99,6 +104,11 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cancelConfirmId, setCancelConfirmId] = useState<number | null>(null)
+  const [cancelling, setCancelling] = useState(false)
+  const [ratingRequestId, setRatingRequestId] = useState<number | null>(null)
+  const [paymentRequestId, setPaymentRequestId] = useState<number | null>(null)
+  const [actionLoading, setActionLoading] = useState<number | null>(null)
 
   const fetchSolicitudes = useCallback(async () => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -374,39 +384,107 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                           )}
                         </div>
 
-                        {/* Row 3: Action buttons (only for active requests) */}
-                        {isActive && (
-                          <div className="flex gap-2 mt-3">
-                            <button onClick={() => onOpenChat?.(s.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-green-500/15 hover:bg-green-500/25 text-green-400 rounded-xl text-xs font-bold transition active:scale-95">
-                              💬 Chat
-                            </button>
-                            {isPending && (
+                        {/* Row 3: Action buttons */}
+                        {(isActive || s.status === 'completed') && (
+                          <div className="flex gap-2 mt-3 flex-wrap">
+                            {isActive && (() => {
+                              const otherPerson2 = imWorker ? s.client : s.worker?.user
+                              const isSelf2 = otherPerson2?.id === user?.id
+                              const myRole2: 'cliente' | 'trabajador' = imWorker ? 'trabajador' : 'cliente'
+                              return (
+                                <button
+                                  onClick={() => onOpenChat?.(s.id, otherPerson2?.name ?? '', otherPerson2?.avatar ?? null, myRole2, isSelf2)}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-green-500/15 hover:bg-green-500/25 text-green-400 rounded-xl text-xs font-bold transition active:scale-95"
+                                >
+                                  💬 Chat
+                                </button>
+                              )
+                            })()}
+                            {/* Worker: botón Completar */}
+                            {imWorker && ['accepted', 'in_progress'].includes(s.status) && (
                               <button
-                                onClick={async (e) => {
-                                  e.stopPropagation()
-                                  if (!confirm('¿Cancelar esta solicitud? La demanda volverá a estar disponible.')) return
+                                disabled={actionLoading === s.id}
+                                onClick={async () => {
+                                  setActionLoading(s.id)
                                   const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-                                  if (!token) return
+                                  if (!token) { setActionLoading(null); return }
                                   try {
-                                    const res = await apiFetch(`/api/v1/requests/${s.id}/cancel`, {
+                                    const res = await apiFetch(`/api/v1/requests/${s.id}/complete`, {
                                       method: 'POST',
-                                      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+                                      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({}),
                                     })
-                                    const data = await res.json()
-                                    if (data.status === 'success') {
-                                      setSolicitudes(prev => prev.filter(x => x.id !== s.id))
-                                      window.dispatchEvent(new CustomEvent('remove-feed-item', { detail: { id: s.id } }))
-                                    } else {
-                                      alert(data.message || 'Error al cancelar')
-                                    }
-                                  } catch {
-                                    alert('Error de conexión')
-                                  }
+                                    if (res.ok) fetchSolicitudes()
+                                  } catch {}
+                                  setActionLoading(null)
                                 }}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs font-bold transition active:scale-95"
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold transition active:scale-95 disabled:opacity-50"
                               >
-                                Cancelar
+                                {actionLoading === s.id ? '...' : '✓ Completar'}
                               </button>
+                            )}
+                            {/* Cliente: botones Pagar + Calificar en completed */}
+                            {!imWorker && s.status === 'completed' && (
+                              <>
+                                {(!s.payment_status || s.payment_status === 'pending') ? (
+                                  <button
+                                    onClick={() => setPaymentRequestId(s.id)}
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl text-xs font-bold transition active:scale-95 border border-blue-500/30"
+                                  >
+                                    💳 Pagar
+                                  </button>
+                                ) : (
+                                  <span className="flex-1 text-center py-2 text-emerald-400 text-xs font-bold">✅ Pagado</span>
+                                )}
+                                <button
+                                  onClick={() => setRatingRequestId(s.id)}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-xl text-xs font-bold transition active:scale-95 border border-yellow-500/30"
+                                >
+                                  ⭐ Calificar
+                                </button>
+                              </>
+                            )}
+                            {isPending && (
+                              cancelConfirmId === s.id ? (
+                                <div className="flex-1 flex items-center gap-2 bg-red-500/10 rounded-xl px-3 py-2">
+                                  <span className="text-red-400 text-xs font-bold flex-1">¿Confirmar cancelación?</span>
+                                  <button
+                                    disabled={cancelling}
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      setCancelling(true)
+                                      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+                                      if (!token) { setCancelling(false); return }
+                                      try {
+                                        const res = await apiFetch(`/api/v1/requests/${s.id}/cancel`, {
+                                          method: 'POST',
+                                          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+                                        })
+                                        const data = await res.json()
+                                        if (data.status === 'success') {
+                                          setSolicitudes(prev => prev.filter(x => x.id !== s.id))
+                                          window.dispatchEvent(new CustomEvent('remove-feed-item', { detail: { id: s.id } }))
+                                        }
+                                      } catch {}
+                                      setCancelling(false)
+                                      setCancelConfirmId(null)
+                                    }}
+                                    className="px-2.5 py-1 bg-red-500 text-white rounded-lg text-xs font-black transition active:scale-95 disabled:opacity-50"
+                                  >
+                                    {cancelling ? '...' : 'Sí'}
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); setCancelConfirmId(null) }} className="px-2.5 py-1 bg-slate-600 text-slate-300 rounded-lg text-xs font-bold transition">
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setCancelConfirmId(s.id) }}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs font-bold transition active:scale-95"
+                                >
+                                  Cancelar
+                                </button>
+                              )
                             )}
                           </div>
                         )}
@@ -419,6 +497,41 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
           </AnimatePresence>
         )}
       </div>
+
+      {/* Modal Calificación */}
+      {ratingRequestId && (() => {
+        const s = solicitudes.find(x => x.id === ratingRequestId)
+        if (!s) return null
+        const otherPerson = isMyWorkerRole(s) ? s.client : s.worker?.user
+        return (
+          <RatingModal
+            isOpen
+            onClose={() => setRatingRequestId(null)}
+            serviceRequestId={ratingRequestId}
+            workerName={otherPerson?.name ?? 'Trabajador'}
+            workerAvatar={otherPerson?.avatar ?? null}
+            onRated={fetchSolicitudes}
+          />
+        )
+      })()}
+
+      {/* Modal Pago */}
+      {paymentRequestId && (() => {
+        const s = solicitudes.find(x => x.id === paymentRequestId)
+        if (!s) return null
+        const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') || localStorage.getItem('token') || '') : ''
+        return (
+          <PaymentModal
+            isOpen
+            onClose={() => setPaymentRequestId(null)}
+            serviceRequestId={paymentRequestId}
+            amount={s.final_price || s.offered_price || 0}
+            workerName={s.worker?.user?.name ?? 'Trabajador'}
+            description={s.description ?? ''}
+            userToken={token}
+          />
+        )
+      })()}
     </div>
   )
 }

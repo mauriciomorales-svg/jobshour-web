@@ -40,17 +40,27 @@ const icons: Record<ToastType, JSX.Element> = {
   ),
 }
 
-const styles: Record<ToastType, { bg: string; icon: string; bar: string }> = {
-  success: { bg: 'bg-white border-l-4 border-green-500', icon: 'text-green-500 bg-green-50', bar: 'bg-green-500' },
-  error:   { bg: 'bg-white border-l-4 border-red-500',   icon: 'text-red-500 bg-red-50',     bar: 'bg-red-500' },
-  warning: { bg: 'bg-white border-l-4 border-amber-500', icon: 'text-amber-500 bg-amber-50', bar: 'bg-amber-500' },
-  info:    { bg: 'bg-white border-l-4 border-blue-500',  icon: 'text-blue-500 bg-blue-50',   bar: 'bg-blue-500' },
+const styles: Record<ToastType, { bg: string; icon: string; bar: string; shadow: string }> = {
+  success: { bg: 'bg-white border-l-4 border-green-500', icon: 'text-green-600 bg-green-100', bar: 'bg-green-500', shadow: 'shadow-green-500/20' },
+  error:   { bg: 'bg-red-950 border-l-4 border-red-500 text-white', icon: 'text-red-400 bg-red-900', bar: 'bg-red-400', shadow: 'shadow-red-500/40' },
+  warning: { bg: 'bg-amber-950 border-l-4 border-amber-400 text-white', icon: 'text-amber-400 bg-amber-900', bar: 'bg-amber-400', shadow: 'shadow-amber-500/30' },
+  info:    { bg: 'bg-white border-l-4 border-blue-500', icon: 'text-blue-600 bg-blue-100', bar: 'bg-blue-500', shadow: 'shadow-blue-500/20' },
+}
+
+const DEFAULT_DURATIONS: Record<ToastType, number> = {
+  success: 3500,
+  error: 6000,
+  warning: 5000,
+  info: 3500,
 }
 
 function ToastItem({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: string) => void }) {
   const [visible, setVisible] = useState(false)
-  const duration = toast.duration ?? 3500
+  const duration = toast.duration ?? DEFAULT_DURATIONS[toast.type]
   const s = styles[toast.type]
+  const isError = toast.type === 'error'
+  const isWarning = toast.type === 'warning'
+  const darkBg = isError || isWarning
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true))
@@ -63,28 +73,27 @@ function ToastItem({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
 
   return (
     <div
-      className={`relative flex items-start gap-3 ${s.bg} rounded-2xl shadow-lg shadow-black/10 px-4 py-3.5 min-w-[280px] max-w-[340px] overflow-hidden transition-all duration-300 ${
-        visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+      className={`relative flex items-start gap-3 ${s.bg} rounded-2xl shadow-xl ${s.shadow} px-4 py-3.5 min-w-[300px] max-w-[360px] overflow-hidden transition-all duration-300 ${
+        visible ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-8 opacity-0 scale-95'
       }`}
     >
-      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${s.icon}`}>
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.icon}`}>
         {icons[toast.type]}
       </div>
       <div className="flex-1 min-w-0 pt-0.5">
-        <p className="text-sm font-bold text-gray-900 leading-tight">{toast.title}</p>
-        {toast.body && <p className="text-xs text-gray-500 mt-0.5 leading-snug">{toast.body}</p>}
+        <p className={`text-sm font-black leading-tight ${darkBg ? 'text-white' : 'text-gray-900'}`}>{toast.title}</p>
+        {toast.body && <p className={`text-xs mt-0.5 leading-snug ${darkBg ? 'text-white/70' : 'text-gray-500'}`}>{toast.body}</p>}
       </div>
       <button
         onClick={() => { setVisible(false); setTimeout(() => onRemove(toast.id), 300) }}
-        className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition mt-0.5"
+        className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition mt-0.5 ${darkBg ? 'text-white/50 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
       >
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-      {/* Progress bar */}
       <div
-        className={`absolute bottom-0 left-0 h-0.5 ${s.bar} rounded-full`}
+        className={`absolute bottom-0 left-0 h-1 ${s.bar} rounded-full opacity-60`}
         style={{ animation: `shrink ${duration}ms linear forwards` }}
       />
       <style>{`@keyframes shrink { from { width: 100% } to { width: 0% } }`}</style>

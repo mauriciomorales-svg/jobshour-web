@@ -156,13 +156,14 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
         payload.pickup_lng = pickupLng
         payload.delivery_lat = deliveryLat
         payload.delivery_lng = deliveryLng
-        payload.departure_time = new Date(departureTime).toISOString()
+        // Enviar como string local (sin convertir a UTC) para que el backend valide correctamente
+        payload.departure_time = departureTime.replace('T', ' ') + ':00'
         payload.seats = seats
         payload.destination_name = destinationName.trim() || deliveryAddress.trim()
         payload.payload = {
           travel_role: travelRole,
           seats,
-          departure_time: new Date(departureTime).toISOString(),
+          departure_time: departureTime.replace('T', ' ') + ':00',
           destination_name: destinationName.trim() || deliveryAddress.trim(),
           origin_address: pickupAddress.trim(),
           destination_address: deliveryAddress.trim(),
@@ -230,20 +231,41 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
   const [showAdvanced, setShowAdvanced] = useState(false)
 
+  const inputCls = "w-full bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+
   return (
-    <div className="fixed inset-0 z-[400] bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold">¿Qué necesitas?</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+    <div className="fixed inset-0 z-[400] flex items-end justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-slate-900 rounded-t-3xl shadow-2xl overflow-hidden">
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-slate-700 rounded-full" />
         </div>
 
-        <div className="p-4 space-y-4">
-          {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">{error}</div>}
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-slate-800">
+          <div>
+            <h2 className="text-lg font-black text-white">¿Qué necesitas?</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Publica tu demanda y recibe ofertas</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center transition">
+            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto max-h-[78vh] px-5 py-4 space-y-4 pb-8">
+          {error && (
+            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <p className="text-red-400 text-xs">{error}</p>
+            </div>
+          )}
 
           {/* Categoría */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Categoría <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Categoría <span className="text-amber-500">*</span>
+            </label>
             <CategoryPicker
               categories={categories}
               selectedId={categoryId}
@@ -254,53 +276,62 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
           {/* Descripción */}
           <div>
-            <label className="block text-sm font-semibold mb-2">¿Qué necesitas? <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Descripción <span className="text-amber-500">*</span>
+            </label>
             <div className="relative">
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe brevemente lo que necesitas..."
-                className="w-full h-24 px-3 py-2 pr-10 border rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-full h-24 px-3.5 py-2.5 pr-12 bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
                 maxLength={500}
               />
-              <div className="absolute bottom-2 right-2">
+              <div className="absolute bottom-2.5 right-2.5">
                 <VoiceInput onTranscript={(t) => setDescription(prev => prev ? prev + ' ' + t : t)} />
               </div>
             </div>
+            <p className="text-right text-[10px] text-slate-600 mt-1">{description.length}/500</p>
           </div>
 
           {/* Precio */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Precio ofrecido (CLP)</label>
-            <input
-              type="number"
-              value={offeredPrice}
-              onChange={(e) => setOfferedPrice(e.target.value)}
-              placeholder="Ej: 5000 (opcional)"
-              className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Precio ofrecido (CLP)</label>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
+              <input
+                type="number"
+                value={offeredPrice}
+                onChange={(e) => setOfferedPrice(e.target.value)}
+                placeholder="5000 (opcional)"
+                className="w-full bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl pl-7 pr-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+              />
+            </div>
           </div>
 
-          {/* Opciones avanzadas colapsables */}
+          {/* Opciones avanzadas */}
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold"
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-sm font-semibold hover:bg-slate-700 transition"
           >
-            <span>⚙️ Opciones avanzadas</span>
-            <span>{showAdvanced ? '▲' : '▼'}</span>
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+              Opciones avanzadas
+            </span>
+            <svg className={`w-4 h-4 text-slate-500 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </button>
 
           {showAdvanced && (
-            <div className="space-y-4 border border-slate-200 rounded-xl p-3">
+            <div className="space-y-4 bg-slate-800/50 border border-slate-700 rounded-2xl p-4">
               {/* Tipo */}
               <div>
-                <label className="block text-xs font-semibold mb-2 text-slate-500">Tipo de servicio</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tipo de servicio</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {([['fixed_job','🔧 Trabajo'],['ride_share','🚗 Viaje'],['express_errand','📦 Compra']] as const).map(([val, label]) => (
+                  {([['fixed_job','🔧','Trabajo'],['ride_share','🚗','Viaje'],['express_errand','📦','Compra']] as const).map(([val, icon, label]) => (
                     <button key={val} onClick={() => setDemandType(val as DemandType)}
-                      className={`py-2 rounded-lg text-xs font-semibold transition ${demandType === val ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-400' : 'bg-gray-100 text-gray-500'}`}>
-                      {label}
+                      className={`py-3 rounded-xl text-xs font-black flex flex-col items-center gap-1 transition ${demandType === val ? 'bg-amber-500/20 text-amber-300 ring-2 ring-amber-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
+                      <span className="text-base">{icon}</span>{label}
                     </button>
                   ))}
                 </div>
@@ -308,26 +339,36 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
               {/* Campos ride_share */}
               {demandType === 'ride_share' && (
-                <div className="space-y-2">
+                <div className="space-y-3 bg-blue-500/5 border border-blue-500/20 rounded-xl p-3">
+                  <p className="text-xs font-black text-blue-400 uppercase tracking-wider">Detalles del viaje</p>
                   <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} onSelect={(v, lat, lng) => { setPickupAddress(v); setPickupLat(lat); setPickupLng(lng) }} placeholder="Origen" />
                   <AddressAutocomplete value={deliveryAddress} onChange={(v) => { setDeliveryAddress(v); setDestinationName(v) }} onSelect={(v, lat, lng) => { setDeliveryAddress(v); setDestinationName(v); setDeliveryLat(lat); setDeliveryLng(lng) }} placeholder="Destino" />
-                  <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} className={inputCls} />
                 </div>
               )}
 
               {/* Campos express_errand */}
               {demandType === 'express_errand' && (
-                <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Nombre del negocio" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-3">
+                  <p className="text-xs font-black text-violet-400 uppercase tracking-wider mb-2">Negocio</p>
+                  <AddressAutocomplete
+                    value={storeName}
+                    onChange={setStoreName}
+                    onSelect={(v) => setStoreName(v)}
+                    placeholder="Nombre del negocio (ej: Jumbo, Sodimac...)"
+                    searchType="amenity"
+                  />
+                </div>
               )}
 
               {/* Urgencia */}
               <div>
-                <label className="block text-xs font-semibold mb-2 text-slate-500">Urgencia</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Urgencia</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(['low','medium','high'] as const).map(level => (
+                  {([['low','🟢','Baja'],['medium','🟡','Media'],['high','🔴','Alta']] as const).map(([level, dot, label]) => (
                     <button key={level} onClick={() => setUrgency(level)}
-                      className={`py-2 rounded-lg text-xs font-semibold transition ${urgency === level ? 'bg-red-100 text-red-700 ring-2 ring-red-400' : 'bg-gray-100 text-gray-500'}`}>
-                      {level === 'low' ? 'Baja' : level === 'medium' ? 'Media' : 'Alta'}
+                      className={`py-2.5 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 ${urgency === level ? 'bg-amber-500/20 text-amber-300 ring-2 ring-amber-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
+                      <span>{dot}</span>{label}
                     </button>
                   ))}
                 </div>
@@ -335,15 +376,17 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
               {/* Foto */}
               <div>
-                <label className="block text-xs font-semibold mb-2 text-slate-500">Foto (opcional)</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Foto (opcional)</label>
                 {imagePreview ? (
-                  <div className="relative">
-                    <img src={imagePreview} alt="Preview" className="w-full h-32 object-cover rounded-lg border" />
-                    <button onClick={() => { setImageFile(null); setImagePreview(null) }} className="absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold">×</button>
+                  <div className="relative rounded-xl overflow-hidden">
+                    <img src={imagePreview} alt="Preview" className="w-full h-36 object-cover" />
+                    <button onClick={() => { setImageFile(null); setImagePreview(null) }}
+                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white w-7 h-7 rounded-full text-sm font-black flex items-center justify-center transition">×</button>
                   </div>
                 ) : (
-                  <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer text-sm text-gray-500">
-                    <span>📷 Agregar foto</span>
+                  <label className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-xl cursor-pointer text-sm text-slate-500 hover:text-slate-400 transition">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <span>Agregar foto</span>
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)) } }} />
                   </label>
                 )}
@@ -355,10 +398,17 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
           <button
             onClick={handlePublish}
             disabled={saving || !categoryId || !description.trim()}
-            className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-2xl font-black text-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
           >
-            {saving ? 'Publicando...' : '✨ Publicar'}
+            {saving ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                Publicando...
+              </span>
+            ) : '✨ Publicar demanda'}
           </button>
+
+          <p className="text-[10px] text-slate-600 text-center pb-2">Los trabajadores cercanos recibirán una notificación</p>
         </div>
       </div>
     </div>

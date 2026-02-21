@@ -45,21 +45,21 @@ function PagoResultadoContent() {
     <>
       {status === 'loading' && (
         <>
-          <Loader2 className="h-16 w-16 text-green-500 animate-spin mx-auto mb-4" />
-          <h1 className="text-xl font-bold mb-2 text-gray-900">Procesando pago</h1>
-          <p className="text-gray-600">{message}</p>
+          <Loader2 className="h-16 w-16 text-emerald-500 animate-spin mx-auto mb-4" />
+          <h1 className="text-xl font-bold mb-2 text-white">Procesando pago</h1>
+          <p className="text-slate-400">{message}</p>
         </>
       )}
 
       {status === 'success' && (
         <>
-          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-          <h1 className="text-xl font-bold mb-2 text-green-600">¡Pago Exitoso!</h1>
-          <p className="text-gray-600 mb-6">{message}</p>
-          <p className="text-sm text-gray-500 mb-6">Serás redirigido al inicio en unos segundos...</p>
-          <Link 
-            href="/" 
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-colors shadow-lg"
+          <CheckCircle className="h-16 w-16 text-emerald-400 mx-auto mb-4" />
+          <h1 className="text-xl font-bold mb-2 text-emerald-400">¡Pago Exitoso!</h1>
+          <p className="text-slate-300 mb-6">{message}</p>
+          <p className="text-sm text-slate-500 mb-6">Serás redirigido al inicio en unos segundos...</p>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition shadow-lg"
           >
             Volver al inicio
           </Link>
@@ -68,17 +68,15 @@ function PagoResultadoContent() {
 
       {status === 'error' && (
         <>
-          <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-xl font-bold mb-2 text-red-600">Pago no completado</h1>
-          <p className="text-gray-600 mb-6">{message}</p>
-          <div className="space-y-2">
-            <Link 
-              href="/" 
-              className="block px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-colors"
-            >
-              Volver al inicio
-            </Link>
-          </div>
+          <XCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h1 className="text-xl font-bold mb-2 text-red-400">Pago no completado</h1>
+          <p className="text-slate-300 mb-6">{message}</p>
+          <Link
+            href="/"
+            className="block px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition"
+          >
+            Volver al inicio
+          </Link>
         </>
       )}
     </>
@@ -87,9 +85,9 @@ function PagoResultadoContent() {
 
 export default function PagoResultadoPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl border border-green-100 p-8 max-w-md w-full text-center">
-        <Suspense fallback={<Loader2 className="h-16 w-16 text-green-500 animate-spin mx-auto" />}>
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+        <Suspense fallback={<Loader2 className="h-16 w-16 text-emerald-500 animate-spin mx-auto" />}>
           <PagoResultadoContent />
         </Suspense>
       </div>

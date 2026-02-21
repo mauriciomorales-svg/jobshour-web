@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, TouchEvent } from 'react'
 import { apiFetch } from '@/lib/api'
 import ServiceCard from './ServiceCard'
 import LiveStats from './LiveStats'
@@ -42,6 +42,10 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [dailyViewed, setDailyViewed] = useState(0)
+  const [pullY, setPullY] = useState(0)
+  const [isPulling, setIsPulling] = useState(false)
+  const touchStartY = useRef(0)
+  const containerRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
@@ -178,11 +182,46 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
     }
   }, [highlightedRequestId])
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (containerRef.current && containerRef.current.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY
+      setIsPulling(true)
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPulling) return
+    const delta = e.touches[0].clientY - touchStartY.current
+    if (delta > 0) setPullY(Math.min(delta * 0.4, 70))
+  }
+
+  const handleTouchEnd = () => {
+    if (pullY > 50) loadMore(true)
+    setPullY(0)
+    setIsPulling(false)
+  }
+
   const dailyGoal = 50000
   const goalProgress = Math.min((dailyViewed / dailyGoal) * 100, 100)
 
   return (
-    <div className="h-full overflow-y-auto bg-slate-900 p-4 space-y-3">
+    <div
+      ref={containerRef}
+      className="h-full overflow-y-auto bg-slate-900 p-4 space-y-3"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      {pullY > 0 && (
+        <div
+          className="flex items-center justify-center gap-2 text-slate-400 text-xs font-semibold overflow-hidden transition-all"
+          style={{ height: pullY, marginBottom: pullY > 0 ? 4 : 0 }}
+        >
+          <div className={`w-4 h-4 border-2 border-slate-500 border-t-teal-400 rounded-full ${pullY > 50 ? 'animate-spin' : ''}`} />
+          {pullY > 50 ? 'Suelta para actualizar' : 'Arrastra para actualizar'}
+        </div>
+      )}
 
       {/* ── HEADER ── */}
       <div className="flex items-start justify-between gap-2">
@@ -265,19 +304,29 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
       {/* Estado vacío */}
       {!loading && feed.length === 0 && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-12"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-10 px-4"
         >
-          <div className="text-5xl mb-3">📍</div>
-          <p className="text-white font-bold text-base mb-1">No hay solicitudes cerca</p>
-          <p className="text-slate-400 text-sm mb-4">Las oportunidades aparecen cuando alguien pide ayuda cerca de ti</p>
-          <button
-            onClick={() => loadMore(true)}
-            className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition active:scale-95"
-          >
-            Buscar de nuevo
-          </button>
+          <div className="text-6xl mb-4">�</div>
+          <p className="text-white font-black text-lg mb-2">Sin oportunidades cerca</p>
+          <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+            No hay solicitudes activas en tu zona ahora mismo.<br />¿Por qué no publicas la tuya?
+          </p>
+          <div className="flex flex-col gap-3 max-w-xs mx-auto">
+            <button
+              onClick={() => window.dispatchEvent(new Event('open-publish-demand'))}
+              className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl text-sm font-black shadow-lg shadow-amber-500/30 active:scale-95 transition"
+            >
+              ✨ Publicar una demanda
+            </button>
+            <button
+              onClick={() => loadMore(true)}
+              className="w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-2xl text-sm font-bold transition active:scale-95"
+            >
+              🔄 Buscar de nuevo
+            </button>
+          </div>
         </motion.div>
       )}
 

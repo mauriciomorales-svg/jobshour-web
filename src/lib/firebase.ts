@@ -192,13 +192,11 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
 
 export const registerFCMToken = async (token: string, apiToken: string): Promise<boolean> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-    const fullUrl = `${apiUrl}/notifications/register-token`;
+    const { apiFetch } = await import('@/lib/api');
     
-    console.log('[FCM] Register URL:', fullUrl);
     console.log('[FCM] Token length:', token.length);
     
-    const response = await fetch(fullUrl, {
+    const response = await apiFetch('/api/v1/notifications/register-token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -23,9 +23,10 @@ interface Props {
   placeholder?: string
   className?: string
   useCurrentLocation?: boolean
+  searchType?: 'address' | 'amenity'
 }
 
-export default function AddressAutocomplete({ value, onChange, onSelect, placeholder = 'Buscar dirección...', className = '', useCurrentLocation = true }: Props) {
+export default function AddressAutocomplete({ value, onChange, onSelect, placeholder = 'Buscar dirección...', className = '', useCurrentLocation = true, searchType = 'address' }: Props) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
@@ -37,7 +38,8 @@ export default function AddressAutocomplete({ value, onChange, onSelect, placeho
     if (q.length < 3) { setSuggestions([]); return }
     setLoading(true)
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=cl&limit=5&addressdetails=1`, {
+      const extraParams = searchType === 'amenity' ? '&featuretype=settlement&featuretype=amenity' : ''
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=cl&limit=6&addressdetails=1${extraParams}`, {
         headers: { 'Accept-Language': 'es' }
       })
       const data = await res.json()
@@ -45,7 +47,7 @@ export default function AddressAutocomplete({ value, onChange, onSelect, placeho
       setOpen(true)
     } catch {}
     setLoading(false)
-  }, [])
+  }, [searchType])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value
@@ -55,7 +57,9 @@ export default function AddressAutocomplete({ value, onChange, onSelect, placeho
   }
 
   const handleSelect = (s: Suggestion) => {
-    const label = s.display_name.split(',').slice(0, 3).join(',').trim()
+    const label = searchType === 'amenity'
+      ? s.display_name.split(',')[0].trim()
+      : s.display_name.split(',').slice(0, 3).join(',').trim()
     onChange(label)
     onSelect?.(label, parseFloat(s.lat), parseFloat(s.lon))
     setSuggestions([])
@@ -108,7 +112,7 @@ export default function AddressAutocomplete({ value, onChange, onSelect, placeho
             </div>
           )}
         </div>
-        {useCurrentLocation && (
+        {useCurrentLocation && searchType !== 'amenity' && (
           <button
             type="button"
             onClick={handleCurrentLocation}

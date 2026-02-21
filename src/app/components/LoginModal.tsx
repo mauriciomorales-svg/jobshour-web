@@ -120,8 +120,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
   }, [onSuccess, onClose])
 
   return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto py-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto py-4">
+      <div className="bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 p-6 relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
@@ -147,8 +147,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
         {/* Body */}
         <div className="p-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 animate-slide-up">
-              <p className="text-red-600 text-sm font-semibold flex items-center gap-2">
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4 animate-slide-up">
+              <p className="text-red-400 text-sm font-semibold flex items-center gap-2">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
@@ -160,7 +160,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">
+              <label className="block text-sm font-bold text-slate-300 mb-2">
                 Email
               </label>
               <div className="relative">
@@ -170,9 +170,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu@email.com"
                   required
-                  className="w-full px-4 py-3 pl-11 border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-blue-500 focus:bg-blue-50/30"
+                  className="w-full px-4 py-3 pl-11 bg-slate-800 border-2 border-slate-700 text-white placeholder-slate-500 rounded-xl outline-none transition-all focus:border-blue-500"
                 />
-                <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                 </svg>
               </div>
@@ -180,7 +180,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">
+              <label className="block text-sm font-bold text-slate-300 mb-2">
                 Contraseña
               </label>
               <div className="relative">
@@ -191,15 +191,15 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
                   placeholder="••••••••"
                   required
                   minLength={8}
-                  className="w-full px-4 py-3 pl-11 pr-11 border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-blue-500 focus:bg-blue-50/30"
+                  className="w-full px-4 py-3 pl-11 pr-11 bg-slate-800 border-2 border-slate-700 text-white placeholder-slate-500 rounded-xl outline-none transition-all focus:border-blue-500"
                 />
-                <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,9 +222,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
                 id="remember"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                className="w-4 h-4 text-blue-500 rounded border-slate-600 bg-slate-800 focus:ring-blue-500"
               />
-              <label htmlFor="remember" className="text-sm text-slate-600">
+              <label htmlFor="remember" className="text-sm text-slate-400">
                 Recordarme
               </label>
             </div>
@@ -234,7 +234,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
               <button
                 type="button"
                 onClick={onForgotPassword}
-                className="text-sm text-blue-600 hover:text-blue-700 font-semibold"
+                className="text-sm text-blue-400 hover:text-blue-300 font-semibold transition"
               >
                 ¿Olvidaste tu contraseña?
               </button>
@@ -260,10 +260,10 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200" />
+              <div className="w-full border-t border-slate-700" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-3 text-slate-500 font-semibold">O continúa con</span>
+              <span className="bg-slate-900 px-3 text-slate-500 font-semibold">O continúa con</span>
             </div>
           </div>
 
@@ -272,7 +272,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
             <button
               type="button"
               onClick={(e) => handleOAuth(e, 'google')}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-semibold transition hover:shadow-md"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 hover:bg-slate-700 text-sm text-slate-200 font-semibold transition"
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -286,7 +286,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
             <button
               type="button"
               onClick={(e) => handleOAuth(e, 'facebook')}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-semibold transition hover:shadow-md"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 hover:bg-slate-700 text-sm text-slate-200 font-semibold transition"
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="#1877F2">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
@@ -297,11 +297,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
 
           {/* Register Link */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-400">
               ¿No tienes cuenta?{' '}
               <button
                 onClick={onSwitchToRegister}
-                className="text-blue-600 hover:text-blue-700 font-bold"
+                className="text-blue-400 hover:text-blue-300 font-bold transition"
               >
                 Regístrate aquí
               </button>

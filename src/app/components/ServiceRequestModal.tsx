@@ -245,301 +245,192 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
     setSending(false)
   }
 
+  const inputCls = "w-full bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+
   return (
     <div className="fixed inset-0 z-[300] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-t-2xl shadow-2xl p-5 pb-8 animate-slide-up">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-slate-900 rounded-t-3xl shadow-2xl overflow-hidden">
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-slate-700 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-black text-gray-900">Solicitar servicio</h3>
-          <button onClick={onClose} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200">
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-slate-800">
+          <div>
+            <h3 className="text-lg font-black text-white">Solicitar servicio</h3>
+            <p className="text-xs text-slate-400 mt-0.5">El trabajador responderá en minutos</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center transition">
+            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        {/* Worker info */}
-        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-4">
-          <img
-            src={expert.avatar || `https://i.pravatar.cc/80?u=${expert.id}`}
-            alt={expert.name}
-            className="w-11 h-11 rounded-lg object-cover"
-          />
-          <div className="flex-1">
-            <p className="font-bold text-sm text-gray-900">{expert.name}</p>
-            {expert.category && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: expert.category.color }}>
-                {expert.category.name}
-              </span>
-            )}
-            {hasActiveRoute && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 mt-1 inline-block">
-                🚗 Viaje disponible
-              </span>
-            )}
-          </div>
-          <span className="font-bold text-blue-600 text-sm">${expert.hourly_rate.toLocaleString('es-CL')}/hr</span>
-        </div>
-
-        {/* Selector de tipo de solicitud */}
-        {!hasActiveRoute && (
-          <div className="mb-4">
-            <label className="block text-xs font-bold text-gray-700 mb-2">Tipo de Servicio</label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => setRequestType('fixed_job')}
-                className={`py-2 px-2 rounded-lg text-xs font-semibold transition ${
-                  requestType === 'fixed_job' 
-                    ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500' 
-                    : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                🔧 Trabajo
-              </button>
-              <button
-                onClick={() => setRequestType('ride_share')}
-                className={`py-2 px-2 rounded-lg text-xs font-semibold transition ${
-                  requestType === 'ride_share' 
-                    ? 'bg-green-100 text-green-700 ring-2 ring-green-500' 
-                    : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                🚗 Viaje
-              </button>
-              <button
-                onClick={() => setRequestType('express_errand')}
-                className={`py-2 px-2 rounded-lg text-xs font-semibold transition ${
-                  requestType === 'express_errand' 
-                    ? 'bg-orange-100 text-orange-700 ring-2 ring-orange-500' 
-                    : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                📦 Compra
-              </button>
+        <div className="overflow-y-auto max-h-[75vh] px-5 py-4 space-y-4 pb-8">
+          {/* Worker info */}
+          <div className="flex items-center gap-3 p-3.5 bg-slate-800 rounded-2xl border border-slate-700">
+            <img src={expert.avatar || `https://i.pravatar.cc/80?u=${expert.id}`} alt={expert.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-slate-700" />
+            <div className="flex-1 min-w-0">
+              <p className="font-black text-sm text-white truncate">{expert.name}</p>
+              <div className="flex flex-wrap gap-1 mt-0.5">
+                {expert.category && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: expert.category.color }}>{expert.category.name}</span>
+                )}
+                {hasActiveRoute && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">🚗 Viaje disponible</span>
+                )}
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-teal-400 font-black text-base">${expert.hourly_rate.toLocaleString('es-CL')}</p>
+              <p className="text-slate-500 text-[10px]">por hora</p>
             </div>
           </div>
-        )}
 
-        {/* Campos específicos para RIDE_SHARE */}
-        {requestType === 'ride_share' && (
-          <div className="space-y-3 mb-4 bg-green-50 p-3 rounded-lg">
-            <h4 className="text-xs font-bold text-green-800 mb-2">Detalles del Viaje</h4>
-            
+          {/* Selector de tipo */}
+          {!hasActiveRoute && (
             <div>
-              <label className="text-xs font-medium mb-1 block">Origen</label>
-              <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} placeholder="Ej: Renaico, Plaza" />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium mb-1 block">Destino</label>
-              <AddressAutocomplete value={rideDeliveryAddress} onChange={setRideDeliveryAddress} placeholder="Ej: Angol, Hospital" />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium mb-1 block">Hora de Salida</label>
-              <input
-                type="datetime-local"
-                value={departureTime}
-                onChange={(e) => setDepartureTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium mb-1 block">Asientos Necesarios</label>
-              <input
-                type="number"
-                min="1"
-                max="8"
-                value={seats}
-                onChange={(e) => setSeats(parseInt(e.target.value) || 1)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Campos específicos para EXPRESS_ERRAND */}
-        {requestType === 'express_errand' && (
-          <div className="space-y-3 mb-4 bg-orange-50 p-3 rounded-lg">
-            <h4 className="text-xs font-bold text-orange-800 mb-2">Detalles de la Compra</h4>
-            
-            <div>
-              <label className="text-xs font-medium mb-1 block">Nombre del Negocio</label>
-              <input
-                type="text"
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                placeholder="Ej: Supermercado Angol"
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium mb-1 block">Cantidad de Artículos</label>
-              <input
-                type="number"
-                min="1"
-                value={itemsCount}
-                onChange={(e) => setItemsCount(e.target.value)}
-                placeholder="Ej: 15"
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium mb-1 block">Tipo de Carga</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tipo de servicio</label>
               <div className="grid grid-cols-3 gap-2">
-                {(['light', 'medium', 'heavy'] as const).map(type => (
-                  <button
-                    key={type}
-                    onClick={() => setLoadType(type)}
-                    className={`py-2 rounded-lg text-xs font-semibold transition ${
-                      loadType === type 
-                        ? 'bg-orange-100 text-orange-700 ring-2 ring-orange-500' 
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {type === 'light' ? 'Ligera' : type === 'medium' ? 'Media' : 'Pesada'}
+                {([['fixed_job','🔧','Trabajo','teal'],['ride_share','🚗','Viaje','blue'],['express_errand','📦','Compra','violet']] as const).map(([val, icon, label, color]) => (
+                  <button key={val} onClick={() => setRequestType(val)}
+                    className={`py-3 rounded-2xl text-xs font-black transition flex flex-col items-center gap-1 ${
+                      requestType === val
+                        ? color === 'teal' ? 'bg-teal-500/20 text-teal-300 ring-2 ring-teal-500'
+                        : color === 'blue' ? 'bg-blue-500/20 text-blue-300 ring-2 ring-blue-500'
+                        : 'bg-violet-500/20 text-violet-300 ring-2 ring-violet-500'
+                        : 'bg-slate-800 text-slate-500 hover:bg-slate-700'
+                    }`}>
+                    <span className="text-lg">{icon}</span>{label}
                   </button>
                 ))}
               </div>
             </div>
+          )}
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={requiresVehicle}
-                onChange={(e) => setRequiresVehicle(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <label className="text-xs">Requiere vehículo</label>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium mb-1 block">Dirección de Entrega</label>
-              <input
-                type="text"
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-                placeholder="Calle, número, comuna"
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Campos específicos para Recados (legacy - mantener compatibilidad) */}
-        {isRecados && requestType === 'express_errand' && !storeName && (
-          <div className="space-y-3 mb-4">
-            <div>
-              <label className="text-xs font-bold text-gray-700 mb-1 block">Tipo de carga</label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => setCargaTipo('sobre')}
-                  className={`py-2 rounded-lg text-xs font-semibold transition ${cargaTipo === 'sobre' ? 'bg-orange-100 text-orange-700 ring-2 ring-orange-500' : 'bg-gray-100 text-gray-500'}`}
-                >
-                  📄 Sobre
-                </button>
-                <button
-                  onClick={() => setCargaTipo('paquete')}
-                  className={`py-2 rounded-lg text-xs font-semibold transition ${cargaTipo === 'paquete' ? 'bg-orange-100 text-orange-700 ring-2 ring-orange-500' : 'bg-gray-100 text-gray-500'}`}
-                >
-                  📦 Paquete
-                </button>
-                <button
-                  onClick={() => setCargaTipo('bulto')}
-                  className={`py-2 rounded-lg text-xs font-semibold transition ${cargaTipo === 'bulto' ? 'bg-orange-100 text-orange-700 ring-2 ring-orange-500' : 'bg-gray-100 text-gray-500'}`}
-                >
-                  🛍️ Bulto
-                </button>
+          {/* Campos RIDE_SHARE */}
+          {requestType === 'ride_share' && (
+            <div className="space-y-3 bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
+              <p className="text-xs font-black text-blue-400 uppercase tracking-wider">Detalles del viaje</p>
+              <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Origen</label>
+                <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} placeholder="Ej: Renaico, Plaza" /></div>
+              <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Destino</label>
+                <AddressAutocomplete value={rideDeliveryAddress} onChange={setRideDeliveryAddress} placeholder="Ej: Angol, Hospital" /></div>
+              <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Hora de salida</label>
+                <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} className={inputCls} /></div>
+              <div>
+                <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Asientos necesarios</label>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setSeats(s => Math.max(1, s - 1))} className="w-10 h-10 bg-slate-800 hover:bg-slate-700 rounded-xl text-white font-black text-xl transition active:scale-95">−</button>
+                  <span className="flex-1 text-center text-white font-black text-xl">{seats}</span>
+                  <button onClick={() => setSeats(s => Math.min(8, s + 1))} className="w-10 h-10 bg-slate-800 hover:bg-slate-700 rounded-xl text-white font-black text-xl transition active:scale-95">+</button>
+                </div>
               </div>
             </div>
-            <div>
-              <label className="text-xs font-bold text-gray-700 mb-1 block">Peso aproximado (kg)</label>
-              <input
-                type="number"
-                value={cargaPeso}
-                onChange={e => setCargaPeso(e.target.value)}
-                placeholder="Ej: 2.5"
-                step="0.1"
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-gray-700 mb-1 block">Dirección de entrega</label>
-              <AddressAutocomplete value={deliveryAddress} onChange={setDeliveryAddress} placeholder="Calle, número, comuna" />
-            </div>
-            {deliveryAddress && (
-              <button
-                onClick={() => {
-                  const encodedAddress = encodeURIComponent(deliveryAddress)
-                  const url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`
-                  window.open(url, '_blank')
-                }}
-                className="w-full bg-green-500 text-white py-2 rounded-xl font-bold text-sm hover:bg-green-600 transition flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                </svg>
-                Abrir en Google Maps
+          )}
+
+          {/* Campos EXPRESS_ERRAND */}
+          {requestType === 'express_errand' && (
+            <div className="space-y-3 bg-violet-500/5 border border-violet-500/20 rounded-2xl p-4">
+              <p className="text-xs font-black text-violet-400 uppercase tracking-wider">Detalles de la compra</p>
+              <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Nombre del negocio</label>
+                <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Ej: Supermercado Angol" className={inputCls} /></div>
+              <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Cantidad de artículos</label>
+                <input type="number" min="1" value={itemsCount} onChange={(e) => setItemsCount(e.target.value)} placeholder="Ej: 15" className={inputCls} /></div>
+              <div>
+                <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Tipo de carga</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['light','medium','heavy'] as const).map(t => (
+                    <button key={t} onClick={() => setLoadType(t)}
+                      className={`py-2.5 rounded-xl text-xs font-bold transition ${loadType === t ? 'bg-violet-500/20 text-violet-300 ring-2 ring-violet-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
+                      {t === 'light' ? '🪶 Ligera' : t === 'medium' ? '📦 Media' : '🏋️ Pesada'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={() => setRequiresVehicle(v => !v)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition ${requiresVehicle ? 'bg-violet-500/15 border-violet-500/40 text-violet-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${requiresVehicle ? 'bg-violet-500 border-violet-500' : 'border-slate-600'}`}>
+                  {requiresVehicle && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                </div>
+                <span className="text-sm font-semibold">Requiere vehículo</span>
               </button>
-            )}
+              <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Dirección de entrega</label>
+                <AddressAutocomplete value={deliveryAddress} onChange={setDeliveryAddress} placeholder="Calle, número, comuna" /></div>
+            </div>
+          )}
+
+          {/* Campos legacy recados */}
+          {isRecados && requestType === 'express_errand' && !storeName && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Tipo de carga</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['sobre','paquete','bulto'] as const).map(t => (
+                    <button key={t} onClick={() => setCargaTipo(t)}
+                      className={`py-2.5 rounded-xl text-xs font-bold transition ${cargaTipo === t ? 'bg-orange-500/20 text-orange-300 ring-2 ring-orange-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
+                      {t === 'sobre' ? '📄 Sobre' : t === 'paquete' ? '📦 Paquete' : '🛍️ Bulto'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div><label className="text-xs font-bold text-slate-400 mb-1.5 block">Peso aproximado (kg)</label>
+                <input type="number" value={cargaPeso} onChange={e => setCargaPeso(e.target.value)} placeholder="Ej: 2.5" step="0.1" className={inputCls} /></div>
+              <div><label className="text-xs font-bold text-slate-400 mb-1.5 block">Dirección de entrega</label>
+                <AddressAutocomplete value={deliveryAddress} onChange={setDeliveryAddress} placeholder="Calle, número, comuna" /></div>
+            </div>
+          )}
+
+          {/* Descripción */}
+          <div>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+              {requestType === 'ride_share' ? 'Detalles adicionales' : requestType === 'express_errand' ? 'Lista de productos' : 'Descripción'}
+            </label>
+            <div className="relative">
+              <textarea value={description} onChange={e => setDescription(e.target.value)}
+                placeholder={requestType === 'ride_share' ? "Detalles adicionales del viaje (opcional)..." : requestType === 'express_errand' ? "Lista de productos o detalles de la compra..." : "Describe brevemente lo que necesitas..."}
+                className="w-full h-24 px-3.5 py-2.5 pr-12 bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                maxLength={500} />
+              <div className="absolute bottom-2.5 right-2.5">
+                <VoiceInput onTranscript={(t) => setDescription(prev => prev ? prev + ' ' + t : t)} />
+              </div>
+            </div>
+            <p className="text-right text-[10px] text-slate-600 mt-1">{description.length}/500</p>
           </div>
-        )}
 
-        {/* Description */}
-        <div className="relative">
-          <textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder={
-              requestType === 'ride_share' 
-                ? "Detalles adicionales del viaje (opcional)..." 
-                : requestType === 'express_errand'
-                ? "Lista de productos o detalles de la compra..."
-                : "Describe brevemente lo que necesitas..."
-            }
-            className="w-full h-20 px-3 py-2 pr-10 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
-            maxLength={500}
-          />
-          <div className="absolute bottom-2 right-2">
-            <VoiceInput onTranscript={(t) => setDescription(prev => prev ? prev + ' ' + t : t)} />
+          {/* Urgencia */}
+          <div className="flex gap-2">
+            <button onClick={() => setUrgency('normal')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${urgency === 'normal' ? 'bg-teal-500/20 text-teal-300 ring-2 ring-teal-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
+              🕐 Normal
+            </button>
+            <button onClick={() => setUrgency('urgent')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${urgency === 'urgent' ? 'bg-red-500/20 text-red-300 ring-2 ring-red-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
+              🔥 Urgente
+            </button>
           </div>
-        </div>
 
-        {/* Urgency */}
-        <div className="flex gap-2 mt-3">
-          <button
-            onClick={() => setUrgency('normal')}
-            className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${urgency === 'normal' ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500' : 'bg-gray-100 text-gray-500'}`}
-          >
-            Normal
+          {error && (
+            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <p className="text-red-400 text-xs">{error}</p>
+            </div>
+          )}
+
+          {/* Botón enviar */}
+          <button onClick={handleSend} disabled={sending}
+            className="w-full py-4 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white rounded-2xl font-black text-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-teal-500/25">
+            {sending ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                Enviando solicitud...
+              </span>
+            ) : '⚡ Enviar solicitud'}
           </button>
-          <button
-            onClick={() => setUrgency('urgent')}
-            className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${urgency === 'urgent' ? 'bg-red-100 text-red-700 ring-2 ring-red-500' : 'bg-gray-100 text-gray-500'}`}
-          >
-            Urgente
-          </button>
+
+          <p className="text-[10px] text-slate-600 text-center pb-2">El trabajador tiene 5 minutos para responder</p>
         </div>
-
-        {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
-
-        {/* Send button */}
-        <button
-          onClick={handleSend}
-          disabled={sending}
-          className="w-full mt-4 bg-gray-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-gray-800 transition disabled:opacity-50"
-        >
-          {sending ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-              Enviando...
-            </span>
-          ) : 'Enviar solicitud'}
-        </button>
-
-        <p className="text-[10px] text-gray-400 text-center mt-2">El trabajador tiene 5 minutos para responder</p>
       </div>
     </div>
   )
