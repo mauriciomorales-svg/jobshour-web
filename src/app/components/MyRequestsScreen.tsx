@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import { apiFetch } from '@/lib/api'
 
 const LiveTrackingModal = dynamic(() => import('./LiveTrackingModal'), { ssr: false })
 const RatingModal = dynamic(() => import('./RatingModal'), { ssr: false })
@@ -10,6 +11,7 @@ interface Props {
   isOpen: boolean
   onClose: () => void
   userToken: string
+  onOpenChat?: (requestId: number) => void
 }
 
 interface ServiceRequest {
@@ -33,10 +35,10 @@ interface ServiceRequest {
   delivery_lng?: number
 }
 
-export default function MyRequestsScreen({ isOpen, onClose, userToken }: Props) {
+export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenChat }: Props) {
   const [requests, setRequests] = useState<ServiceRequest[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'completed'>('all')
+  const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'completed' | 'cancelled'>('pending')
   const [trackingRequestId, setTrackingRequestId] = useState<number | null>(null)
   const [ratingRequestId, setRatingRequestId] = useState<number | null>(null)
   const [completedRequests, setCompletedRequests] = useState<Set<number>>(new Set())
@@ -50,7 +52,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken }: Props) 
   const fetchRequests = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/v1/requests/my-requests', {
+      const res = await apiFetch('/api/v1/requests/my-requests', {
         headers: { Authorization: `Bearer ${userToken}` }
       })
       const data = await res.json()
@@ -78,7 +80,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken }: Props) 
     if (!confirm('¿Cancelar esta solicitud?')) return
 
     try {
-      await fetch(`/api/v1/requests/${id}/cancel`, {
+      await apiFetch(`/api/v1/requests/${id}/cancel`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${userToken}` }
       })
@@ -89,7 +91,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken }: Props) 
   }
 
   const filtered = requests.filter(r => {
-    if (filter === 'all') return true
+    if (filter === 'all') return r.status !== 'cancelled'
     return r.status === filter
   })
 
@@ -152,10 +154,10 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken }: Props) 
         <div className="p-4 border-b border-slate-200 shrink-0">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {[
-              { key: 'all', label: 'Todas', count: requests.length },
               { key: 'pending', label: 'Pendientes', count: requests.filter(r => r.status === 'pending').length },
               { key: 'accepted', label: 'Aceptadas', count: requests.filter(r => r.status === 'accepted').length },
               { key: 'completed', label: 'Completadas', count: requests.filter(r => r.status === 'completed').length },
+              { key: 'all', label: 'Todas', count: requests.filter(r => r.status !== 'cancelled').length },
             ].map(({ key, label, count }) => (
               <button
                 key={key}
@@ -266,7 +268,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken }: Props) 
                           <span>📍</span>
                           <span>Ver Tracking</span>
                         </button>
-                        <button className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition">
+                        <button onClick={() => onOpenChat?.(request.id)} className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition">
                           💬 Chat
                         </button>
                       </>

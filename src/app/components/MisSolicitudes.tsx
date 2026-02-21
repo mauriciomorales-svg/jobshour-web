@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { apiFetch } from '@/lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Solicitud {
@@ -31,6 +32,7 @@ interface Props {
   user: any | null
   onLoginRequest: () => void
   onClose: () => void
+  onOpenChat?: (requestId: number) => void
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
@@ -93,7 +95,7 @@ function ExpirationTimer({ expiresAt }: { expiresAt: string }) {
   )
 }
 
-export default function MisSolicitudes({ user, onLoginRequest, onClose }: Props) {
+export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenChat }: Props) {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -104,7 +106,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose }: Props)
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/v1/requests/mine', {
+      const res = await apiFetch('/api/v1/requests/mine', {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -247,6 +249,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose }: Props)
                   const categoryColor = s.category?.color ?? '#6b7280'
                   const isPending = s.status === 'pending'
                   const isActive = ['pending', 'accepted', 'in_progress'].includes(s.status)
+                  if (s.status === 'cancelled') return null
 
                   return (
                     <motion.div
@@ -374,7 +377,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose }: Props)
                         {/* Row 3: Action buttons (only for active requests) */}
                         {isActive && (
                           <div className="flex gap-2 mt-3">
-                            <button className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-green-500/15 hover:bg-green-500/25 text-green-400 rounded-xl text-xs font-bold transition active:scale-95">
+                            <button onClick={() => onOpenChat?.(s.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-green-500/15 hover:bg-green-500/25 text-green-400 rounded-xl text-xs font-bold transition active:scale-95">
                               💬 Chat
                             </button>
                             {isPending && (
@@ -385,7 +388,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose }: Props)
                                   const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
                                   if (!token) return
                                   try {
-                                    const res = await fetch(`/cancel_request.php?id=${s.id}`, {
+                                    const res = await apiFetch(`/api/v1/requests/${s.id}/cancel`, {
                                       method: 'POST',
                                       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
                                     })

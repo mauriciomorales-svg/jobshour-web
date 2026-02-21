@@ -1800,6 +1800,7 @@ export default function Home() {
             user={user}
             onLoginRequest={() => { setShowSolicitudesPanel(false); setShowLoginModal(true) }}
             onClose={() => { setShowSolicitudesPanel(false); setActiveTab('map') }}
+            onOpenChat={(requestId) => { setShowSolicitudesPanel(false); setActiveRequestId(requestId); setShowChat(true) }}
           />
         </div>
       )}
