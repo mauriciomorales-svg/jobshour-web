@@ -15,6 +15,7 @@ interface OnboardingData {
   location: { lat: number; lng: number; address: string }
   hourly_rate: number
   category_id?: number
+  category_ids?: number[]
   skills: string[]
   bio: string
 }
@@ -23,6 +24,23 @@ interface ApiCategory {
   id: number
   name: string
   icon: string
+}
+
+const ICON_MAP: Record<string, string> = {
+  wrench: '🔧', zap: '⚡', paintbrush: '🎨', sparkles: '✨', hammer: '🔨',
+  leaf: '🌿', key: '🔑', building: '🏗️', scissors: '✂️', 'paw-print': '🐾',
+  truck: '🚚', 'shopping-cart': '🛒', car: '🚗', baby: '👶',
+  'heart-handshake': '🤝', dog: '🐕', 'graduation-cap': '🎓', music: '🎵',
+  hand: '💆', activity: '🏃', utensils: '🍽️', 'chef-hat': '👨‍🍳',
+  disc: '🎧', camera: '📷', monitor: '💻', wifi: '📶',
+  flame: '🔥', rabbit: '🐇', droplet: '💧', droplets: '💧',
+  'key-round': '🔑', 'hard-hat': '👷', trees: '🌳', home: '🏠',
+  package: '📦', broom: '🧹', motorcycle: '🏍️', bicycle: '🚲',
+}
+
+function getIcon(icon?: string): string {
+  if (!icon) return '📌'
+  return ICON_MAP[icon] || icon
 }
 
 const MOTIVATIONAL = [
@@ -44,6 +62,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
   const [locating, setLocating] = useState(false)
   const [categories, setCategories] = useState<ApiCategory[]>([])
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
+  const [selectedCategories, setSelectedCategories] = useState<number[]>([])
   const [customSkill, setCustomSkill] = useState('')
   const [error, setError] = useState('')
 
@@ -113,7 +132,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
 
   const canProceed = () => {
     if (step === 1) return data.location.lat !== 0
-    if (step === 2) return selectedCategory !== null
+    if (step === 2) return selectedCategories.length > 0
     if (step === 3) return data.hourly_rate >= 5000
     return true
   }
@@ -131,15 +150,17 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
           latitude: data.location.lat,
           longitude: data.location.lng,
           hourly_rate: data.hourly_rate,
-          category_id: selectedCategory,
+          category_id: selectedCategories[0] || selectedCategory,
+          category_ids: selectedCategories,
           skills: data.skills,
           bio: data.bio,
+          availability_status: 'intermediate',
         }),
       })
 
       if (res.ok) {
         localStorage.setItem(`onboarding_done_${userName}`, 'true')
-        onComplete({ ...data, category_id: selectedCategory || undefined })
+        onComplete({ ...data, category_id: selectedCategories[0] || selectedCategory || undefined, category_ids: selectedCategories })
       } else {
         setError('Error al guardar. Intenta nuevamente.')
       }
@@ -268,31 +289,39 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
           {step === 2 && (
             <div className="space-y-4 animate-slide-up">
               <div className="text-center">
-                <h4 className="text-lg font-black text-white mb-1">¿Qué servicio ofreces?</h4>
-                <p className="text-sm text-slate-400">Elige tu categoría principal</p>
+                <h4 className="text-lg font-black text-white mb-1">¿Qué servicios ofreces?</h4>
+                <p className="text-sm text-slate-400">Elige una o más especialidades</p>
               </div>
 
               <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto pr-1">
-                {categories.map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`flex items-center gap-2.5 px-3 py-3 rounded-xl text-left transition-all ${
-                      selectedCategory === cat.id
-                        ? 'bg-teal-500/20 border-2 border-teal-400 text-teal-300 shadow-[0_0_12px_rgba(45,212,191,0.15)]'
-                        : 'bg-slate-800 border-2 border-slate-700 text-slate-400 hover:border-slate-600'
-                    }`}
-                  >
-                    <span className="text-lg">{cat.icon || '📌'}</span>
-                    <span className="text-xs font-bold leading-tight">{cat.name}</span>
-                  </button>
-                ))}
+                {categories.map(cat => {
+                  const isSelected = selectedCategories.includes(cat.id)
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        setSelectedCategories(prev =>
+                          prev.includes(cat.id) ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
+                        )
+                      }}
+                      className={`flex items-center gap-2.5 px-3 py-3 rounded-xl text-left transition-all relative ${
+                        isSelected
+                          ? 'bg-teal-500/20 border-2 border-teal-400 text-teal-300 shadow-[0_0_12px_rgba(45,212,191,0.15)]'
+                          : 'bg-slate-800 border-2 border-slate-700 text-slate-400 hover:border-slate-600'
+                      }`}
+                    >
+                      <span className="text-lg">{getIcon(cat.icon)}</span>
+                      <span className="text-xs font-bold leading-tight flex-1">{cat.name}</span>
+                      {isSelected && <span className="text-teal-400 text-xs font-black">✓</span>}
+                    </button>
+                  )
+                })}
               </div>
 
-              {selectedCategory && (
+              {selectedCategories.length > 0 && (
                 <div className="bg-teal-500/10 border border-teal-500/30 rounded-xl p-3">
                   <p className="text-teal-400 text-xs font-semibold">
-                    ✅ Podrás agregar más categorías después en tu perfil
+                    ✅ {selectedCategories.length} especialidad{selectedCategories.length > 1 ? 'es' : ''} seleccionada{selectedCategories.length > 1 ? 's' : ''}
                   </p>
                 </div>
               )}
