@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
+const AddressAutocomplete = dynamic(() => import('./AddressAutocomplete'), { ssr: false })
+const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
 
 interface Props {
   expert: {
@@ -323,24 +326,12 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             
             <div>
               <label className="text-xs font-medium mb-1 block">Origen</label>
-              <input
-                type="text"
-                value={pickupAddress}
-                onChange={(e) => setPickupAddress(e.target.value)}
-                placeholder="Ej: Renaico, Calle Principal 123"
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-              />
+              <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} placeholder="Ej: Renaico, Plaza" />
             </div>
 
             <div>
               <label className="text-xs font-medium mb-1 block">Destino</label>
-              <input
-                type="text"
-                value={rideDeliveryAddress}
-                onChange={(e) => setRideDeliveryAddress(e.target.value)}
-                placeholder="Ej: Angol, Hospital"
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-              />
+              <AddressAutocomplete value={rideDeliveryAddress} onChange={setRideDeliveryAddress} placeholder="Ej: Angol, Hospital" />
             </div>
 
             <div>
@@ -476,13 +467,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             </div>
             <div>
               <label className="text-xs font-bold text-gray-700 mb-1 block">Dirección de entrega</label>
-              <input
-                type="text"
-                value={deliveryAddress}
-                onChange={e => setDeliveryAddress(e.target.value)}
-                placeholder="Calle, número, comuna"
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
+              <AddressAutocomplete value={deliveryAddress} onChange={setDeliveryAddress} placeholder="Calle, número, comuna" />
             </div>
             {deliveryAddress && (
               <button
@@ -503,19 +488,24 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
         )}
 
         {/* Description */}
-        <textarea
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder={
-            requestType === 'ride_share' 
-              ? "Detalles adicionales del viaje (opcional)..." 
-              : requestType === 'express_errand'
-              ? "Lista de productos o detalles de la compra..."
-              : "Describe brevemente lo que necesitas..."
-          }
-          className="w-full h-20 px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
-          maxLength={500}
-        />
+        <div className="relative">
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder={
+              requestType === 'ride_share' 
+                ? "Detalles adicionales del viaje (opcional)..." 
+                : requestType === 'express_errand'
+                ? "Lista de productos o detalles de la compra..."
+                : "Describe brevemente lo que necesitas..."
+            }
+            className="w-full h-20 px-3 py-2 pr-10 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
+            maxLength={500}
+          />
+          <div className="absolute bottom-2 right-2">
+            <VoiceInput onTranscript={(t) => setDescription(prev => prev ? prev + ' ' + t : t)} />
+          </div>
+        </div>
 
         {/* Urgency */}
         <div className="flex gap-2 mt-3">

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
 import dynamic from 'next/dynamic'
 const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
+const AddressAutocomplete = dynamic(() => import('./AddressAutocomplete'), { ssr: false })
 import CategoryPicker from './CategoryPicker'
 
 interface Category {
@@ -308,8 +309,8 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
               {/* Campos ride_share */}
               {demandType === 'ride_share' && (
                 <div className="space-y-2">
-                  <input type="text" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)} placeholder="Origen" className="w-full px-3 py-2 border rounded-lg text-sm" />
-                  <input type="text" value={deliveryAddress} onChange={(e) => { setDeliveryAddress(e.target.value); setDestinationName(e.target.value) }} placeholder="Destino" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} onSelect={(v, lat, lng) => { setPickupAddress(v); setPickupLat(lat); setPickupLng(lng) }} placeholder="Origen" />
+                  <AddressAutocomplete value={deliveryAddress} onChange={(v) => { setDeliveryAddress(v); setDestinationName(v) }} onSelect={(v, lat, lng) => { setDeliveryAddress(v); setDestinationName(v); setDeliveryLat(lat); setDeliveryLng(lng) }} placeholder="Destino" />
                   <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
                 </div>
               )}
