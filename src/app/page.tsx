@@ -109,6 +109,7 @@ export default function Home() {
   const [activeRequestId, setActiveRequestId] = useState<number | null>(null)
   const [activeChatRequestIds, setActiveChatRequestIds] = useState<number[]>([])
   const [showChat, setShowChat] = useState(false)
+  const [chatContext, setChatContext] = useState<{ description?: string; name?: string; avatar?: string | null }>({})
   const [nudge, setNudge] = useState<string | null>(null)
   const [nudgeFade, setNudgeFade] = useState(true)
   const [demandAlert, setDemandAlert] = useState<string | null>(null)
@@ -1735,6 +1736,7 @@ export default function Home() {
                   return
                 }
                 setActiveRequestId(request.id)
+                setChatContext({ description: request?.description, name: request?.client?.name, avatar: request?.client?.avatar })
                 setShowChat(true)
                 setDashHidden(true)
               }}
@@ -2145,6 +2147,7 @@ export default function Home() {
             setActiveRequestId(reqId)
             setShowChat(true)
             toast('Solicitud enviada exitosamente', 'success')
+            setChatContext({})
           }}
         />
       )}
@@ -2155,6 +2158,9 @@ export default function Home() {
           requestId={activeRequestId}
           currentUserId={0}
           onClose={() => setShowChat(false)}
+          requestDescription={chatContext.description}
+          otherPersonName={chatContext.name}
+          otherPersonAvatar={chatContext.avatar}
         />
       )}
 
