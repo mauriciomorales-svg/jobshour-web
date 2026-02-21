@@ -91,12 +91,30 @@ export default function LandingPage() {
         <h2 className="text-2xl font-black text-center mb-8">¿Para quién es JobsHour?</h2>
         <div className="grid grid-cols-2 gap-4">
           {[
-            { emoji: '🔨', title: 'Maestros y técnicos', desc: 'Gasfiteros, electricistas, pintores, carpinteros' },
-            { emoji: '🧹', title: 'Aseo y limpieza', desc: 'Limpieza de hogares, oficinas y locales' },
-            { emoji: '🚚', title: 'Fletes y mudanzas', desc: 'Traslados, despachos y delivery local' },
-            { emoji: '🌿', title: 'Jardín y campo', desc: 'Podas, siembras, mantención de terrenos' },
-            { emoji: '📦', title: 'Mandados', desc: 'Compras en tiendas, recados y encargos' },
-            { emoji: '🚗', title: 'Viajes compartidos', desc: 'Llevar o traer personas entre comunas' },
+            { emoji: '🔨', title: 'Reparaciones', desc: 'Maestros, gasfiteros, electricistas' },
+            { emoji: '🧹', title: 'Aseo y limpieza', desc: 'Hogares, oficinas y locales' },
+            { emoji: '🚚', title: 'Fletes y mudanzas', desc: 'Traslados y despachos' },
+            { emoji: '�', title: 'Jardín y campo', desc: 'Podas, siembras, terrenos' },
+            { emoji: '📦', title: 'Mandados', desc: 'Compras y recados' },
+            { emoji: '🚗', title: 'Viajes compartidos', desc: 'Entre comunas' },
+            { emoji: '⚡', title: 'Electricidad', desc: 'Instalaciones eléctricas' },
+            { emoji: '💧', title: 'Gasfitería', desc: 'Cañerías y plomería' },
+            { emoji: '🎨', title: 'Pintura', desc: 'Interiores y exteriores' },
+            { emoji: '�', title: 'Carpintería', desc: 'Muebles y maderas' },
+            { emoji: '❤️', title: 'Cuidado de personas', desc: 'Adultos mayores y niños' },
+            { emoji: '🐾', title: 'Cuidado de animales', desc: 'Mascotas y animales' },
+            { emoji: '👨‍🍳', title: 'Cocina y catering', desc: 'Eventos y comida a domicilio' },
+            { emoji: '📚', title: 'Clases y tutoría', desc: 'Reforzamiento y enseñanza' },
+            { emoji: '💻', title: 'Tecnología', desc: 'PC, celulares y redes' },
+            { emoji: '📷', title: 'Fotografía y video', desc: 'Eventos y retratos' },
+            { emoji: '�', title: 'Construcción', desc: 'Obras y albañilería' },
+            { emoji: '🛡️', title: 'Seguridad', desc: 'Vigilancia y rondas' },
+            { emoji: '🎵', title: 'Eventos y animación', desc: 'Fiestas y celebraciones' },
+            { emoji: '✂️', title: 'Peluquería', desc: 'Cortes y estética' },
+            { emoji: '💆', title: 'Masajes', desc: 'Relajación y bienestar' },
+            { emoji: '🌱', title: 'Agricultura', desc: 'Siembra y cosecha' },
+            { emoji: '🔥', title: 'Soldadura', desc: 'Metal y estructuras' },
+            { emoji: '🚌', title: 'Transporte escolar', desc: 'Traslado de niños' },
           ].map(({ emoji, title, desc }) => (
             <div key={title} className="bg-slate-800/60 border border-slate-700 rounded-2xl p-4">
               <div className="text-3xl mb-2">{emoji}</div>

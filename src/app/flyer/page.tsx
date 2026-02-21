@@ -83,7 +83,7 @@ export default function FlyerPage() {
         <div className="servicios">
           <h3>Servicios disponibles</h3>
           <div className="chips">
-            {['🔧 Reparaciones','🧹 Aseo','🚚 Fletes','🌿 Jardín','📦 Mandados','🚗 Viajes','⚡ Electricidad','💧 Gasfitería'].map(s => (
+            {['🔧 Reparaciones','🧹 Aseo','🚚 Fletes','🌿 Jardín','📦 Mandados','🚗 Viajes','⚡ Electricidad','💧 Gasfitería','🎨 Pintura','📐 Carpintería','❤️ Cuidado personas','🐾 Mascotas','👨‍🍳 Cocina','📚 Clases','💻 Tecnología','📷 Fotografía','👷 Construcción','✂️ Peluquería','💆 Masajes','🌱 Agricultura','🔥 Soldadura','🚌 Transporte escolar'].map(s => (
               <div key={s} className="chip">{s}</div>
             ))}
           </div>

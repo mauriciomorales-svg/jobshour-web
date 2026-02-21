@@ -17,6 +17,8 @@ const iconMap: Record<string, string> = {
   'disc': '🎧', 'wifi': '📶', 'chef-hat': '👨‍🍳', 'utensils': '🍽️',
   'activity': '🏃', 'hand': '💆', 'music': '🎵', 'graduation-cap': '🎓',
   'dog': '🐕', 'heart-handshake': '🤝', 'baby': '👶', 'shopping-cart': '🛒',
+  'shield': '🛡️', 'book': '📚', 'laptop': '💻', 'heart': '❤️',
+  'paw': '🐾', 'ruler': '📐', 'tree': '🌳',
 }
 
 function InlineFeedback({ msg, type }: { msg: string; type: 'ok' | 'err' | 'info' }) {
