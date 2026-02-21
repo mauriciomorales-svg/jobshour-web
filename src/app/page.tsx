@@ -813,8 +813,8 @@ export default function Home() {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     
     // Usar ubicación del usuario si está disponible, sino usar coordenadas por defecto
-    const lat = userLat || -37.6672
-    const lng = userLng || -72.5730
+    const lat = userLat || -38.7359
+    const lng = userLng || -72.5904
     
     
     const params = new URLSearchParams({ lat: String(lat), lng: String(lng) })
