@@ -1,4 +1,7 @@
 'use client'
+import { QRCodeSVG } from 'qrcode.react'
+
+const LANDING_URL = 'https://jobshour.dondemorales.cl/landing'
 
 export default function LandingPage() {
   return (
@@ -23,10 +26,11 @@ export default function LandingPage() {
           <h1 className="text-4xl font-black tracking-tight mb-3">
             <span className="text-teal-400">Jobs</span>Hour
           </h1>
-          <p className="text-xl text-slate-300 font-semibold mb-2">Encuentra trabajo cerca de ti</p>
-          <p className="text-slate-400 text-base mb-8 leading-relaxed">
-            Conectamos a personas que necesitan un servicio con trabajadores de su misma comunidad, en tiempo real y sin intermediarios.
+          <p className="text-xl text-slate-300 font-semibold mb-2">El trabajo que necesitas, a pasos de tu casa</p>
+          <p className="text-slate-400 text-base mb-4 leading-relaxed">
+            ¿Necesitas un gasfiter, un flete o alguien que te haga un mandado? <strong className="text-white">En minutos</strong> encuentras a alguien de tu misma comunidad, sin llamadas, sin esperas y sin intermediarios.
           </p>
+          <p className="text-teal-400 font-bold text-sm mb-8">✅ Gratis · ✅ Sin registro previo · ✅ Solo para tu zona</p>
 
           {/* Botón descarga */}
           <a
@@ -36,7 +40,32 @@ export default function LandingPage() {
             <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.341a.75.75 0 01-.75.75H7.227a.75.75 0 010-1.5h9.546a.75.75 0 01.75.75zM6.17 6.232l1.521 1.521A5.25 5.25 0 0012 6.75a5.25 5.25 0 004.309 2.003l1.521-1.521a.75.75 0 011.06 1.06l-1.5 1.5a.75.75 0 01-.53.22A6.75 6.75 0 0112 8.25a6.75 6.75 0 01-4.86 2.762.75.75 0 01-.53-.22l-1.5-1.5a.75.75 0 011.06-1.06zM12 2.25a.75.75 0 01.75.75v6.19l1.72-1.72a.75.75 0 111.06 1.06l-3 3a.75.75 0 01-1.06 0l-3-3a.75.75 0 111.06-1.06l1.72 1.72V3a.75.75 0 01.75-.75z"/></svg>
             Descargar para Android
           </a>
-          <p className="text-slate-500 text-xs mt-3">Gratis · Sin registro previo · Android 8+</p>
+          <p className="text-slate-500 text-xs mt-3">Android 8+ · También disponible en versión web</p>
+
+          {/* QR */}
+          <div className="mt-10 flex flex-col items-center gap-3">
+            <div className="bg-white p-4 rounded-2xl shadow-2xl inline-block">
+              <QRCodeSVG value={LANDING_URL} size={160} level="H" />
+            </div>
+            <p className="text-slate-400 text-xs">📱 Escanea con tu celular para abrir esta página</p>
+            <button
+              onClick={() => {
+                const svg = document.querySelector('#qr-download svg') as SVGElement
+                if (!svg) return
+                const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' })
+                const a = document.createElement('a')
+                a.href = URL.createObjectURL(blob)
+                a.download = 'jobshour-qr.svg'
+                a.click()
+              }}
+              className="text-teal-400 text-xs hover:underline flex items-center gap-1"
+            >
+              ⬇️ Descargar QR para imprimir
+            </button>
+            <div id="qr-download" className="hidden">
+              <QRCodeSVG value={LANDING_URL} size={400} level="H" />
+            </div>
+          </div>
         </div>
       </section>
 
