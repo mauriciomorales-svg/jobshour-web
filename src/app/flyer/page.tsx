@@ -1,22 +1,9 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 
 const LANDING_URL = 'https://jobshour.dondemorales.cl/landing'
 
 export default function FlyerPage() {
-  const qrRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    import('qrcode').then(QRCode => {
-      if (qrRef.current) {
-        QRCode.toCanvas(qrRef.current, LANDING_URL, {
-          width: 160,
-          margin: 1,
-          color: { dark: '#0f172a', light: '#ffffff' }
-        })
-      }
-    })
-  }, [])
 
   return (
     <>
@@ -113,7 +100,7 @@ export default function FlyerPage() {
         </div>
 
         <div className="qr-section">
-          <canvas ref={qrRef} style={{flexShrink: 0, borderRadius: 8}} />
+          <QRCodeSVG value={LANDING_URL} size={160} level="H" style={{flexShrink: 0, borderRadius: 8}} />
           <div className="qr-text">
             <h3>👆 Escanea y<br/>empieza ahora</h3>
             <p>Abre la cámara de tu celular y apunta al código QR. Gratis, sin instalación previa.</p>
