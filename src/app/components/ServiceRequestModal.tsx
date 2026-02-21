@@ -370,8 +370,13 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
           {requestType === 'express_errand' && (
             <div className="space-y-3 bg-violet-500/5 border border-violet-500/20 rounded-2xl p-4">
               <p className="text-xs font-black text-violet-400 uppercase tracking-wider">Detalles de la compra</p>
-              <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Nombre del negocio</label>
-                <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Ej: Supermercado Angol" className={inputCls} /></div>
+              <div>
+                <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Nombre del negocio</label>
+                <div className="relative">
+                  <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Ej: Supermercado Angol" className={inputCls + ' pr-10'} />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2"><VoiceInput onTranscript={t => setStoreName(prev => prev ? prev + ' ' + t : t)} /></div>
+                </div>
+              </div>
               <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Cantidad de artículos</label>
                 <input type="number" min="1" value={itemsCount} onChange={(e) => setItemsCount(e.target.value)} placeholder="Ej: 15" className={inputCls} /></div>
               <div>
@@ -394,12 +399,15 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
               </button>
               <div>
                 <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Dirección de entrega</label>
-                <input type="text" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="Ej: Los Robles 123, Renaico" className={inputCls} />
+                <div className="relative">
+                  <input type="text" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="Ej: Los Robles 123, Renaico" className={inputCls + ' pr-10'} />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2"><VoiceInput onTranscript={t => setDeliveryAddress(prev => prev ? prev + ' ' + t : t)} /></div>
+                </div>
                 {deliveryAddress.trim().length > 3 && (
-                  <a href={`https://maps.google.com/?q=${encodeURIComponent(deliveryAddress)}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`https://maps.google.com/maps?saddr=Mi+ubicaci%C3%B3n&daddr=${encodeURIComponent(deliveryAddress)}`} target="_blank" rel="noopener noreferrer"
                     className="mt-1.5 flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    Ver en Google Maps
+                    📍 Cómo llegar (Google Maps)
                   </a>
                 )}
               </div>
@@ -424,12 +432,15 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
                 <input type="number" value={cargaPeso} onChange={e => setCargaPeso(e.target.value)} placeholder="Ej: 2.5" step="0.1" className={inputCls} /></div>
               <div>
                 <label className="text-xs font-bold text-slate-400 mb-1.5 block">Dirección de entrega</label>
-                <input type="text" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="Ej: Los Robles 123, Renaico" className={inputCls} />
+                <div className="relative">
+                  <input type="text" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="Ej: Los Robles 123, Renaico" className={inputCls + ' pr-10'} />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2"><VoiceInput onTranscript={t => setDeliveryAddress(prev => prev ? prev + ' ' + t : t)} /></div>
+                </div>
                 {deliveryAddress.trim().length > 3 && (
-                  <a href={`https://maps.google.com/?q=${encodeURIComponent(deliveryAddress)}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`https://maps.google.com/maps?saddr=Mi+ubicaci%C3%B3n&daddr=${encodeURIComponent(deliveryAddress)}`} target="_blank" rel="noopener noreferrer"
                     className="mt-1.5 flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    Ver en Google Maps
+                    📍 Cómo llegar (Google Maps)
                   </a>
                 )}
               </div>
