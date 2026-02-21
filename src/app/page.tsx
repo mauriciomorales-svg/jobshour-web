@@ -809,7 +809,8 @@ export default function Home() {
 
     fetchNearbyRef.current.lastCall = now
     
-    setLoading(true)
+    // No mostrar pantalla de loading al mover el mapa
+    if (!overrideLat) setLoading(true)
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     
     // Usar coordenadas override (mover mapa), luego GPS usuario, luego fallback
