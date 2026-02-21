@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { apiFetch } from '@/lib/api'
 
 interface DeliveryPhotoModalProps {
   isOpen: boolean
@@ -65,7 +66,7 @@ export default function DeliveryPhotoModal({
       formData.append('photo', photo)
       formData.append('type', 'delivery')
 
-      const response = await fetch(`/api/v1/requests/${serviceRequestId}/delivery-photo`, {
+      const response = await apiFetch(`/api/v1/requests/${serviceRequestId}/delivery-photo`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { apiFetch } from '@/lib/api'
 
 interface ReviewResponseModalProps {
   isOpen: boolean
@@ -36,7 +37,7 @@ export default function ReviewResponseModal({
         return
       }
 
-      const res = await fetch(`/api/v1/reviews/${reviewId}/respond`, {
+      const res = await apiFetch(`/api/v1/reviews/${reviewId}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

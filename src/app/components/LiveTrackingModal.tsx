@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 import dynamic from 'next/dynamic'
 import { useLocationTracking } from '@/hooks/useLocationTracking'
 import TrackingStatusCard from './TrackingStatusCard'
@@ -134,7 +135,7 @@ export default function LiveTrackingModal({
     // Polling como fallback (cada 5 segundos)
     const fetchWorkerLocation = async () => {
       try {
-        const response = await fetch(`/api/v1/requests/${requestId}`, {
+        const response = await apiFetch(`/api/v1/requests/${requestId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',

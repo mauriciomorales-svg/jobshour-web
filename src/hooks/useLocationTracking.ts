@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { apiFetch } from '@/lib/api'
 
 interface Location {
   lat: number
@@ -67,7 +68,7 @@ export function useLocationTracking({
       }
 
       try {
-        const response = await fetch(`/api/v1/requests/${requestId}/activity`, {
+        const response = await apiFetch(`/api/v1/requests/${requestId}/activity`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -93,6 +94,7 @@ export function useLocationTracking({
           const data = await response.json()
           console.warn('Error enviando ubicación:', data.message)
         }
+
       } catch (err) {
         console.error('Error en sendLocationUpdate:', err)
       }

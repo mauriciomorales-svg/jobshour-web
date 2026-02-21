@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Experience {
@@ -45,7 +46,7 @@ export default function ExperienceSelector({ isOpen, onClose, onAdd, existingExp
     setLoading(true)
     try {
       const token = localStorage.getItem('auth_token')
-      const res = await fetch(`/api/v1/worker/experiences/suggestions?q=${encodeURIComponent(searchQuery)}`, {
+      const res = await apiFetch(`/api/v1/worker/experiences/suggestions?q=${encodeURIComponent(searchQuery)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {

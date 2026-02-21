@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { apiFetch } from '@/lib/api'
 
 interface Stats {
   users: { total: number; workers: number; clients: number; with_fcm: number; recent_7d: number }
@@ -49,7 +50,7 @@ export default function AdminPage() {
   }, [])
 
   const api = useCallback(async (path: string, method = 'GET', body?: any) => {
-    const res = await fetch(`/api/v1/admin${path}`, {
+    const res = await apiFetch(`/api/v1/admin${path}`, {
       method,
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       ...(body ? { body: JSON.stringify(body) } : {}),

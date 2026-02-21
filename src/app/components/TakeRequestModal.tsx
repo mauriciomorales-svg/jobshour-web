@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { apiFetch } from '@/lib/api'
 
 interface Props {
   request: {
@@ -30,7 +31,7 @@ export default function TakeRequestModal({ request, onClose, onAccepted }: Props
     setError('')
     
     try {
-      const r = await fetch(`/api/v1/requests/${request.id}/respond`, {
+      const r = await apiFetch(`/api/v1/requests/${request.id}/respond`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

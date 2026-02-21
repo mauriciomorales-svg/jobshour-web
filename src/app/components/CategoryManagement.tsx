@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 
 interface Category {
   id: number
@@ -138,7 +139,7 @@ export default function CategoryManagement({ onClose }: { onClose: () => void })
 
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-      const res = await fetch(`/api/v1/categories/${id}`, {
+      const res = await apiFetch(`/api/v1/categories/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

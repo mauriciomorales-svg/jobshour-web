@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 
 interface NotificationCenterProps {
   isOpen: boolean
@@ -41,7 +42,7 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
         return
       }
 
-      const response = await fetch('/api/v1/notifications', {
+      const response = await apiFetch('/api/v1/notifications', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
@@ -62,7 +63,7 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
   const markAsRead = async (id: number) => {
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-      await fetch(`/api/v1/notifications/${id}/read`, {
+      await apiFetch(`/api/v1/notifications/${id}/read`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -77,7 +78,7 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-      await fetch('/api/v1/notifications/read-all', {
+      await apiFetch('/api/v1/notifications/read-all', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -92,7 +93,7 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
   const deleteNotification = async (id: number) => {
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-      await fetch(`/api/v1/notifications/${id}`, {
+      await apiFetch(`/api/v1/notifications/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

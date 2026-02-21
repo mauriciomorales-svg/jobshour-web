@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api'
 import ReviewCard from './ReviewCard'
 import ReviewResponseModal from './ReviewResponseModal'
 
@@ -39,7 +40,7 @@ export default function ReviewsList({ workerId, showAverage = true, canRespond =
     setLoading(true)
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-      const response = await fetch(`/api/v1/workers/${workerId}/reviews`, {
+      const response = await apiFetch(`/api/v1/workers/${workerId}/reviews`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       })
       const data = await response.json()
