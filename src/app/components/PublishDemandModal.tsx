@@ -261,6 +261,29 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
             </div>
           )}
 
+          {/* Tipo de servicio — PRIMERO y visible */}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">¿Qué necesitas?</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                ['fixed_job',  '🔧', 'Trabajo',  'Electricista, plomero...'],
+                ['ride_share', '🚗', 'Viaje',    'Llevarme o traerme'],
+                ['express_errand', '📦', 'Mandado', 'Compras, delivery'],
+              ] as const).map(([val, icon, label, sub]) => (
+                <button key={val} type="button" onClick={() => setDemandType(val as DemandType)}
+                  className={`py-3 px-2 rounded-xl text-left flex flex-col gap-1 transition active:scale-95 ${
+                    demandType === val
+                      ? 'bg-amber-500/20 ring-2 ring-amber-500'
+                      : 'bg-slate-800 border border-slate-700 hover:border-slate-600'
+                  }`}>
+                  <span className="text-2xl">{icon}</span>
+                  <span className={`text-xs font-black leading-tight ${ demandType === val ? 'text-amber-300' : 'text-slate-200'}`}>{label}</span>
+                  <span className="text-[10px] text-slate-500 leading-tight">{sub}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Categoría */}
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
@@ -309,6 +332,30 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
             </div>
           </div>
 
+          {/* Campos ride_share — aparecen automáticamente */}
+          {demandType === 'ride_share' && (
+            <div className="space-y-3 bg-blue-500/5 border border-blue-500/20 rounded-xl p-3">
+              <p className="text-xs font-black text-blue-400 uppercase tracking-wider">Detalles del viaje</p>
+              <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} onSelect={(v, lat, lng) => { setPickupAddress(v); setPickupLat(lat); setPickupLng(lng) }} placeholder="Origen" />
+              <AddressAutocomplete value={deliveryAddress} onChange={(v) => { setDeliveryAddress(v); setDestinationName(v) }} onSelect={(v, lat, lng) => { setDeliveryAddress(v); setDestinationName(v); setDeliveryLat(lat); setDeliveryLng(lng) }} placeholder="Destino" />
+              <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} className={inputCls} />
+            </div>
+          )}
+
+          {/* Campos express_errand — aparecen automáticamente */}
+          {demandType === 'express_errand' && (
+            <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-3">
+              <p className="text-xs font-black text-violet-400 uppercase tracking-wider mb-2">Negocio</p>
+              <AddressAutocomplete
+                value={storeName}
+                onChange={setStoreName}
+                onSelect={(v) => setStoreName(v)}
+                placeholder="Nombre del negocio (ej: Jumbo, Sodimac...)"
+                searchType="amenity"
+              />
+            </div>
+          )}
+
           {/* Opciones avanzadas */}
           <button
             type="button"
@@ -317,56 +364,19 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
           >
             <span className="flex items-center gap-2">
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-              Opciones avanzadas
+              Más opciones
             </span>
             <svg className={`w-4 h-4 text-slate-500 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </button>
 
           {showAdvanced && (
             <div className="space-y-4 bg-slate-800/50 border border-slate-700 rounded-2xl p-4">
-              {/* Tipo */}
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tipo de servicio</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {([['fixed_job','🔧','Trabajo'],['ride_share','🚗','Viaje'],['express_errand','📦','Compra']] as const).map(([val, icon, label]) => (
-                    <button key={val} onClick={() => setDemandType(val as DemandType)}
-                      className={`py-3 rounded-xl text-xs font-black flex flex-col items-center gap-1 transition ${demandType === val ? 'bg-amber-500/20 text-amber-300 ring-2 ring-amber-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
-                      <span className="text-base">{icon}</span>{label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Campos ride_share */}
-              {demandType === 'ride_share' && (
-                <div className="space-y-3 bg-blue-500/5 border border-blue-500/20 rounded-xl p-3">
-                  <p className="text-xs font-black text-blue-400 uppercase tracking-wider">Detalles del viaje</p>
-                  <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} onSelect={(v, lat, lng) => { setPickupAddress(v); setPickupLat(lat); setPickupLng(lng) }} placeholder="Origen" />
-                  <AddressAutocomplete value={deliveryAddress} onChange={(v) => { setDeliveryAddress(v); setDestinationName(v) }} onSelect={(v, lat, lng) => { setDeliveryAddress(v); setDestinationName(v); setDeliveryLat(lat); setDeliveryLng(lng) }} placeholder="Destino" />
-                  <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} className={inputCls} />
-                </div>
-              )}
-
-              {/* Campos express_errand */}
-              {demandType === 'express_errand' && (
-                <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-3">
-                  <p className="text-xs font-black text-violet-400 uppercase tracking-wider mb-2">Negocio</p>
-                  <AddressAutocomplete
-                    value={storeName}
-                    onChange={setStoreName}
-                    onSelect={(v) => setStoreName(v)}
-                    placeholder="Nombre del negocio (ej: Jumbo, Sodimac...)"
-                    searchType="amenity"
-                  />
-                </div>
-              )}
-
               {/* Urgencia */}
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Urgencia</label>
                 <div className="grid grid-cols-3 gap-2">
                   {([['low','🟢','Baja'],['medium','🟡','Media'],['high','🔴','Alta']] as const).map(([level, dot, label]) => (
-                    <button key={level} onClick={() => setUrgency(level)}
+                    <button key={level} type="button" onClick={() => setUrgency(level)}
                       className={`py-2.5 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 ${urgency === level ? 'bg-amber-500/20 text-amber-300 ring-2 ring-amber-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
                       <span>{dot}</span>{label}
                     </button>
@@ -380,7 +390,7 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
                 {imagePreview ? (
                   <div className="relative rounded-xl overflow-hidden">
                     <img src={imagePreview} alt="Preview" className="w-full h-36 object-cover" />
-                    <button onClick={() => { setImageFile(null); setImagePreview(null) }}
+                    <button type="button" onClick={() => { setImageFile(null); setImagePreview(null) }}
                       className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white w-7 h-7 rounded-full text-sm font-black flex items-center justify-center transition">×</button>
                   </div>
                 ) : (
