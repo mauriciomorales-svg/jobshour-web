@@ -44,6 +44,8 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [requestType, setRequestType] = useState<'fixed_job' | 'ride_share' | 'express_errand'>('fixed_job')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   
   // Campos para recados/express_errand
   const [cargaTipo, setCargaTipo] = useState<'sobre' | 'paquete' | 'bulto' | null>(null)
@@ -138,6 +140,13 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
     )
   }
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
   const handleSend = async () => {
     // Verificar autenticación (ya verificado arriba, pero por seguridad)
     if (!token) {
@@ -213,15 +222,25 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
         }
       }
       
-      const r = await fetch('/api/v1/requests', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload),
-      })
+      let r: Response
+      if (imageFile) {
+        const formData = new FormData()
+        Object.entries(payload).forEach(([k, v]) => {
+          if (v !== null && v !== undefined) formData.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v))
+        })
+        formData.append('image', imageFile)
+        r = await fetch('/api/v1/requests', {
+          method: 'POST',
+          headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: formData,
+        })
+      } else {
+        r = await fetch('/api/v1/requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(payload),
+        })
+      }
       const data = await r.json()
       if (r.ok) {
         // Éxito - cerrar modal y notificar
@@ -397,6 +416,26 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
               </div>
             </div>
             <p className="text-right text-[10px] text-slate-600 mt-1">{description.length}/500</p>
+          </div>
+
+          {/* Imagen opcional */}
+          <div>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">📷 Foto de referencia <span className="text-slate-600 font-normal normal-case">(opcional)</span></label>
+            {imagePreview ? (
+              <div className="relative">
+                <img src={imagePreview} alt="preview" className="w-full h-32 object-cover rounded-xl border border-slate-700" />
+                <button onClick={() => { setImageFile(null); setImagePreview(null) }}
+                  className="absolute top-2 right-2 w-7 h-7 bg-slate-900/80 rounded-full flex items-center justify-center text-slate-300 hover:text-white">
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center gap-3 px-4 py-3 bg-slate-800 border border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-teal-500 transition">
+                <span className="text-2xl">📷</span>
+                <span className="text-sm text-slate-400">Toca para adjuntar una foto</span>
+                <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+              </label>
+            )}
           </div>
 
           {/* Urgencia */}
