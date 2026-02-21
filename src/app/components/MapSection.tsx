@@ -1,6 +1,6 @@
 'use client'
 
-import { MapContainer, TileLayer, Marker, ZoomControl, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, ZoomControl, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEffect, forwardRef, useImperativeHandle, useState, useCallback, useRef } from 'react'
@@ -202,6 +202,16 @@ function MapMarkers({ points, onPointClick, highlightedId }: { points: MapPoint[
   )
 }
 
+function MapMoveHandler({ onMove }: { onMove: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    moveend: (e) => {
+      const center = e.target.getCenter()
+      onMove(center.lat, center.lng)
+    }
+  })
+  return null
+}
+
 // Componente para exponer la instancia del mapa
 function MapController({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
   const map = useMap()
@@ -216,7 +226,7 @@ function MapController({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
   return null
 }
 
-const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapPoint) => void | Promise<void>; onMapClick?: () => void; mapCenter?: { lat: number; lng: number; zoom: number } | null; highlightedId?: number | null }>(({ points, onPointClick, onMapClick, mapCenter, highlightedId }, ref) => {
+const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapPoint) => void | Promise<void>; onMapClick?: () => void; mapCenter?: { lat: number; lng: number; zoom: number } | null; highlightedId?: number | null; onMapMove?: (lat: number, lng: number) => void }>(({ points, onPointClick, onMapClick, mapCenter, highlightedId, onMapMove }, ref) => {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   // Usar ref para acceder siempre al valor más reciente de mapInstance
   const mapInstanceRef = useRef<L.Map | null>(null)
@@ -346,6 +356,7 @@ const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapP
       <ZoomControl position="bottomright" />
       <MapController onMapReady={handleMapReady} />
       {onMapClick && <MapClickHandler onClick={onMapClick} />}
+      {onMapMove && <MapMoveHandler onMove={onMapMove} />}
       <MapMarkers points={points} onPointClick={onPointClick} highlightedId={highlightedId} />
     </MapContainer>
   )

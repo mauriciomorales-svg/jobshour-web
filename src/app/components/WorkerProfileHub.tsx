@@ -10,7 +10,13 @@ const iconMap: Record<string, string> = {
   'wrench': '🔧', 'zap': '⚡', 'paintbrush': '🎨', 'sparkles': '✨',
   'hammer': '🔨', 'leaf': '🌿', 'key': '🔑', 'building': '🏗️',
   'scissors': '✂️', 'paw-print': '🐾', 'shopping-bag': '🛍️',
-  'truck': '🚚', 'package': '📦',
+  'truck': '🚚', 'package': '📦', 'broom': '🧹', 'motorcycle': '🏍️',
+  'bicycle': '🚲', 'car': '🚗', 'trees': '🌳', 'home': '🏠',
+  'hard-hat': '👷', 'key-round': '🔑', 'droplet': '💧', 'droplets': '💧',
+  'flame': '🔥', 'rabbit': '🐇', 'monitor': '💻', 'camera': '📷',
+  'disc': '🎧', 'wifi': '📶', 'chef-hat': '👨‍🍳', 'utensils': '🍽️',
+  'activity': '🏃', 'hand': '💆', 'music': '🎵', 'graduation-cap': '🎓',
+  'dog': '🐕', 'heart-handshake': '🤝', 'baby': '👶', 'shopping-cart': '🛒',
 }
 
 function InlineFeedback({ msg, type }: { msg: string; type: 'ok' | 'err' | 'info' }) {

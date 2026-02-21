@@ -784,7 +784,7 @@ export default function Home() {
     timeoutId: null 
   })
   
-  const fetchNearby = useCallback((categoryId?: number | null) => {
+  const fetchNearby = useCallback((categoryId?: number | null, overrideLat?: number, overrideLng?: number) => {
     // Throttle: máximo una llamada cada 2 segundos
     const now = Date.now()
     const timeSinceLastCall = now - fetchNearbyRef.current.lastCall
@@ -797,7 +797,7 @@ export default function Home() {
       fetchNearbyRef.current.timeoutId = setTimeout(() => {
         fetchNearbyRef.current.timeoutId = null
         fetchNearbyRef.current.lastCall = 0
-        fetchNearby(categoryId)
+        fetchNearby(categoryId, overrideLat, overrideLng)
       }, delay)
       return
     }
@@ -812,9 +812,9 @@ export default function Home() {
     setLoading(true)
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     
-    // Usar ubicación del usuario si está disponible, sino usar coordenadas por defecto
-    const lat = userLat || -38.7359
-    const lng = userLng || -72.5904
+    // Usar coordenadas override (mover mapa), luego GPS usuario, luego fallback
+    const lat = overrideLat ?? userLat ?? -38.7359
+    const lng = overrideLng ?? userLng ?? -72.5904
     
     
     const params = new URLSearchParams({ lat: String(lat), lng: String(lng) })
@@ -1167,7 +1167,7 @@ export default function Home() {
 
       {/* ── MAPA FULLSCREEN (always visible in background) ── */}
       <div className="absolute inset-0 pt-[180px] pb-[68px]">
-        <MapSection ref={mapRef} points={filtered} onPointClick={handlePointClick} onMapClick={handleMapClick} highlightedId={highlightedRequestId} />
+        <MapSection ref={mapRef} points={filtered} onPointClick={handlePointClick} onMapClick={handleMapClick} highlightedId={highlightedRequestId} onMapMove={(lat, lng) => fetchNearby(activeCategory, lat, lng)} />
       </div>
 
       {/* ── HEADER MODERNO CON GRADIENTES ── */}
