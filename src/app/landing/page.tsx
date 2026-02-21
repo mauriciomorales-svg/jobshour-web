@@ -23,24 +23,41 @@ export default function LandingPage() {
               </svg>
             </div>
           </div>
-          <h1 className="text-4xl font-black tracking-tight mb-3">
+          {/* Banner beta */}
+          <div className="inline-flex items-center gap-2 bg-amber-500/15 border border-amber-500/40 text-amber-400 text-sm font-bold px-4 py-2 rounded-full mb-6">
+            🚧 Versión Beta — Estamos comenzando, ¡sé de los primeros!
+          </div>
+
+          <h1 className="text-5xl font-black tracking-tight mb-4">
             <span className="text-teal-400">Jobs</span>Hour
           </h1>
-          <p className="text-xl text-slate-300 font-semibold mb-2">El trabajo que necesitas, a pasos de tu casa</p>
-          <p className="text-slate-400 text-base mb-4 leading-relaxed">
+          <p className="text-2xl text-slate-200 font-bold mb-3">El trabajo que necesitas, a pasos de tu casa</p>
+          <p className="text-slate-300 text-lg mb-4 leading-relaxed">
             ¿Necesitas un gasfiter, un flete o alguien que te haga un mandado? <strong className="text-white">En minutos</strong> encuentras a alguien de tu misma comunidad, sin llamadas, sin esperas y sin intermediarios.
           </p>
-          <p className="text-teal-400 font-bold text-sm mb-8">✅ Gratis · ✅ Sin registro previo · ✅ Solo para tu zona</p>
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-6 text-left">
+            <p className="text-amber-300 text-sm font-bold mb-1">⚠️ Aplicación en versión inicial (Beta)</p>
+            <p className="text-amber-200/70 text-sm">Estamos en etapa de pruebas en Renaico, Angol y Los Ángeles. Puede haber pocos trabajadores disponibles por ahora — eso cambiará pronto. Tu participación ayuda a crecer.</p>
+          </div>
+          <p className="text-teal-400 font-bold text-base mb-8">✅ Gratis · ✅ Sin registro previo · ✅ Solo para tu zona</p>
 
           {/* Botón descarga */}
-          <a
-            href="/jobshour.apk"
-            className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl shadow-teal-500/30 transition active:scale-95"
-          >
-            <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.341a.75.75 0 01-.75.75H7.227a.75.75 0 010-1.5h9.546a.75.75 0 01.75.75zM6.17 6.232l1.521 1.521A5.25 5.25 0 0012 6.75a5.25 5.25 0 004.309 2.003l1.521-1.521a.75.75 0 011.06 1.06l-1.5 1.5a.75.75 0 01-.53.22A6.75 6.75 0 0112 8.25a6.75 6.75 0 01-4.86 2.762.75.75 0 01-.53-.22l-1.5-1.5a.75.75 0 011.06-1.06zM12 2.25a.75.75 0 01.75.75v6.19l1.72-1.72a.75.75 0 111.06 1.06l-3 3a.75.75 0 01-1.06 0l-3-3a.75.75 0 111.06-1.06l1.72 1.72V3a.75.75 0 01.75-.75z"/></svg>
-            Descargar para Android
-          </a>
-          <p className="text-slate-500 text-xs mt-3">Android 8+ · También disponible en versión web</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <a
+              href="/jobshour.apk"
+              className="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-black text-base px-7 py-4 rounded-2xl shadow-xl shadow-teal-500/30 transition active:scale-95"
+            >
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.341a.75.75 0 01-.75.75H7.227a.75.75 0 010-1.5h9.546a.75.75 0 01.75.75zM6.17 6.232l1.521 1.521A5.25 5.25 0 0012 6.75a5.25 5.25 0 004.309 2.003l1.521-1.521a.75.75 0 011.06 1.06l-1.5 1.5a.75.75 0 01-.53.22A6.75 6.75 0 0112 8.25a6.75 6.75 0 01-4.86 2.762.75.75 0 01-.53-.22l-1.5-1.5a.75.75 0 011.06-1.06zM12 2.25a.75.75 0 01.75.75v6.19l1.72-1.72a.75.75 0 111.06 1.06l-3 3a.75.75 0 01-1.06 0l-3-3a.75.75 0 111.06-1.06l1.72 1.72V3a.75.75 0 01.75-.75z"/></svg>
+              📱 Descargar APK Android
+            </a>
+            <a
+              href="https://jobshour.dondemorales.cl"
+              className="inline-flex items-center justify-center gap-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-black text-base px-7 py-4 rounded-2xl transition active:scale-95"
+            >
+              🌐 Abrir versión web
+            </a>
+          </div>
+          <p className="text-slate-500 text-xs mt-3">Sin instalación · Funciona en cualquier celular o PC</p>
 
           {/* QR */}
           <div className="mt-10 flex flex-col items-center gap-3">
