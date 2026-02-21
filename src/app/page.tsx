@@ -1171,6 +1171,21 @@ export default function Home() {
         <MapSection ref={mapRef} points={filtered} onPointClick={handlePointClick} onMapClick={handleMapClick} highlightedId={highlightedRequestId} onMapMove={(lat, lng) => fetchNearby(activeCategory, lat, lng)} />
       </div>
 
+      {/* ── MENSAJE MAPA VACÍO ── */}
+      {activeTab === 'map' && !loading && filtered.length === 0 && !selectedDetail && (
+        <div className="absolute inset-0 pt-[180px] pb-[68px] flex items-center justify-center pointer-events-none z-[150]">
+          <div className="bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-2xl px-6 py-5 mx-6 text-center shadow-2xl pointer-events-auto">
+            <div className="text-4xl mb-2">🔍</div>
+            <p className="text-white font-black text-base mb-1">No hay trabajadores cerca</p>
+            <p className="text-slate-400 text-xs leading-relaxed mb-3">Mueve el mapa para buscar en otra zona, o publica lo que necesitas y te contactarán.</p>
+            <button
+              onClick={() => { const a = checkAuthAndProfile(); if (!a.canInteract) { if (a.reason === 'login') setShowLoginModal(true); else setShowOnboarding(true); return; } setShowPublishDemand(true) }}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-black text-xs transition active:scale-95"
+            >💰 Publicar lo que necesito</button>
+          </div>
+        </div>
+      )}
+
       {/* ── FAB CREAR DEMANDA ── */}
       {activeTab === 'map' && !selectedDetail && (
         <button

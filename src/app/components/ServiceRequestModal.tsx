@@ -46,6 +46,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
   const [requestType, setRequestType] = useState<'fixed_job' | 'ride_share' | 'express_errand'>('fixed_job')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
   
   // Campos para recados/express_errand
   const [cargaTipo, setCargaTipo] = useState<'sobre' | 'paquete' | 'bulto' | null>(null)
@@ -257,8 +258,8 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
       }
       const data = await r.json()
       if (r.ok) {
-        // Éxito - cerrar modal y notificar
-        onSent(data.data.id)
+        setSent(true)
+        setTimeout(() => onSent(data.data.id), 2000)
       } else {
         // Mostrar error detallado
         const errorMsg = data.message || (data.errors ? Object.values(data.errors).flat().join(', ') : 'Error al enviar solicitud')
@@ -289,7 +290,22 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
           <div className="w-10 h-1 bg-slate-700 rounded-full" />
         </div>
 
-        {/* Header */}
+        {/* Pantalla de éxito */}
+        {sent && (
+          <div className="px-5 py-12 flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-teal-500/20 rounded-full flex items-center justify-center mb-4 animate-bounce">
+              <svg className="w-10 h-10 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <h3 className="text-xl font-black text-white mb-2">¡Solicitud enviada!</h3>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              <span className="text-white font-bold">{expert.name}</span> recibirá tu solicitud ahora mismo.<br/>
+              Te responderá en minutos por el chat.
+            </p>
+          </div>
+        )}
+
+        {/* Header + Formulario */}
+        {!sent && <>
         <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-slate-800">
           <div>
             <h3 className="text-lg font-black text-white">Solicitar servicio</h3>
@@ -516,6 +532,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
 
           <p className="text-[10px] text-slate-600 text-center pb-2">El trabajador tiene 5 minutos para responder</p>
         </div>
+        </>}
       </div>
     </div>
   )
