@@ -39,8 +39,8 @@ export default function AddressAutocomplete({ value, onChange, onSelect, placeho
     setLoading(true)
     try {
       const extraParams = searchType === 'amenity' ? '&featuretype=settlement&featuretype=amenity' : ''
-      // viewbox limitado a La Araucanía y alrededores (sur de Chile)
-      const viewbox = '&viewbox=-73.5,-36.5,-71.0,-39.5&bounded=1'
+      // viewbox: Biobío + La Araucanía (Los Ángeles, Nacimiento, Angol, Renaico, Temuco)
+      const viewbox = '&viewbox=-74.0,-36.0,-71.0,-40.0&bounded=1'
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=cl&limit=6&addressdetails=1${extraParams}${viewbox}`, {
         headers: { 'Accept-Language': 'es' }
       })
