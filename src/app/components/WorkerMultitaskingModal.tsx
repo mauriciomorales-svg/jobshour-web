@@ -4,6 +4,18 @@ import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 
+const ICON_MAP: Record<string, string> = {
+  wrench: '🔧', zap: '⚡', paintbrush: '🎨', sparkles: '🧹', hammer: '🔨',
+  leaf: '🌿', key: '🔑', building: '🏗️', scissors: '✂️', 'paw-print': '🐾',
+  truck: '🚚', 'shopping-cart': '🛒', car: '🚗', baby: '👶',
+  'heart-handshake': '🤝', dog: '🐕', 'graduation-cap': '🎓', music: '🎵',
+  hand: '💆', activity: '🏃', utensils: '🍽️', 'chef-hat': '👨‍🍳',
+  camera: '📷', monitor: '💻', flame: '🔥', droplet: '💧',
+  'hard-hat': '👷', trees: '🌳', package: '📦', shield: '🛡️',
+  book: '📚', laptop: '💻', heart: '❤️', paw: '🐾', ruler: '📐', tree: '🌳',
+}
+const getIcon = (icon?: string) => ICON_MAP[icon || ''] || '📋'
+
 interface Category {
   id: number
   name: string
@@ -239,7 +251,7 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
                       `}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">{cat.icon}</span>
+                        <span className="text-2xl">{getIcon(cat.icon)}</span>
                         <span className={`text-sm font-bold ${isSelected ? 'text-emerald-700' : 'text-gray-700'}`}>
                           {cat.name}
                         </span>

@@ -6,6 +6,18 @@ import { QRCodeSVG } from 'qrcode.react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
+const ICON_MAP: Record<string, string> = {
+  wrench: '🔧', zap: '⚡', paintbrush: '🎨', sparkles: '🧹', hammer: '🔨',
+  leaf: '🌿', key: '🔑', building: '🏗️', scissors: '✂️', 'paw-print': '🐾',
+  truck: '🚚', 'shopping-cart': '🛒', car: '🚗', baby: '👶',
+  'heart-handshake': '🤝', dog: '🐕', 'graduation-cap': '🎓', music: '🎵',
+  hand: '💆', activity: '🏃', utensils: '🍽️', 'chef-hat': '👨‍🍳',
+  camera: '📷', monitor: '💻', flame: '🔥', droplet: '💧',
+  'hard-hat': '👷', trees: '🌳', package: '📦', shield: '🛡️',
+  book: '📚', laptop: '💻', heart: '❤️', paw: '🐾', ruler: '📐', tree: '🌳',
+}
+const getIcon = (icon?: string) => ICON_MAP[icon || ''] || '📋'
+
 interface CardData {
   id: number
   name: string
@@ -260,7 +272,7 @@ Revisa mi perfil completo:
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                 {cardData.categories.slice(0, 4).map((cat) => (
                   <div key={cat.id} className="group bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-yellow-400 transition-all duration-300 cursor-pointer relative">
-                    <span className="text-4xl mb-2 block">{cat.icon}</span>
+                    <span className="text-4xl mb-2 block">{getIcon(cat.icon)}</span>
                     <span className="text-sm font-black text-slate-800 uppercase italic block">{cat.name}</span>
                     <div className="absolute inset-0 rounded-2xl bg-yellow-400/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                   </div>

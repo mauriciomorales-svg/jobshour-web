@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
 import dynamic from 'next/dynamic'
 const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
-const AddressAutocomplete = dynamic(() => import('./AddressAutocomplete'), { ssr: false })
 import CategoryPicker from './CategoryPicker'
 
 interface Category {
@@ -63,6 +62,7 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string,string>>({})
 
   // Asignar categoría automáticamente según tipo (usar primera disponible si no hay match)
   useEffect(() => {
@@ -87,40 +87,30 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
   const handlePublish = async () => {
     setError('')
-    
+    const errs: Record<string,string> = {}
+
     // Validaciones básicas
-    if (!categoryId) {
-      setError('Selecciona una categoría')
-      return
-    }
-    if (!description.trim()) {
-      setError('Ingresa una descripción')
-      return
-    }
+    if (demandType === 'fixed_job' && !categoryId) errs.category = 'Selecciona una categoría'
+    if (!description.trim()) errs.description = 'Describe lo que necesitas'
 
-    // Validaciones específicas por tipo
+    // Validaciones por tipo
     if (demandType === 'ride_share') {
-      if (!pickupAddress.trim() || !deliveryAddress.trim()) {
-        setError('Ingresa origen y destino')
-        return
-      }
-      if (!departureTime) {
-        setError('Selecciona hora de salida')
-        return
-      }
-      const departureDate = new Date(departureTime)
-      if (departureDate <= new Date()) {
-        setError('La hora de salida debe ser en el futuro')
-        return
-      }
+      if (!pickupAddress.trim()) errs.pickup = 'Ingresa el origen'
+      if (!deliveryAddress.trim()) errs.delivery = 'Ingresa el destino'
+      if (!departureTime) errs.departure = 'Selecciona hora de salida'
+      else if (new Date(departureTime) <= new Date()) errs.departure = 'La hora debe ser en el futuro'
+    }
+    if (demandType === 'express_errand') {
+      if (!storeName.trim()) errs.storeName = 'Ingresa el nombre del negocio'
     }
 
-    if (demandType === 'express_errand') {
-      if (!storeName.trim()) {
-        setError('Ingresa el nombre del negocio')
-        return
-      }
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs)
+      // Scroll al primer error
+      setTimeout(() => document.querySelector('[data-field-error]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+      return
     }
+    setFieldErrors({})
 
     setSaving(true)
     try {
@@ -145,6 +135,15 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
         recurrence,
         ...(scheduledAt ? { scheduled_at: new Date(scheduledAt).toISOString() } : {}),
         ...(recurrence === 'custom' && recurrenceDays.length > 0 ? { recurrence_days: recurrenceDays } : {}),
+      }
+
+      // Asignar categoría automática para ride_share y express_errand
+      if (demandType === 'ride_share') {
+        const ridecat = categories.find(c => c.name?.toLowerCase().includes('viaje') || c.icon === 'car')
+        if (ridecat) payload.category_id = ridecat.id
+      } else if (demandType === 'express_errand') {
+        const errandcat = categories.find(c => c.name?.toLowerCase().includes('mandado') || c.icon === 'package')
+        if (errandcat) payload.category_id = errandcat.id
       }
 
       // Agregar campos específicos según el tipo
@@ -284,18 +283,21 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
             </div>
           </div>
 
-          {/* Categoría */}
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-              Categoría <span className="text-amber-500">*</span>
-            </label>
-            <CategoryPicker
-              categories={categories}
-              selectedId={categoryId}
-              onSelect={(id) => setCategoryId(id)}
-              placeholder="¿Qué tipo de servicio?"
-            />
-          </div>
+          {/* Categoría — solo para trabajo general */}
+          {demandType === 'fixed_job' && (
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Categoría <span className="text-amber-500">*</span>
+              </label>
+              <CategoryPicker
+                categories={categories}
+                selectedId={categoryId}
+                onSelect={(id) => { setCategoryId(id); setFieldErrors(e => ({...e, category: ''})) }}
+                placeholder="¿Qué tipo de servicio?"
+              />
+              {fieldErrors.category && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.category}</p>}
+            </div>
+          )}
 
           {/* Descripción */}
           <div>
@@ -305,64 +307,66 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
             <div className="relative">
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => { setDescription(e.target.value); setFieldErrors(er => ({...er, description: ''})) }}
                 placeholder="Describe brevemente lo que necesitas..."
-                className="w-full h-24 px-3.5 py-2.5 pr-12 bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+                className={`w-full h-24 px-3.5 py-2.5 pr-12 bg-slate-800 border text-white placeholder:text-slate-500 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition ${fieldErrors.description ? 'border-red-500' : 'border-slate-700'}`}
                 maxLength={500}
               />
               <div className="absolute bottom-2.5 right-2.5">
                 <VoiceInput onTranscript={(t) => setDescription(prev => prev ? prev + ' ' + t : t)} />
               </div>
             </div>
+            {fieldErrors.description && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.description}</p>}
             <p className="text-right text-[10px] text-slate-600 mt-1">{description.length}/500</p>
           </div>
 
           {/* Precio */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Precio ofrecido (CLP)</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">¿Cuánto pagarías? <span className="text-slate-600 font-normal normal-case">(opcional)</span></label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
               <input
                 type="number"
                 value={offeredPrice}
                 onChange={(e) => setOfferedPrice(e.target.value)}
-                placeholder="5000 (opcional)"
+                placeholder="Ej: 10000"
                 className="w-full bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl pl-7 pr-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
               />
             </div>
+            <p className="text-[10px] text-slate-600 mt-1">Pesos chilenos (CLP) · El trabajador puede negociar</p>
           </div>
 
-          {/* Campos ride_share — aparecen automáticamente */}
+          {/* Campos ride_share */}
           {demandType === 'ride_share' && (
             <div className="space-y-3 bg-blue-500/5 border border-blue-500/20 rounded-xl p-3">
               <p className="text-xs font-black text-blue-400 uppercase tracking-wider">Detalles del viaje</p>
-              <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} onSelect={(v, lat, lng) => { setPickupAddress(v); setPickupLat(lat); setPickupLng(lng) }} placeholder="Origen" />
-              <AddressAutocomplete value={deliveryAddress} onChange={(v) => { setDeliveryAddress(v); setDestinationName(v) }} onSelect={(v, lat, lng) => { setDeliveryAddress(v); setDestinationName(v); setDeliveryLat(lat); setDeliveryLng(lng) }} placeholder="Destino" />
-              <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} className={inputCls} />
+              <div>
+                <input type="text" value={pickupAddress} onChange={e => { setPickupAddress(e.target.value); setFieldErrors(er => ({...er, pickup: ''})) }} placeholder="Origen (ej: Plaza de Renaico)" className={inputCls} />
+                {fieldErrors.pickup && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.pickup}</p>}
+              </div>
+              <div>
+                <input type="text" value={deliveryAddress} onChange={e => { setDeliveryAddress(e.target.value); setDestinationName(e.target.value); setFieldErrors(er => ({...er, delivery: ''})) }} placeholder="Destino (ej: Hospital de Angol)" className={inputCls} />
+                {fieldErrors.delivery && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.delivery}</p>}
+              </div>
+              <div>
+                <input type="datetime-local" value={departureTime} onChange={e => { setDepartureTime(e.target.value); setFieldErrors(er => ({...er, departure: ''})) }} className={inputCls} />
+                {fieldErrors.departure && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.departure}</p>}
+              </div>
             </div>
           )}
 
-          {/* Campos express_errand — aparecen automáticamente */}
+          {/* Campos express_errand */}
           {demandType === 'express_errand' && (
-            <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-3">
-              <p className="text-xs font-black text-violet-400 uppercase tracking-wider mb-2">Negocio</p>
-              <AddressAutocomplete
-                value={storeName}
-                onChange={setStoreName}
-                onSelect={(v) => setStoreName(v)}
-                placeholder="Nombre del negocio (ej: Jumbo, Sodimac...)"
-                searchType="amenity"
-              />
-              {storeName.trim() && (
-                <a
-                  href={`https://www.google.com/maps/search/${encodeURIComponent(storeName)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition"
-                >
-                  <span>📍</span>
-                  <span>Ver "{storeName}" en Google Maps</span>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-black text-violet-400 uppercase tracking-wider">Detalles del mandado</p>
+              <div>
+                <input type="text" value={storeName} onChange={e => { setStoreName(e.target.value); setFieldErrors(er => ({...er, storeName: ''})) }} placeholder="Nombre del negocio (ej: Supermercado Angol)" className={inputCls} />
+                {fieldErrors.storeName && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.storeName}</p>}
+              </div>
+              {storeName.trim().length > 2 && (
+                <a href={`https://maps.google.com/maps?saddr=Mi+ubicaci%C3%B3n&daddr=${encodeURIComponent(storeName)}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition">
+                  <span>📍</span><span>Cómo llegar (Google Maps)</span>
                 </a>
               )}
             </div>
@@ -419,7 +423,7 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
           {/* Botón Publicar */}
           <button
             onClick={handlePublish}
-            disabled={saving || !categoryId || !description.trim()}
+            disabled={saving}
             className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-2xl font-black text-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
           >
             {saving ? (
