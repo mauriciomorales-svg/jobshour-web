@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#0f172a"/>
+  <circle cx="96" cy="72" r="30" fill="none" stroke="#2dd4bf" stroke-width="4"/>
+  <line x1="96" y1="72" x2="96" y2="48" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
+  <line x1="96" y1="72" x2="110" y2="60" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="96" cy="72" r="3" fill="#fbbf24"/>
+  <text x="20" y="142" font-family="Arial Black,sans-serif" font-weight="900" font-size="32" fill="white" letter-spacing="-1">J</text>
+  <text x="42" y="142" font-family="Arial Black,sans-serif" font-weight="900" font-size="32" fill="white" letter-spacing="-1">bs</text>
+  <text x="90" y="142" font-family="Arial Black,sans-serif" font-weight="900" font-size="32" fill="#2dd4bf" letter-spacing="-1">Hrs</text>
+  <text x="96" y="162" font-family="Arial,sans-serif" font-weight="700" font-size="8" fill="#fbbf24" text-anchor="middle" letter-spacing="2">SERVICIOS AHORA</text>
+</svg>

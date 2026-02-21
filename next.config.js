@@ -3,7 +3,7 @@ const isExport = process.env.NEXT_EXPORT === 'true'
 
 const nextConfig = {
   // Para Capacitor/Android se exporta como archivos estáticos
-  ...(isExport ? { output: 'export' } : {}),
+  ...(isExport ? { output: 'export', distDir: '.next-android' } : {}),
   images: {
     unoptimized: true,
     remotePatterns: [
