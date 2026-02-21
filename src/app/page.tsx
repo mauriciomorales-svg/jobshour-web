@@ -33,6 +33,7 @@ import WorkerStatusPill from './components/WorkerStatusPill'
 
 interface ExpertDetail {
   id: number
+  user_id?: number | null
   nickname?: string | null
   name: string
   avatar: string | null
@@ -51,7 +52,10 @@ interface ExpertDetail {
   videos_count: number
   showcase_video?: { url: string; thumbnail: string | null; duration: number | null } | null
   pos: { lat: number; lng: number }
+  client_id?: number
   microcopy?: string
+  travel_role?: 'driver' | 'passenger' | null
+  payload?: Record<string, any> | null
   active_route?: {
     available_seats?: number
     destination?: { address: string; lat?: number; lng?: number }
@@ -88,6 +92,8 @@ const ICON_MAP: Record<string, string> = {
 function formatCLP(val: number) {
   return '$' + val.toLocaleString('es-CL')
 }
+
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshour.dondemorales.cl/api').replace(/\/api$/, '')
 
 export default function Home() {
   const [points, setPoints] = useState<MapPoint[]>([])
@@ -134,6 +140,10 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabKey>('map')
   const [statusLoading, setStatusLoading] = useState(false)
   const { toasts, toast, removeToast } = useToast()
+
+  // Registrar token FCM cuando el usuario está logueado
+  const authTokenForFcm = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+  useNotifications(user ? authTokenForFcm : null)
 
   // Actualizar ref cuando cambia el estado
   useEffect(() => {
@@ -197,6 +207,9 @@ export default function Home() {
       const onboardingDoneKey = `onboarding_done_${data.id}`
       const onboardingDone = localStorage.getItem(onboardingDoneKey) === 'true'
       
+      // Cargar datos del worker siempre, independiente del onboarding
+      fetchWorkerData(token)
+
       if (onboardingDone) {
         return
       }
@@ -227,9 +240,6 @@ export default function Home() {
         return 'inactive' // Siempre empezar en PLOMO después de login
       })
       
-      // Cargar datos del worker incluyendo categorías
-      fetchWorkerData(token)
-      
       // Actualizar ref también
       workerStatusRef.current = workerStatus === 'guest' ? 'inactive' : workerStatus
     } catch {
@@ -256,6 +266,68 @@ export default function Home() {
     }
   }, [])
 
+  // Handle OAuth callback en Capacitor via browserFinished + key en caché
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const cap = (window as any).Capacitor
+    if (!cap) return
+
+    let removeBrowserListener: () => void = () => {}
+    let removeUrlListener: () => void = () => {}
+
+    // Cuando Chrome Custom Tab cierra, recuperar token del backend
+    import('@capacitor/browser').then(({ Browser }) => {
+      Browser.addListener('browserFinished', async () => {
+        const authKey = localStorage.getItem('pending_auth_key')
+        if (!authKey) return
+        localStorage.removeItem('pending_auth_key')
+        try {
+          const res = await fetch(`https://jobshour.dondemorales.cl/api/auth/mobile-token?key=${authKey}`)
+          if (res.ok) {
+            const data = await res.json()
+            if (data.token) {
+              localStorage.setItem('auth_token', data.token)
+              fetchUserProfile(data.token)
+            }
+          }
+        } catch (e) {
+          console.error('Error recuperando token:', e)
+        }
+      }).then((listener: any) => {
+        removeBrowserListener = listener.remove
+      })
+    })
+
+    // Deep link handler: jobshour://auth-success (desde mobile-success page) o jobshour://auth?token=...
+    import('@capacitor/app').then(({ App }) => {
+      App.addListener('appUrlOpen', async (data: { url: string }) => {
+        try {
+          const url = new URL(data.url)
+          // Caso 1: jobshour://auth-success?key=... → recuperar token del backend
+          if (data.url.startsWith('jobshour://auth-success')) {
+            const authKey = url.searchParams.get('key')
+            if (!authKey) return
+            const res = await fetch(`https://jobshour.dondemorales.cl/api/auth/mobile-token?key=${authKey}`)
+            if (res.ok) {
+              const d = await res.json()
+              if (d.token) { localStorage.setItem('auth_token', d.token); fetchUserProfile(d.token) }
+            }
+            return
+          }
+          // Caso 2: jobshour://auth?token=... (legacy)
+          const token = url.searchParams.get('token')
+          if (token) { localStorage.setItem('auth_token', token); fetchUserProfile(token) }
+        } catch (e) {
+          console.error('Error parsing deep link:', e)
+        }
+      }).then((listener: any) => {
+        removeUrlListener = listener.remove
+      })
+    })
+
+    return () => { removeBrowserListener(); removeUrlListener() }
+  }, [fetchUserProfile])
+
   // Handle social login callback
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -274,7 +346,30 @@ export default function Home() {
       }
     } else {
       const existingToken = localStorage.getItem('auth_token')
-      if (existingToken) fetchUserProfile(existingToken)
+      if (existingToken) {
+        fetchUserProfile(existingToken)
+      } else {
+        // Auto-login con credenciales guardadas
+        const savedEmail = localStorage.getItem('saved_email')
+        const savedPassword = localStorage.getItem('saved_password')
+        if (savedEmail && savedPassword) {
+          fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: savedEmail, password: savedPassword })
+          })
+          .then(r => r.json())
+          .then(data => {
+            if (data.token) {
+              localStorage.setItem('auth_token', data.token)
+              fetchUserProfile(data.token)
+            }
+          })
+          .catch(() => {
+            // Silencioso - si falla, no mostrar error
+          })
+        }
+      }
     }
   }, [fetchUserProfile])
 
@@ -327,7 +422,7 @@ export default function Home() {
             
             if (!alreadyRated && sr.worker) {
               // Verificar si ya tiene reseña
-              fetch(`/api/v1/workers/${sr.worker.id}/reviews`, {
+              fetch(`${API_BASE}/api/v1/workers/${sr.worker.id}/reviews`, {
                 headers: {
                   Authorization: `Bearer ${token}`,
                 },
@@ -472,15 +567,20 @@ export default function Home() {
 
       echo.channel('workers').listen('.worker.updated', (e: any) => {
         if (!e?.worker_id) return
+        // Ignorar evento del propio usuario — ya se actualiza localmente al cambiar estado
+        if (e.user_id && user?.id && e.user_id === user.id) return
+        const newStatus: 'active' | 'intermediate' | 'inactive' =
+          e.status === 'intermediate' ? 'intermediate' :
+          e.status === 'inactive' ? 'inactive' :
+          e.is_active ? 'active' : 'inactive'
         setPoints(prev => prev.map(p => {
           if (p.id !== e.worker_id || p.pin_type === 'demand') return p
           return {
             ...p,
-            status: e.is_active ? 'active' : 'inactive',
+            status: newStatus,
             pos: e.lat && e.lng ? { lat: e.lat, lng: e.lng } : p.pos,
           }
         }))
-        // Invalidar cache del contador cuando cambia un worker
         fetchWorkerCount(userLat, userLng)
       })
     })
@@ -496,7 +596,7 @@ export default function Home() {
   // Contador workers verdes cercanos — polling cada 45s + cacheado en backend
   const fetchWorkerCount = useCallback(async (lat: number, lng: number) => {
     try {
-      const res = await fetch(`/api/v1/experts/count?lat=${lat}&lng=${lng}&radius=10`)
+      const res = await fetch(`${API_BASE}/api/v1/experts/count?lat=${lat}&lng=${lng}&radius=10`)
       if (!res.ok) return
       const data = await res.json()
       setWorkerCount({ count: data.count, label: data.label })
@@ -674,9 +774,9 @@ export default function Home() {
     
     // Fetch workers y demandas en paralelo
     Promise.all([
-      fetch(`/api/v1/experts/nearby?${params}`, { headers })
+      fetch(`${API_BASE}/api/v1/experts/nearby?${params}`, { headers })
         .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
-      fetch(`/api/v1/demand/nearby?${params}`, { headers })
+      fetch(`${API_BASE}/api/v1/demand/nearby?${params}`, { headers })
         .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
         .catch(() => ({ data: [], meta: {} })) // Si falla, continuar sin demandas
     ])
@@ -704,13 +804,15 @@ export default function Home() {
           status: 'demand' as const,
           pin_type: 'demand' as const,
           urgency: d.urgency,
+          travel_role: d.travel_role ?? null,
+          payload: d.payload ?? null,
           description: d.description,
           distance_km: d.distance_km,
         }))
         
         // Logs reducidos - solo si hay problema
         if (user && workers.length > 0) {
-          const userInResults = workers.find(w => {
+          const userInResults = workers.find((w: any) => {
             return (w.user_id && w.user_id === user.id) || (w.id && w.id === user.id)
           })
           if (!userInResults && workerStatus !== 'inactive') {
@@ -821,6 +923,7 @@ export default function Home() {
             name: data.data.client?.name || 'Cliente',
             nickname: null,
             avatar: data.data.client?.avatar || null,
+            client_id: data.data.client?.id || data.data.client_id || null,
             phone: data.data.client?.phone || null,
             title: data.data.description || 'Sin descripción',
             bio: '',
@@ -835,6 +938,8 @@ export default function Home() {
             category: data.data.category || { name: 'Sin categoría', color: '#6b7280', slug: '', icon: '' },
             videos_count: 0,
             pos: data.data.pos || point.pos,
+            travel_role: data.data.travel_role ?? null,
+            payload: data.data.payload ?? null,
             microcopy: `Demanda: ${data.data.description || 'Sin descripción'}`,
           })
           console.log('✅ Detail cargado:', data.data.client?.name)
@@ -922,8 +1027,16 @@ export default function Home() {
       const data = await res.json()
       if (data.status === 'success') {
         setWorkerStatus(next)
+        // Actualizar el marcador propio inmediatamente sin esperar fetchNearby
+        if (user) {
+          setPoints(prev => prev.map(p => {
+            const isMe = (p.user_id && p.user_id === user.id) || p.id === user.id
+            if (!isMe || p.pin_type === 'demand') return p
+            return { ...p, status: next as 'active' | 'intermediate' | 'inactive' }
+          }))
+        }
         fetchNearby(activeCategory)
-        const labels = { active: '🟢 Estás activo y visible', intermediate: '🟡 Modo Escucha activado', inactive: '⚫ Te desconectaste del mapa' }
+        const labels = { active: '🟢 Disponibilidad Inmediata activada', intermediate: '🔵 Disponibilidad Flexible activada', inactive: '⚫ Te desconectaste del mapa' }
         toast(labels[next], next === 'inactive' ? 'info' : 'success')
       } else {
         toast(data.message || 'Error al actualizar estado', 'error')
@@ -1005,24 +1118,20 @@ export default function Home() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
 
-            {/* Logo JOBSHOURS animado */}
-            <div className="flex items-baseline font-black tracking-tighter text-xl">
-              <span className="text-white">J</span>
-              <div className="relative mx-[2px] inline-flex h-[18px] w-[18px] -translate-y-[3px] items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-[2px] border-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.3)]"></div>
-                <div className="absolute h-1/2 w-[2px] origin-bottom rounded-full bg-gradient-to-t from-teal-400 to-amber-300" style={{ bottom: '50%', animation: 'spin 3s linear infinite' }}></div>
-                <div className="z-10 h-[4px] w-[4px] rounded-full bg-amber-400"></div>
-              </div>
-              <span className="text-white">b</span>
-              <span className="text-teal-400">s</span>
-              <span className="mx-1"></span>
-              <span className="bg-gradient-to-br from-teal-300 to-teal-500 bg-clip-text text-transparent">H</span>
-              <div className="relative mx-[2px] inline-flex h-[18px] w-[18px] -translate-y-[3px] items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-[2px] border-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.3)]"></div>
-                <div className="absolute h-1/2 w-[2px] origin-bottom rounded-full bg-gradient-to-t from-teal-400 to-amber-300" style={{ bottom: '50%', animation: 'spin 5s linear infinite' }}></div>
-                <div className="z-10 h-[4px] w-[4px] rounded-full bg-amber-400"></div>
-              </div>
-              <span className="bg-gradient-to-br from-teal-300 to-teal-500 bg-clip-text text-transparent">urs</span>
+            {/* Logo JOBSHOURS — Jobs blanco + H-reloj-urs teal */}
+            <div className="flex items-center font-black tracking-tight text-2xl leading-none gap-1">
+              <span className="text-white">Jobs</span>
+              <span className="text-teal-400 flex items-center">
+                <span>H</span>
+                {/* Reloj como la "O" */}
+                <span className="relative inline-flex items-center justify-center mx-0.5" style={{ width: 28, height: 28 }}>
+                  <span className="absolute inset-0 rounded-full border-[3px] border-teal-400 shadow-[0_0_10px_rgba(45,212,191,0.35)]" />
+                  <span className="clock-hand-long" style={{ position: 'absolute', bottom: '50%', left: '50%', width: '2.5px', height: '42%', background: 'linear-gradient(to top,#5eead4,#fbbf24)', borderRadius: '2px', transformOrigin: 'bottom center' }} />
+                  <span className="clock-hand-short" style={{ position: 'absolute', bottom: '50%', left: '50%', width: '2.5px', height: '28%', background: '#f1f5f9', borderRadius: '2px', transformOrigin: 'bottom center' }} />
+                  <span className="rounded-full bg-amber-400 z-10" style={{ position: 'relative', width: 5, height: 5 }} />
+                </span>
+                <span>urs</span>
+              </span>
             </div>
 
             {/* Auth button */}
@@ -1127,7 +1236,13 @@ export default function Home() {
               </div>
               <div className="space-y-2">
                 <button
-                  onClick={() => { window.location.href = '/api/auth/google' }}
+                  type="button"
+                  onClick={async (e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const { openExternalBrowser } = await import('@/lib/capacitor')
+                    await openExternalBrowser('https://jobshour.dondemorales.cl/api/auth/google?mobile=true')
+                  }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-semibold transition hover:shadow-sm"
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -1137,15 +1252,6 @@ export default function Home() {
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                   </svg>
                   <span>Continuar con Google</span>
-                </button>
-                <button
-                  onClick={() => { window.location.href = '/api/auth/facebook' }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-semibold transition hover:shadow-sm"
-                >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="#1877F2">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                  <span>Continuar con Facebook</span>
                 </button>
               </div>
               <p className="text-[9px] text-slate-400 text-center mt-3">Rápido, seguro y sin contraseñas</p>
@@ -1163,11 +1269,11 @@ export default function Home() {
         <>
           {/* Backdrop tap-to-close */}
           <div
-            className="fixed inset-0 z-[108] bg-black/20"
+            className="fixed inset-0 z-[108] bg-black/30 backdrop-blur-[2px]"
             onClick={() => { setSelectedDetail(null); setLoadingDetail(false) }}
           />
           <div className="fixed left-0 right-0 z-[109] bottom-[68px] animate-slide-up">
-            <div className="bg-white rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.18)] max-h-[70vh] overflow-y-auto">
+            <div className="bg-white rounded-t-3xl shadow-[0_-12px_48px_rgba(0,0,0,0.22)] max-h-[72vh] overflow-y-auto">
               {/* Handle bar */}
               <div className="flex justify-center pt-3 pb-1">
                 <div className="w-10 h-1 bg-gray-200 rounded-full" />
@@ -1175,72 +1281,135 @@ export default function Home() {
 
               {loadingDetail && !selectedDetail ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <div className="animate-spin w-8 h-8 border-[3px] border-blue-500 border-t-transparent rounded-full" />
+                  <div className="animate-spin w-8 h-8 border-[3px] border-green-500 border-t-transparent rounded-full" />
                   <p className="text-sm text-gray-400">Cargando perfil...</p>
                 </div>
-              ) : selectedDetail && (
-                <div className="px-5 pb-6">
-                  {/* Header — Avatar + Info */}
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="relative shrink-0">
-                      <img
-                        src={selectedDetail.avatar || `https://i.pravatar.cc/150?u=${selectedDetail.id}`}
-                        alt={selectedDetail.name}
-                        className="w-16 h-16 rounded-2xl object-cover shadow-sm"
-                      />
-                      <span className={`absolute -bottom-1 -right-1 w-4 h-4 border-2 border-white rounded-full shadow ${
-                        selectedDetail.status === 'active' ? 'bg-green-500 animate-pulse' :
-                        selectedDetail.status === 'intermediate' ? 'bg-yellow-400' : 'bg-gray-300'
-                      }`} />
+              ) : selectedDetail && (() => {
+                const _catColor = selectedDetail.category?.color || '#6b7280'
+                const _isDemand = selectedDetail.status === 'demand'
+                return (
+                <div className="pb-6">
+                  {/* Hero banner con gradiente de categoría */}
+                  <div className="px-5 pt-4 pb-5 relative" style={{ background: `linear-gradient(135deg, ${_catColor}15 0%, ${_catColor}05 100%)` }}>
+                    {/* Categoría top-right */}
+                    <div className="absolute top-3 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
+                      style={{ background: `${_catColor}25`, color: _catColor }}>
+                      <span>{selectedDetail.category?.icon ? (ICON_MAP[selectedDetail.category.icon] || '⚙️') : '⚙️'}</span>
+                      <span>{selectedDetail.category?.name || 'General'}</span>
                     </div>
-                    <div className="flex-1 min-w-0 pt-0.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-black text-gray-900 text-base leading-tight">{selectedDetail.name}</h3>
-                        {selectedDetail.is_verified && (
-                          <svg className="w-4 h-4 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        )}
+
+                    {/* Avatar + info */}
+                    <div className="flex items-center gap-4 mt-1">
+                      <div className="relative shrink-0">
+                        <div className="w-20 h-20 rounded-2xl overflow-hidden" style={{ border: `3px solid ${_catColor}60`, boxShadow: `0 8px 24px ${_catColor}30` }}>
+                          <img src={selectedDetail.avatar || `https://i.pravatar.cc/150?u=${selectedDetail.id}`} alt={selectedDetail.name} className="w-full h-full object-cover" />
+                        </div>
+                        <span className={`absolute -bottom-1 -right-1 w-5 h-5 border-2 border-white rounded-full shadow-md ${
+                          selectedDetail.status === 'active' ? 'bg-green-500 animate-pulse' :
+                          selectedDetail.status === 'intermediate' ? 'bg-sky-400 animate-pulse' :
+                          _isDemand ? 'bg-amber-400' : 'bg-gray-300'
+                        }`} />
                       </div>
-                      {selectedDetail.nickname && (
-                        <p className="text-xs text-gray-400 font-medium mt-0.5">@{selectedDetail.nickname}</p>
-                      )}
-                      {/* Stats row */}
-                      <div className="flex items-center gap-3 mt-1.5">
-                        {selectedDetail.fresh_score > 0 && (
-                          <span className="flex items-center gap-1 text-sm">
-                            <svg className="w-3.5 h-3.5 fill-orange-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                            <span className="font-bold text-gray-900">{selectedDetail.fresh_score}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-black text-gray-900 text-lg leading-tight">{selectedDetail.name}</h3>
+                          {user && selectedDetail.user_id && user.id === selectedDetail.user_id && (
+                            <span className="text-[10px] font-black bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Tú</span>
+                          )}
+                          {_isDemand && selectedDetail.client_id && user?.id === selectedDetail.client_id && (
+                            <span className="text-[10px] font-black bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">(yo)</span>
+                          )}
+                          {selectedDetail.is_verified && (
+                            <svg className="w-4 h-4 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                          )}
+                        </div>
+                        {selectedDetail.nickname && <p className="text-xs text-gray-400 font-medium mt-0.5">@{selectedDetail.nickname}</p>}
+                        <div className="flex items-center gap-2.5 mt-2 flex-wrap">
+                          <span className="font-black text-xl" style={{ color: _catColor }}>
+                            {formatCLP(selectedDetail.hourly_rate)}<span className="text-xs font-semibold text-gray-400">/hr</span>
                           </span>
-                        )}
-                        <span className="font-black text-blue-600 text-sm">{formatCLP(selectedDetail.hourly_rate)}/hr</span>
-                        {selectedDetail.showcase_video && (
-                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">📹 Video</span>
-                        )}
+                          {selectedDetail.fresh_score > 0 && (
+                            <span className="flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded-full">
+                              <svg className="w-3 h-3 fill-orange-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                              <span className="text-xs font-bold text-orange-700">{selectedDetail.fresh_score}</span>
+                            </span>
+                          )}
+                          {selectedDetail.total_jobs > 0 && <span className="text-xs text-gray-400 font-semibold">{selectedDetail.total_jobs} trabajos</span>}
+                          {selectedDetail.showcase_video && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">📹 Video</span>}
+                        </div>
                       </div>
                     </div>
-                    {/* Status badge */}
-                    <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
-                      selectedDetail.status === 'active' ? 'bg-green-100 text-green-700' :
-                      selectedDetail.status === 'intermediate' ? 'bg-amber-100 text-amber-700' :
-                      selectedDetail.status === 'demand' ? 'bg-orange-100 text-orange-700' :
-                      'bg-gray-100 text-gray-500'
-                    }`}>
-                      {selectedDetail.status === 'active' ? 'Disponible' :
-                       selectedDetail.status === 'intermediate' ? 'En escucha' :
-                       selectedDetail.status === 'demand' ? 'Demanda activa' : 'No disponible'}
-                    </span>
+
+                    {/* Status pill */}
+                    <div className="mt-3">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full ${
+                        selectedDetail.status === 'active' ? 'bg-green-500 text-white' :
+                        selectedDetail.status === 'intermediate' ? 'bg-sky-500 text-white' :
+                        _isDemand ? 'bg-amber-400 text-white' : 'bg-gray-200 text-gray-500'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          selectedDetail.status === 'active' ? 'bg-white animate-pulse' :
+                          selectedDetail.status === 'intermediate' ? 'bg-white animate-pulse' :
+                          _isDemand ? 'bg-white' : 'bg-gray-400'
+                        }`} />
+                        {selectedDetail.status === 'active' ? 'Disp. Inmediata' :
+                         selectedDetail.status === 'intermediate' ? 'Disp. Flexible' :
+                         _isDemand ? 'Demanda activa' : 'No disponible'}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Microcopy */}
                   {selectedDetail.microcopy && (
-                    <p className="text-sm text-gray-500 italic mb-4 leading-relaxed">{selectedDetail.microcopy}</p>
+                    <div className="px-5 py-3 border-t border-gray-50">
+                      <p className="text-sm text-gray-500 italic leading-relaxed">"{selectedDetail.microcopy}"</p>
+                    </div>
                   )}
 
-                  {/* Modo Viaje */}
-                  {selectedDetail.active_route?.available_seats && selectedDetail.active_route.available_seats > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3.5 mb-4">
+                  {/* Card de Viaje — chofer o pasajero */}
+                  {selectedDetail.travel_role && (
+                    <div className={`mx-5 mt-3 rounded-2xl p-3.5 border ${
+                      selectedDetail.travel_role === 'driver'
+                        ? 'bg-emerald-50 border-emerald-200'
+                        : 'bg-blue-50 border-blue-200'
+                    }`}>
                       <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">{selectedDetail.travel_role === 'driver' ? '🚗' : '🙋'}</span>
+                        <span className={`text-sm font-bold ${selectedDetail.travel_role === 'driver' ? 'text-emerald-800' : 'text-blue-800'}`}>
+                          {selectedDetail.travel_role === 'driver' ? 'Ofrece transporte' : 'Busca transporte'}
+                        </span>
+                        {selectedDetail.payload?.seats && (
+                          <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-bold ${
+                            selectedDetail.travel_role === 'driver' ? 'bg-emerald-200 text-emerald-800' : 'bg-blue-200 text-blue-800'
+                          }`}>
+                            {selectedDetail.payload.seats} {selectedDetail.travel_role === 'driver' ? 'asientos libres' : 'asientos necesarios'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        {selectedDetail.payload?.origin_address && (
+                          <p className={selectedDetail.travel_role === 'driver' ? 'text-emerald-700' : 'text-blue-700'}>
+                            📍 Desde: <span className="font-semibold">{selectedDetail.payload.origin_address}</span>
+                          </p>
+                        )}
+                        {(selectedDetail.payload?.destination_address || selectedDetail.payload?.destination_name) && (
+                          <p className={selectedDetail.travel_role === 'driver' ? 'text-emerald-700' : 'text-blue-700'}>
+                            🏁 Hacia: <span className="font-semibold">{selectedDetail.payload.destination_address || selectedDetail.payload.destination_name}</span>
+                          </p>
+                        )}
+                        {selectedDetail.payload?.departure_time && (
+                          <p className={selectedDetail.travel_role === 'driver' ? 'text-emerald-700' : 'text-blue-700'}>
+                            🕐 Salida: <span className="font-semibold">{new Date(selectedDetail.payload.departure_time).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Modo Viaje worker activo */}
+                  {!selectedDetail.travel_role && selectedDetail.active_route?.available_seats && selectedDetail.active_route.available_seats > 0 && (
+                    <div className="mx-5 mt-3 bg-blue-50 border border-blue-200 rounded-2xl p-3.5">
+                      <div className="flex items-center gap-2 mb-1">
                         <span className="text-lg">🚗</span>
                         <span className="text-sm font-bold text-blue-800">Modo Viaje Activo</span>
                         <span className="ml-auto text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full font-bold">
@@ -1248,94 +1417,115 @@ export default function Home() {
                         </span>
                       </div>
                       {selectedDetail.active_route.destination && (
-                        <p className="text-xs text-blue-700">
-                          Hacia: <span className="font-semibold">{selectedDetail.active_route.destination.address}</span>
-                        </p>
+                        <p className="text-xs text-blue-700">Hacia: <span className="font-semibold">{selectedDetail.active_route.destination.address}</span></p>
                       )}
                     </div>
                   )}
 
                   {/* Action buttons */}
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {/* Ver perfil / Cómo llegar según tipo */}
-                    {selectedDetail.status === 'demand' ? (
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${selectedDetail.pos.lat},${selectedDetail.pos.lng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 py-3 rounded-2xl text-sm font-bold transition active:scale-95"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        Cómo llegar
-                      </a>
-                    ) : (
-                      <button
-                        onClick={() => { setSelectedWorkerId(selectedDetail.id); setShowWorkerProfileDetail(true) }}
-                        className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-2xl text-sm font-bold transition active:scale-95"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                        Ver perfil
-                      </button>
-                    )}
+                  {(() => {
+                    const isSelf = !!(user && selectedDetail.user_id && user.id === selectedDetail.user_id)
+                    const isDemand = selectedDetail.status === 'demand'
+                    const isTravelPin = isDemand && !!selectedDetail.travel_role
+                    const isOwnDemand = isDemand && selectedDetail.client_id === user?.id
 
-                    {/* CTA principal */}
-                    {selectedDetail.status === 'inactive' ? (
-                      <button disabled className="flex items-center justify-center gap-2 bg-gray-100 text-gray-400 py-3 rounded-2xl text-sm font-bold cursor-not-allowed">
-                        No disponible
-                      </button>
-                    ) : activeRequestId ? (
-                      <button
-                        onClick={() => {
-                          const a = checkAuthAndProfile()
-                          if (!a.canInteract) { setShowLoginModal(true); return }
-                          setShowChat(true)
-                        }}
-                        className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3 rounded-2xl text-sm font-bold transition active:scale-95"
-                      >
-                        💬 Chat activo
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          const a = checkAuthAndProfile()
-                          if (!a.canInteract) {
-                            setShowLoginModal(true)
-                            toast(a.reason === 'login' ? 'Inicia sesión para continuar' : 'Completa tu perfil', a.reason === 'login' ? 'info' : 'warning')
-                            return
-                          }
-                          setShowRequestModal(true)
-                        }}
-                        className={`flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition active:scale-95 ${
-                          selectedDetail.status === 'active'
-                            ? 'bg-green-500 hover:bg-green-600 text-white'
-                            : 'bg-amber-400 hover:bg-amber-500 text-white'
-                        }`}
-                      >
-                        {selectedDetail.status === 'active' ? '⚡ Solicitar ahora' : '💬 Consultar'}
-                      </button>
-                    )}
+                    const handleTravelJoin = async () => {
+                      const auth = checkAuthAndProfile()
+                      if (!auth.canInteract) { setShowLoginModal(true); toast(auth.reason === 'login' ? 'Inicia sesión para continuar' : 'Completa tu perfil', 'info'); return }
+                      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+                      try {
+                        const res = await fetch(`${API_BASE}/api/v1/demand/${selectedDetail.id}/take`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        })
+                        const data = await res.json()
+                        if (res.ok && data.status === 'success') {
+                          toast(selectedDetail.travel_role === 'driver' ? '🙋 Solicitud enviada al chofer' : '🚗 Te ofreciste como chofer', 'success')
+                          setSelectedDetail(null)
+                          fetchNearby(activeCategory)
+                        } else {
+                          toast(data.message || 'Error al conectar', 'error')
+                        }
+                      } catch { toast('Error de conexión', 'error') }
+                    }
 
-                    {/* Teléfono — ancho completo si está disponible */}
-                    {selectedDetail.phone && (
-                      <button
-                        onClick={() => {
-                          const a = checkAuthAndProfile()
-                          if (!a.canInteract) {
-                            setShowLoginModal(true)
-                            toast('Inicia sesión para ver el teléfono', 'info')
-                            return
-                          }
-                          window.open(`tel:${selectedDetail.phone}`, '_self')
-                        }}
-                        className="col-span-2 flex items-center justify-center gap-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 py-3 rounded-2xl text-sm font-bold transition active:scale-95"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                        Llamar ahora
-                      </button>
-                    )}
-                  </div>
+                    return (
+                      <div className="px-5 mt-4">
+                        {isSelf || isOwnDemand ? (
+                          <button
+                            onClick={() => setActiveSection('profile')}
+                            className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-2xl text-sm font-bold transition active:scale-95"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                            Mi perfil
+                          </button>
+                        ) : isTravelPin ? (
+                          /* Botones de match para viaje */
+                          <div className="space-y-2.5">
+                            <button
+                              onClick={handleTravelJoin}
+                              className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition active:scale-95 ${
+                                selectedDetail.travel_role === 'driver'
+                                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+                              }`}
+                            >
+                              {selectedDetail.travel_role === 'driver' ? '🙋 Solicitar unirse al viaje' : '🚗 Ofrecerme como chofer'}
+                            </button>
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${selectedDetail.pos.lat},${selectedDetail.pos.lng}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-2xl text-sm font-semibold transition active:scale-95"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                              Ver en mapa
+                            </a>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2.5">
+                            {isDemand ? (
+                              <a href={`https://www.google.com/maps/dir/?api=1&destination=${selectedDetail.pos.lat},${selectedDetail.pos.lng}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 py-3 rounded-2xl text-sm font-bold transition active:scale-95">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                Cómo llegar
+                              </a>
+                            ) : (
+                              <button onClick={() => { setSelectedWorkerId(selectedDetail.id); setShowWorkerProfileDetail(true) }}
+                                className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-2xl text-sm font-bold transition active:scale-95">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                Ver perfil
+                              </button>
+                            )}
+                            {selectedDetail.status === 'inactive' ? (
+                              <button disabled className="flex items-center justify-center gap-2 bg-gray-100 text-gray-400 py-3 rounded-2xl text-sm font-bold cursor-not-allowed">No disponible</button>
+                            ) : activeRequestId ? (
+                              <button onClick={() => { const a = checkAuthAndProfile(); if (!a.canInteract) { setShowLoginModal(true); return }; setShowChat(true) }}
+                                className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3 rounded-2xl text-sm font-bold transition active:scale-95">
+                                💬 Chat activo
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => { const a = checkAuthAndProfile(); if (!a.canInteract) { setShowLoginModal(true); toast(a.reason === 'login' ? 'Inicia sesión para continuar' : 'Completa tu perfil', a.reason === 'login' ? 'info' : 'warning'); return }; setShowRequestModal(true) }}
+                                className={`flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition active:scale-95 ${selectedDetail.status === 'active' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-amber-400 hover:bg-amber-500 text-white'}`}>
+                                {selectedDetail.status === 'active' ? '⚡ Solicitar ahora' : '💬 Consultar'}
+                              </button>
+                            )}
+                            {selectedDetail.phone && (
+                              <button onClick={() => { const a = checkAuthAndProfile(); if (!a.canInteract) { setShowLoginModal(true); toast('Inicia sesión para ver el teléfono', 'info'); return }; window.open(`tel:${selectedDetail.phone}`, '_self') }}
+                                className="col-span-2 flex items-center justify-center gap-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 py-3 rounded-2xl text-sm font-bold transition active:scale-95">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                Llamar ahora
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
-              )}
+                )
+              })()}
             </div>
           </div>
         </>
@@ -1384,6 +1574,7 @@ export default function Home() {
             <DashboardFeed
               userLat={-37.6672}
               userLng={-72.5730}
+              currentUserId={user?.id}
               onCardClick={(request) => {
                 // Fly to map location
                 if (mapRef.current) {
@@ -1420,7 +1611,7 @@ export default function Home() {
                   if (token) {
                     headers['Authorization'] = `Bearer ${token}`
                   }
-                  fetch(`/api/v1/experts/${request.worker_id}`, { headers })
+                  fetch(`${API_BASE}/api/v1/experts/${request.worker_id}`, { headers })
                     .then(r => {
                       if (!r.ok) {
                         throw new Error(`HTTP ${r.status}`)
@@ -1555,7 +1746,7 @@ export default function Home() {
                     if (token) {
                       headers['Authorization'] = `Bearer ${token}`
                     }
-                    const detailRes = await fetch(`/api/v1/demand/${request.id}`, { headers })
+                    const detailRes = await fetch(`${API_BASE}/api/v1/demand/${request.id}`, { headers })
                     
                     if (detailRes.ok) {
                       const detailData = await detailRes.json()
@@ -1638,8 +1829,14 @@ export default function Home() {
                             localStorage.setItem('user_lng', String(pos.coords.longitude))
                             setShowLocationPrompt(false)
                           },
-                          () => {
-                            setShowLocationPrompt(false)
+                          (err) => {
+                            if (err.code === 1) {
+                              // Permiso denegado - mostrar guía inline
+                              const el = document.getElementById('location-denied-msg')
+                              if (el) { el.style.display = 'block' }
+                            } else {
+                              setShowLocationPrompt(false)
+                            }
                           },
                           { enableHighAccuracy: true, timeout: 10000 }
                         )
@@ -1655,6 +1852,10 @@ export default function Home() {
                   >
                     Ahora no
                   </button>
+                  <div id="location-denied-msg" style={{display:'none'}} className="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                    <p className="text-amber-400 text-xs font-bold">📵 Permiso denegado</p>
+                    <p className="text-slate-400 text-xs mt-0.5">Ve a <strong className="text-white">Ajustes → Apps → JobsHour → Permisos → Ubicación → Permitir</strong></p>
+                  </div>
                 </div>
               </div>
               <button onClick={() => setShowLocationPrompt(false)} className="text-slate-600 hover:text-slate-400">
@@ -1675,14 +1876,21 @@ export default function Home() {
             {/* Header con logo */}
             <div className="sticky top-0 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-5 py-3 z-10 flex items-center justify-between">
               <div className="flex items-baseline font-black tracking-tighter text-lg">
+                {/* Jobs with clock */}
                 <span className="text-white">J</span>
-                <div className="relative mx-[1px] inline-flex h-[14px] w-[14px] -translate-y-[2px] items-center justify-center">
+                <div className="relative mx-[1px] inline-flex h-[14px] w-[14px] -translate-y-[2px] align-baseline items-center justify-center">
                   <div className="absolute inset-0 rounded-full border-[1.5px] border-teal-400"></div>
                   <div className="absolute h-1/2 w-[1.5px] origin-bottom rounded-full bg-gradient-to-t from-teal-400 to-amber-300" style={{ bottom: '50%', animation: 'spin 3s linear infinite' }}></div>
                   <div className="z-10 h-[3px] w-[3px] rounded-full bg-amber-400"></div>
                 </div>
                 <span className="text-white">bs</span>
+                {/* Hours with clock */}
                 <span className="text-teal-400 ml-0.5">H</span>
+                <div className="relative mx-[1px] inline-flex h-[14px] w-[14px] -translate-y-[2px] align-baseline items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-[1.5px] border-teal-400"></div>
+                  <div className="absolute h-1/2 w-[1.5px] origin-bottom rounded-full bg-gradient-to-t from-teal-400 to-amber-300" style={{ bottom: '50%', animation: 'spin 3s linear infinite', animationDelay: '0.5s' }}></div>
+                  <div className="z-10 h-[3px] w-[3px] rounded-full bg-amber-400"></div>
+                </div>
                 <span className="bg-gradient-to-br from-teal-300 to-teal-500 bg-clip-text text-transparent">urs</span>
               </div>
               <button 
@@ -1708,13 +1916,13 @@ export default function Home() {
                         </div>
                       )}
                       <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 border-2 border-slate-800 rounded-full ${
-                        workerStatus === 'active' ? 'bg-teal-400' : workerStatus === 'intermediate' ? 'bg-amber-400' : 'bg-slate-500'
+                        workerStatus === 'active' ? 'bg-teal-400' : workerStatus === 'intermediate' ? 'bg-sky-400' : 'bg-slate-500'
                       }`}></div>
                     </div>
                     <div>
                       <p className="text-base font-black text-white">{user.name}</p>
                       <p className="text-xs font-semibold text-amber-400/80">
-                        {workerStatus === 'active' ? 'Disponible' : workerStatus === 'intermediate' ? 'Escuchando' : 'Inactivo'}
+                        {workerStatus === 'active' ? 'Disp. Inmediata' : workerStatus === 'intermediate' ? 'Disp. Flexible' : 'Inactivo'}
                       </p>
                     </div>
                   </div>
@@ -1889,7 +2097,7 @@ export default function Home() {
               <div className="px-5 py-6 space-y-3">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Iniciar sesión</p>
                 <button 
-                  onClick={() => window.location.href = '/api/auth/google'}
+                  onClick={async (e) => { e.preventDefault(); const { openExternalBrowser } = await import('@/lib/capacitor'); await openExternalBrowser('https://jobshour.dondemorales.cl/api/auth/google?mobile=true') }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-sm text-slate-300 font-semibold transition"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -1899,15 +2107,6 @@ export default function Home() {
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                   </svg>
                   <span>Continuar con Google</span>
-                </button>
-                <button 
-                  onClick={() => window.location.href = '/api/auth/facebook'}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-sm text-slate-300 font-semibold transition"
-                >
-                  <svg className="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                  <span>Continuar con Facebook</span>
                 </button>
               </div>
             )}
@@ -1933,6 +2132,7 @@ export default function Home() {
             pos: selectedDetail.pos,
             active_route: selectedDetail.active_route || null,
           }}
+          currentUser={user}
           onClose={() => setShowRequestModal(false)}
           onSent={(reqId: number) => {
             setShowRequestModal(false)
@@ -2059,12 +2259,12 @@ export default function Home() {
                 <p className="text-xs text-gray-500 mb-2">Estado</p>
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
                   selectedDetail.status === 'active' ? 'bg-green-100 text-green-800' :
-                  selectedDetail.status === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                  selectedDetail.status === 'intermediate' ? 'bg-sky-100 text-sky-800' :
                   selectedDetail.status === 'demand' ? 'bg-orange-100 text-orange-800' :
                   'bg-gray-100 text-gray-800'
                 }`}>
                   {selectedDetail.status === 'active' ? 'Disponible' :
-                   selectedDetail.status === 'intermediate' ? 'A convenir' :
+                   selectedDetail.status === 'intermediate' ? 'Disp. Flexible' :
                    selectedDetail.status === 'demand' ? 'Demanda activa' :
                    'No disponible'}
                 </span>
@@ -2212,11 +2412,12 @@ export default function Home() {
 
       {/* ── BOTONES INFERIORES MODERNOS ── */}
       {/* ── WORKER STATUS PILL (encima del bottom tab) ── */}
-      {(!user || (user && workerStatus !== 'guest')) && (
+      {activeTab === 'map' && (
         <div className="fixed bottom-[68px] left-4 z-[91]">
           <WorkerStatusPill
             status={workerStatus}
             loading={statusLoading}
+            isLoggedIn={!!user}
             onActivate={() => {
               if (workerCategories.length === 0) { setShowCategoryRequiredModal(true); return }
               handleWorkerStatusChange('active')
@@ -2232,13 +2433,53 @@ export default function Home() {
         active={activeTab}
         onChange={handleTabChange}
         requestsBadge={activeChatRequestIds.length}
+        demandsBadge={points.filter(p => p.pin_type === 'demand').length}
         isWorker={workerStatus !== 'guest' && workerStatus !== 'inactive'}
       />
 
       {loading && (
-        <div className="absolute inset-0 z-[150] bg-slate-950 flex flex-col items-center justify-center">
-          <Logo size="md" showTagline={false} />
-          <div className="mt-6 flex items-center gap-2">
+        <div className="absolute inset-0 z-[150] bg-slate-950 flex flex-col items-center justify-center p-8">
+          {/* Logo principal */}
+          <div className="text-center">
+            <h1 className="text-7xl font-black tracking-tight leading-none mb-5 flex items-center justify-center gap-2">
+              <span className="text-gray-100">Jobs</span>
+              <span className="text-teal-400 flex items-center">
+                <span>H</span>
+                {/* Reloj animado como la "O" */}
+                <span className="relative inline-flex items-center justify-center w-16 h-16 mx-1">
+                  <span className="absolute inset-0 rounded-full border-4 border-teal-400 shadow-[0_0_20px_rgba(45,212,191,0.35)]" />
+                  {/* Manecilla larga — pivota desde el centro */}
+                  <span className="clock-hand-long" style={{
+                    position: 'absolute',
+                    bottom: '50%',
+                    left: '50%',
+                    width: '3px',
+                    height: '44%',
+                    background: 'linear-gradient(to top, #5eead4, #fbbf24)',
+                    borderRadius: '2px',
+                    transformOrigin: 'bottom center',
+                  }} />
+                  {/* Manecilla corta — pivota desde el centro */}
+                  <span className="clock-hand-short" style={{
+                    position: 'absolute',
+                    bottom: '50%',
+                    left: '50%',
+                    width: '3px',
+                    height: '30%',
+                    background: '#f1f5f9',
+                    borderRadius: '2px',
+                    transformOrigin: 'bottom center',
+                  }} />
+                  {/* Centro */}
+                  <span className="w-3 h-3 rounded-full bg-amber-400 z-10 shadow-md" style={{ position: 'relative' }} />
+                </span>
+                <span>urs</span>
+              </span>
+            </h1>
+            <p className="text-xl font-medium text-amber-300">Servicios ahora, cerca de ti</p>
+          </div>
+          {/* Dots loader */}
+          <div className="mt-10 flex items-center gap-2">
             <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
             <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
             <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>

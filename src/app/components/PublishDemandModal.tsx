@@ -19,9 +19,11 @@ interface Props {
 }
 
 type DemandType = 'fixed_job' | 'ride_share' | 'express_errand'
+type TravelRole = 'driver' | 'passenger'
 
 export default function PublishDemandModal({ userLat, userLng, categories, onClose, onPublished }: Props) {
   const [demandType, setDemandType] = useState<DemandType>('fixed_job')
+  const [travelRole, setTravelRole] = useState<TravelRole>('passenger')
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [description, setDescription] = useState('')
   const [offeredPrice, setOfferedPrice] = useState('')
@@ -57,6 +59,13 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Asignar categoría automáticamente según tipo
+  useEffect(() => {
+    if (demandType === 'ride_share') setCategoryId(12)       // Movilidad Vecinal
+    else if (demandType === 'express_errand') setCategoryId(11) // Mandados y Vueltas
+    else setCategoryId(null)
+  }, [demandType])
 
   useEffect(() => {
     // Obtener ubicación actual como pickup por defecto
@@ -137,6 +146,7 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
       // Agregar campos específicos según el tipo
       if (demandType === 'ride_share') {
+        payload.travel_role = travelRole
         payload.pickup_address = pickupAddress.trim()
         payload.delivery_address = deliveryAddress.trim()
         payload.pickup_lat = pickupLat
@@ -147,9 +157,12 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
         payload.seats = seats
         payload.destination_name = destinationName.trim() || deliveryAddress.trim()
         payload.payload = {
+          travel_role: travelRole,
           seats,
           departure_time: new Date(departureTime).toISOString(),
           destination_name: destinationName.trim() || deliveryAddress.trim(),
+          origin_address: pickupAddress.trim(),
+          destination_address: deliveryAddress.trim(),
         }
       } else if (demandType === 'express_errand') {
         payload.store_name = storeName.trim()
@@ -265,68 +278,117 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
             </div>
           </div>
 
-          {/* Categoría */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Categoría</label>
-            <CategoryPicker
-              categories={categories}
-              selectedId={categoryId}
-              onSelect={(id) => setCategoryId(id)}
-              placeholder="Buscar categoría..."
-            />
-          </div>
+          {/* Categoría - solo para trabajos fijos */}
+          {demandType === 'fixed_job' && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Categoría</label>
+              <CategoryPicker
+                categories={categories}
+                selectedId={categoryId}
+                onSelect={(id) => setCategoryId(id)}
+                placeholder="Buscar categoría..."
+              />
+            </div>
+          )}
 
           {/* Campos específicos para RIDE_SHARE */}
           {demandType === 'ride_share' && (
-            <div className="space-y-3 bg-green-50 p-3 rounded-lg">
-              <h3 className="font-bold text-sm text-green-800">Detalles del Viaje</h3>
-              
+            <div className="space-y-3">
+              {/* Selector Chofer / Pasajero */}
               <div>
-                <label className="block text-xs font-medium mb-1">Origen</label>
-                <input
-                  type="text"
-                  value={pickupAddress}
-                  onChange={(e) => setPickupAddress(e.target.value)}
-                  placeholder="Ej: Renaico, Calle Principal 123"
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
+                <label className="block text-sm font-semibold mb-2">¿Cuál es tu rol?</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setTravelRole('passenger')}
+                    className={`flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 transition font-semibold text-sm ${
+                      travelRole === 'passenger'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-500'
+                    }`}
+                  >
+                    <span className="text-2xl">🙋</span>
+                    <span>Soy Pasajero</span>
+                    <span className="text-[10px] font-normal opacity-70">Busco quien me lleve</span>
+                  </button>
+                  <button
+                    onClick={() => setTravelRole('driver')}
+                    className={`flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 transition font-semibold text-sm ${
+                      travelRole === 'driver'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-500'
+                    }`}
+                  >
+                    <span className="text-2xl">🚗</span>
+                    <span>Soy Chofer</span>
+                    <span className="text-[10px] font-normal opacity-70">Publico mi ruta</span>
+                  </button>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium mb-1">Destino</label>
-                <input
-                  type="text"
-                  value={deliveryAddress}
-                  onChange={(e) => {
-                    setDeliveryAddress(e.target.value)
-                    setDestinationName(e.target.value)
-                  }}
-                  placeholder="Ej: Angol, Hospital"
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-              </div>
+              {/* Formulario Pasajero */}
+              {travelRole === 'passenger' && (
+                <div className="space-y-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                  <h3 className="font-bold text-sm text-blue-800">🙋 Necesito transporte</h3>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">¿Desde dónde sales?</label>
+                    <input type="text" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)}
+                      placeholder="Ej: Renaico, Plaza" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">¿A dónde vas?</label>
+                    <input type="text" value={deliveryAddress} onChange={(e) => { setDeliveryAddress(e.target.value); setDestinationName(e.target.value) }}
+                      placeholder="Ej: Angol, Hospital" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">¿Cuándo necesitas salir?</label>
+                    <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Asientos que necesitas</label>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setSeats(Math.max(1, seats - 1))} className="w-8 h-8 rounded-lg bg-blue-200 text-blue-700 font-bold text-lg">−</button>
+                      <span className="w-8 text-center font-bold text-lg">{seats}</span>
+                      <button onClick={() => setSeats(Math.min(8, seats + 1))} className="w-8 h-8 rounded-lg bg-blue-200 text-blue-700 font-bold text-lg">+</button>
+                      <span className="text-xs text-gray-500">{seats === 1 ? 'asiento' : 'asientos'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              <div>
-                <label className="block text-xs font-medium mb-1">Hora de Salida</label>
-                <input
-                  type="datetime-local"
-                  value={departureTime}
-                  onChange={(e) => setDepartureTime(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1">Asientos Necesarios</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="8"
-                  value={seats}
-                  onChange={(e) => setSeats(parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-              </div>
+              {/* Formulario Chofer */}
+              {travelRole === 'driver' && (
+                <div className="space-y-3 bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                  <h3 className="font-bold text-sm text-emerald-800">🚗 Publico mi ruta</h3>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Punto de salida</label>
+                    <input type="text" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)}
+                      placeholder="Ej: Renaico, frente a la plaza" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Destino final</label>
+                    <input type="text" value={deliveryAddress} onChange={(e) => { setDeliveryAddress(e.target.value); setDestinationName(e.target.value) }}
+                      placeholder="Ej: Angol, Terminal" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Hora de salida</label>
+                    <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Asientos disponibles</label>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setSeats(Math.max(1, seats - 1))} className="w-8 h-8 rounded-lg bg-emerald-200 text-emerald-700 font-bold text-lg">−</button>
+                      <span className="w-8 text-center font-bold text-lg">{seats}</span>
+                      <button onClick={() => setSeats(Math.min(8, seats + 1))} className="w-8 h-8 rounded-lg bg-emerald-200 text-emerald-700 font-bold text-lg">+</button>
+                      <span className="text-xs text-gray-500">{seats === 1 ? 'asiento libre' : 'asientos libres'}</span>
+                    </div>
+                  </div>
+                  <div className="bg-emerald-100 rounded-lg p-2 text-xs text-emerald-700">
+                    💡 Los pasajeros que necesiten ir en tu ruta verán tu publicación y podrán solicitar unirse.
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

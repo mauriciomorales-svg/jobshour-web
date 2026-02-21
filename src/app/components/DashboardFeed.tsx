@@ -12,7 +12,7 @@ interface ServiceRequest {
   status: string
   template: 'premium' | 'standard' | 'historical' | 'minimal'
   pos: { lat: number; lng: number }
-  client: { name: string; avatar: string | null }
+  client: { id?: number; name: string; avatar: string | null }
   category: { name: string; color: string; icon?: string }
   offered_price: number
   urgency: string
@@ -27,6 +27,7 @@ interface ServiceRequest {
 interface DashboardFeedProps {
   userLat: number
   userLng: number
+  currentUserId?: number
   onCardClick: (request: ServiceRequest) => void
   highlightedRequestId?: number | null
   onRequestService?: (request: ServiceRequest) => void
@@ -34,7 +35,7 @@ interface DashboardFeedProps {
   onGoToLocation?: (request: ServiceRequest) => void
 }
 
-export default function DashboardFeed({ userLat, userLng, onCardClick, highlightedRequestId, onRequestService, onOpenChat, onGoToLocation }: DashboardFeedProps) {
+export default function DashboardFeed({ userLat, userLng, currentUserId, onCardClick, highlightedRequestId, onRequestService, onOpenChat, onGoToLocation }: DashboardFeedProps) {
   const [feed, setFeed] = useState<ServiceRequest[]>([])
   const [cursor, setCursor] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -239,6 +240,7 @@ export default function DashboardFeed({ userLat, userLng, onCardClick, highlight
               index={index}
               onClick={() => onCardClick(request)}
               isHighlighted={highlightedRequestId === request.id}
+              currentUserId={currentUserId}
               onRequestService={onRequestService}
               onOpenChat={onOpenChat}
               onGoToLocation={onGoToLocation}

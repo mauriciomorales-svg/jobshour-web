@@ -7,6 +7,7 @@ import { useEffect, forwardRef, useImperativeHandle, useState, useCallback, useR
 
 export interface MapPoint {
   id: number
+  user_id?: number
   pos: { lat: number; lng: number }
   name: string
   avatar: string | null
@@ -20,6 +21,8 @@ export interface MapPoint {
   has_video?: boolean
   urgency?: 'normal' | 'urgent'
   pin_type?: 'worker' | 'demand'
+  travel_role?: 'driver' | 'passenger' | null
+  payload?: Record<string, any> | null
   description?: string
   distance_km?: number
   active_route?: {
@@ -31,7 +34,7 @@ export interface MapPoint {
 
 const STATUS_STYLES = {
   active: { ring: '#22c55e', dot: '#22c55e', bg: '#22c55e', opacity: '1', shadow: '0 8px 24px rgba(34,197,94,0.25)', grayscale: '' }, // Verde - Disponibilidad inmediata
-  intermediate: { ring: '#eab308', dot: '#eab308', bg: '#eab308', opacity: '0.9', shadow: '0 6px 18px rgba(234,179,8,0.3)', grayscale: '' }, // Amarillo PURO - A convenir (más claro que dorado)
+  intermediate: { ring: '#38bdf8', dot: '#38bdf8', bg: '#38bdf8', opacity: '0.9', shadow: '0 6px 18px rgba(56,189,248,0.3)', grayscale: '' }, // Azul cielo - Modo escucha
   inactive: { ring: '#6b7280', dot: '#6b7280', bg: '#6b7280', opacity: '0.5', shadow: '0 4px 12px rgba(107,114,128,0.15)', grayscale: 'filter:grayscale(0.4);' }, // PLOMO/Gris - Desactivo
   demand: { ring: '#d97706', dot: '#d97706', bg: 'linear-gradient(135deg, #d97706, #f59e0b)', opacity: '1', shadow: '0 8px 24px rgba(217,119,6,0.4)', grayscale: '' }, // Dorado OSCURO - Demanda activa (más oscuro/naranja que amarillo)
 }
@@ -41,34 +44,56 @@ function createPointIcon(p: MapPoint, isHighlighted = false) {
   if (p.pin_type === 'demand') {
     const avatar = p.avatar || `https://i.pravatar.cc/100?u=${p.id}`
     const price = `$${Math.round(p.price / 1000)}k`
+    const isDriver = p.travel_role === 'driver'
+    const isPassenger = p.travel_role === 'passenger'
+    const isTravelPin = isDriver || isPassenger
+
+    // Colores según rol de viaje
+    const pinColor = isDriver ? '#10b981' : isPassenger ? '#3b82f6' : '#f59e0b'
+    const pinGradient = isDriver
+      ? 'linear-gradient(135deg,#10b981,#059669)'
+      : isPassenger
+      ? 'linear-gradient(135deg,#3b82f6,#2563eb)'
+      : 'linear-gradient(135deg,#f59e0b,#eab308)'
+    const pinGlow = isDriver
+      ? 'rgba(16,185,129,0.5)'
+      : isPassenger
+      ? 'rgba(59,130,246,0.5)'
+      : 'rgba(245,158,11,0.5)'
+    const travelEmoji = isDriver ? '🚗' : isPassenger ? '🙋' : ''
+    const seats = p.payload?.seats ? `·${p.payload.seats}💺` : ''
+    const dest = p.payload?.destination_name || p.payload?.destination_address || ''
+    const destShort = dest.length > 12 ? dest.slice(0, 12) + '…' : dest
+
     const urgentBadge = p.urgency === 'urgent' ? `
-      <div style="position:absolute;top:-8px;right:-8px;background:#ef4444;color:white;font-size:10px;font-weight:900;padding:2px 6px;border-radius:999px;border:2px solid white;box-shadow:0 2px 8px rgba(239,68,68,0.4);animation:pulse 1.5s infinite;pointer-events:none">
-        🔥
-      </div>
+      <div style="position:absolute;top:-8px;right:-8px;background:#ef4444;color:white;font-size:10px;font-weight:900;padding:2px 6px;border-radius:999px;border:2px solid white;box-shadow:0 2px 8px rgba(239,68,68,0.4);animation:pulse 1.5s infinite;pointer-events:none">🔥</div>
     ` : ''
-    
     const highlightRing = isHighlighted ? `
       <div style="position:absolute;inset:-12px;border-radius:999px;border:4px solid #ef4444;animation:pulse 1s infinite;pointer-events:none"></div>
       <div style="position:absolute;inset:-20px;border-radius:999px;border:2px solid rgba(239,68,68,0.3);animation:pulse 1.5s infinite;pointer-events:none"></div>
     ` : ''
     const size = isHighlighted ? 60 : 48
-    const iconW = isHighlighted ? 180 : 160
-    const iconH = isHighlighted ? 100 : 82
-    
+    const iconW = isHighlighted ? 190 : 170
+    const iconH = isHighlighted ? 110 : 90
+
+    const labelText = isTravelPin
+      ? `${travelEmoji} ${(p.name || '').split(' ')[0]}${seats}${destShort ? ' → ' + destShort : ''}`
+      : `${isHighlighted ? '📍 ' : ''}${(p.name || '').split(' ')[0]} · ${price}`
+
     return L.divIcon({
       className: 'leaflet-marker-icon-demand',
       iconSize: [iconW, iconH],
       iconAnchor: [iconW / 2, iconH],
       html: `
         <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:opacity 0.3s;pointer-events:auto;${isHighlighted ? 'z-index:9999!important;' : ''}">
-          <div style="width:${size}px;height:${size}px;border-radius:999px;padding:2.5px;background:white;box-shadow:${isHighlighted ? '0 0 30px rgba(239,68,68,0.6),0 8px 24px rgba(245,158,11,0.5)' : '0 8px 24px rgba(245,158,11,0.5)'};position:relative;border:3px solid ${isHighlighted ? '#ef4444' : '#f59e0b'};pointer-events:none">
+          <div style="width:${size}px;height:${size}px;border-radius:999px;padding:2.5px;background:white;box-shadow:${isHighlighted ? `0 0 30px rgba(239,68,68,0.6),0 8px 24px ${pinGlow}` : `0 8px 24px ${pinGlow}`};position:relative;border:3px solid ${isHighlighted ? '#ef4444' : pinColor};pointer-events:none">
             <img src="${avatar}" style="width:100%;height:100%;border-radius:999px;object-fit:cover;pointer-events:none" />
-            <div style="position:absolute;bottom:1px;right:1px;width:11px;height:11px;background:#f59e0b;border:2px solid white;border-radius:999px;animation:pulse 2s infinite;pointer-events:none"></div>
+            <div style="position:absolute;bottom:1px;right:1px;width:11px;height:11px;background:${pinColor};border:2px solid white;border-radius:999px;animation:pulse 2s infinite;pointer-events:none"></div>
             ${urgentBadge}
             ${highlightRing}
           </div>
-          <div style="background:${isHighlighted ? 'linear-gradient(135deg,#ef4444,#f59e0b)' : 'linear-gradient(135deg,#f59e0b,#eab308)'};color:#ffffff;padding:${isHighlighted ? '5px 14px' : '4px 12px'};border-radius:999px;font-size:${isHighlighted ? '13px' : '11px'};font-weight:900;font-style:italic;margin-top:5px;box-shadow:0 4px 12px rgba(245,158,11,0.4);white-space:nowrap;border:2px solid white;letter-spacing:-0.02em;pointer-events:none">
-            ${isHighlighted ? '📍 ' : ''}${(p.name || '').split(' ')[0]} · ${price}
+          <div style="background:${isHighlighted ? `linear-gradient(135deg,#ef4444,${pinColor})` : pinGradient};color:#ffffff;padding:${isHighlighted ? '5px 14px' : '4px 10px'};border-radius:999px;font-size:${isHighlighted ? '13px' : '10px'};font-weight:900;font-style:italic;margin-top:5px;box-shadow:0 4px 12px ${pinGlow};white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;border:2px solid white;letter-spacing:-0.02em;pointer-events:none">
+            ${labelText}
           </div>
         </div>
       `,

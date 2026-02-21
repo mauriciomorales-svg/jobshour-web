@@ -94,7 +94,29 @@
 /* Safe area bottom padding for iOS home indicator */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
 
+/* Fade-in-up animation for semaphore panel */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* Posicionar atribución en la esquina inferior derecha, lo más abajo posible */
 .leaflet-control-attribution {
   margin-bottom: 68px !important;
+}
+
+/* Manecillas del reloj logo — preserva translateX(-50%) mientras rota */
+@keyframes clock-hand {
+  from { transform: translateX(-50%) rotate(0deg); }
+  to   { transform: translateX(-50%) rotate(360deg); }
+}
+.clock-hand-long {
+  animation: clock-hand 6s linear infinite;
+}
+.clock-hand-short {
+  animation: clock-hand 72s linear infinite;
+  transform: translateX(-50%) rotate(120deg);
 }

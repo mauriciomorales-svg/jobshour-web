@@ -12,6 +12,9 @@ interface Props {
 
 export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLogin }: Props) {
   const [step, setStep] = useState(1)
+  const [verificationStep, setVerificationStep] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
+  const [pendingUserId, setPendingUserId] = useState<number | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -73,6 +76,44 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
         return
       }
 
+      // Mostrar paso de verificación
+      setPendingUserId(data.user_id)
+      setVerificationStep(true)
+      setLoading(false)
+    } catch (err) {
+      setError('Error de conexión. Intenta nuevamente.')
+      setLoading(false)
+    }
+  }
+
+  const handleVerify = async () => {
+    if (!pendingUserId || verificationCode.length !== 6) {
+      setError('Ingresa el código de 6 dígitos')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: pendingUserId,
+          code: verificationCode,
+        })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.message || 'Código incorrecto')
+        setLoading(false)
+        return
+      }
+
+      // Verificación exitosa - login automático
       onSuccess(data.user, data.token)
       onClose()
     } catch (err) {
@@ -160,8 +201,62 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
             </div>
           )}
 
-          {/* Step 1: Datos básicos */}
-          {step === 1 && (
+          {/* Verification Step */}
+          {verificationStep && (
+            <div className="space-y-4 animate-slide-up">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-bold text-slate-800">Verifica tu email</h4>
+                <p className="text-sm text-slate-500 mt-1">
+                  Te enviamos un código de 6 dígitos a <strong>{formData.email}</strong>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Código de verificación
+                </label>
+                <input
+                  type="text"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-green-500 focus:bg-green-50/30 text-center text-2xl tracking-widest"
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <p className="text-blue-700 text-xs text-center">
+                  El código expira en 30 minutos. Revisa tu bandeja de entrada o spam.
+                </p>
+              </div>
+
+              <button
+                onClick={handleVerify}
+                disabled={loading || verificationCode.length !== 6}
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:from-green-600 hover:to-emerald-700 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Verificando...</span>
+                  </div>
+                ) : (
+                  'Verificar y Continuar'
+                )}
+              </button>
+            </div>
+          )}
+
+          {!verificationStep && (
+            <>
+              {/* Step 1: Datos básicos */}
+              {step === 1 && (
             <div className="space-y-4 animate-slide-up">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
@@ -347,6 +442,8 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                 </p>
               </div>
             </div>
+          )}
+          </>
           )}
 
           {/* Buttons */}

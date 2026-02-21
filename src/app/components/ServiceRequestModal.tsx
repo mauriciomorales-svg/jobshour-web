@@ -17,11 +17,12 @@ interface Props {
       available_seats?: number
     } | null
   }
+  currentUser?: { id?: number; name?: string; avatar?: string | null; avatarUrl?: string | null } | null
   onClose: () => void
   onSent: (requestId: number) => void
 }
 
-export default function ServiceRequestModal({ expert, onClose, onSent }: Props) {
+export default function ServiceRequestModal({ expert, currentUser, onClose, onSent }: Props) {
   // Verificación defensiva
   if (!expert || !expert.id) {
     console.error('❌ ServiceRequestModal: expert no válido', expert)
@@ -61,7 +62,7 @@ export default function ServiceRequestModal({ expert, onClose, onSent }: Props) 
   
   // Detectar tipo de solicitud automáticamente
   useEffect(() => {
-    if (hasActiveRoute) {
+    if (hasActiveRoute && expert.active_route) {
       setRequestType('ride_share')
       setRideDeliveryAddress(expert.active_route.destination?.address || '')
       setPickupAddress(expert.active_route.origin?.address || 'Mi ubicación')
@@ -77,13 +78,9 @@ export default function ServiceRequestModal({ expert, onClose, onSent }: Props) 
     }
   }, [hasActiveRoute, isRecados, expert.active_route])
 
-  // Verificar autenticación al montar el componente
+  // Verificar autenticación
   const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-  const userStr = localStorage.getItem('user')
-  let user: any = null
-  try {
-    user = userStr ? JSON.parse(userStr) : null
-  } catch {}
+  const user = currentUser
 
   // Si no hay token o usuario, cerrar modal y mostrar error
   if (!token || !user) {
@@ -111,8 +108,9 @@ export default function ServiceRequestModal({ expert, onClose, onSent }: Props) 
     )
   }
 
-  // Verificar perfil completo
-  if (!user.avatar || !user.name || user.name === 'Usuario') {
+  // Verificar perfil completo (avatar puede estar en .avatar o .avatarUrl)
+  const userAvatar = user.avatar || user.avatarUrl
+  if (!userAvatar || !user.name || user.name === 'Usuario') {
     return (
       <div className="fixed inset-0 z-[300] flex items-end justify-center">
         <div className="absolute inset-0 bg-black/40" onClick={onClose} />

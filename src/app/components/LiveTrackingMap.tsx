@@ -76,9 +76,8 @@ export default function LiveTrackingMap({
         maxZoom={19}
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
-        whenCreated={(map) => {
-          mapRef.current = map
-          onMapReady?.(map)
+        whenReady={() => {
+          // Map is available via ref after mount
         }}
       >
         <TileLayer
@@ -101,7 +100,7 @@ export default function LiveTrackingMap({
         {/* Ruta directa (si no hay historial) */}
         {routeHistory.length <= 1 && routePolyline.length === 2 && (
           <Polyline
-            positions={routePolyline}
+            positions={routePolyline as [number, number][]}
             color="#10b981"
             weight={3}
             opacity={0.5}

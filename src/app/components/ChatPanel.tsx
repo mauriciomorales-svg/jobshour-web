@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import ChatImageUpload from './ChatImageUpload'
+import { apiFetch } from '@/lib/api'
 
 interface ChatMessage {
   id: number
@@ -30,6 +31,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose }: Props) 
   const subscribedRequestIdRef = useRef<number | null>(null)
   const boundConnectionRef = useRef(false)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastWhisperRef = useRef<number>(0)
 
   const mergeUniqueById = (prev: ChatMessage[], incoming: ChatMessage[]) => {
     const map = new Map<number, ChatMessage>()
@@ -41,7 +43,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose }: Props) 
   // Fetch existing messages
   useEffect(() => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-    fetch(`/api/v1/requests/${requestId}/messages`, {
+    apiFetch(`/api/v1/requests/${requestId}/messages`, {
       headers: token ? { 'Authorization': `Bearer ${token}` } : {}
     })
       .then(r => r.json())
@@ -52,71 +54,29 @@ export default function ChatPanel({ requestId, currentUserId, onClose }: Props) 
   // Listen for new messages via WebSocket
   useEffect(() => {
     let echo: any = null
-
-    if (subscribedRequestIdRef.current === requestId) {
-      return
-    }
-    subscribedRequestIdRef.current = requestId
+    let cancelled = false
 
     import('@/lib/echo').then(({ getEcho }) => {
+      if (cancelled) return
       echo = getEcho()
-      if (!echo) {
-        console.error('[ChatPanel] Echo instance is null/undefined')
-        return
-      }
-
-      const pusher = (echo as any)?.connector?.pusher
-      if (!pusher) {
-        console.error('[ChatPanel] Echo has no pusher connector', echo)
-      } else {
-        try {
-          if (!boundConnectionRef.current) {
-            boundConnectionRef.current = true
-            pusher.connection.bind('state_change', (states: any) => {
-              console.log('[ChatPanel] Pusher state_change', states)
-            })
-            pusher.connection.bind('connected', () => {
-              console.log('[ChatPanel] Pusher connected', { socket_id: pusher.connection.socket_id })
-            })
-            pusher.connection.bind('error', (err: any) => {
-              console.error('[ChatPanel] Pusher connection error', err)
-            })
-          }
-        } catch (e) {
-          console.error('[ChatPanel] Failed to bind Pusher connection events', e)
-        }
-      }
+      console.log('[Chat] Echo instance:', echo ? 'OK' : 'NULL')
+      if (!echo) return
 
       const channelName = `chat.${requestId}`
-      console.log('[ChatPanel] Subscribing private channel', channelName)
-
+      console.log('[Chat] Subscribing to private channel:', channelName)
       const echoChannel = echo.private(channelName)
 
-      try {
-        const pusherChannelName = `private-${channelName}`
-        const rawChannel = (pusher as any)?.channel?.(pusherChannelName)
-        if (rawChannel) {
-          rawChannel.bind('pusher:subscription_succeeded', () => {
-            console.log('[ChatPanel] subscription_succeeded', { channel: pusherChannelName })
-          })
-          rawChannel.bind('pusher:subscription_error', (status: any) => {
-            console.error('[ChatPanel] subscription_error', { channel: pusherChannelName, status })
-          })
-        } else {
-          console.log('[ChatPanel] rawChannel not available yet (will still subscribe)', { channel: pusherChannelName })
-        }
-      } catch (e) {
-        console.error('[ChatPanel] Failed to bind subscription events', e)
-      }
+      echoChannel
+        .subscribed(() => console.log('[Chat] ✅ Subscribed to', channelName))
+        .error((err: any) => console.error('[Chat] ❌ Channel error:', JSON.stringify(err)))
 
       echoChannel.listen('.message.new', (e: any) => {
-        console.log('[ChatPanel] received .message.new', e)
+        console.log('[Chat] 📨 Message received:', e)
         const msg: ChatMessage | null = e?.message ?? e ?? null
         if (!msg || typeof msg.id !== 'number') return
         setMessages(prev => mergeUniqueById(prev, [msg]))
       })
 
-      // Escuchar indicador de "escribiendo"
       echoChannel.listen('.typing', (e: any) => {
         if (e.user_id !== currentUserId) {
           setOtherTyping(true)
@@ -124,11 +84,12 @@ export default function ChatPanel({ requestId, currentUserId, onClose }: Props) 
         }
       })
     })
+
     return () => {
-      subscribedRequestIdRef.current = null
+      cancelled = true
       if (echo) echo.leave(`chat.${requestId}`)
     }
-  }, [requestId])
+  }, [requestId, currentUserId])
 
   // Auto-scroll
   useEffect(() => {
@@ -144,7 +105,11 @@ export default function ChatPanel({ requestId, currentUserId, onClose }: Props) 
       setIsTyping(false)
     }, 1000)
 
-    // Enviar evento de "escribiendo" via WebSocket
+    // Throttle whisper: máximo una vez cada 3 segundos
+    const now = Date.now()
+    if (now - lastWhisperRef.current < 3000) return
+    lastWhisperRef.current = now
+
     import('@/lib/echo').then(({ getEcho }) => {
       const echo = getEcho()
       if (echo) {
@@ -175,7 +140,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose }: Props) 
         formData.append('body', newMsg.trim())
       }
 
-      const r = await fetch(`/api/v1/requests/${requestId}/messages`, {
+      const r = await apiFetch(`/api/v1/requests/${requestId}/messages`, {
         method: 'POST',
         headers: { 
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})

@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { isCapacitor, openExternalBrowser, onAppResume } from '@/lib/capacitor'
+import { apiUrl } from '@/lib/api'
 
 interface Props {
   isOpen: boolean
@@ -13,9 +15,25 @@ interface Props {
 export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegister, onForgotPassword }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Cargar credenciales guardadas al abrir
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedEmail = localStorage.getItem('saved_email')
+      const savedPassword = localStorage.getItem('saved_password')
+      if (savedEmail) {
+        setEmail(savedEmail)
+        setRememberMe(true)
+      }
+      if (savedPassword) {
+        setPassword(savedPassword)
+      }
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,6 +55,15 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
         return
       }
 
+      // Guardar credenciales si "Recordarme" está activo
+      if (rememberMe) {
+        localStorage.setItem('saved_email', email)
+        localStorage.setItem('saved_password', password)
+      } else {
+        localStorage.removeItem('saved_email')
+        localStorage.removeItem('saved_password')
+      }
+
       onSuccess(data.user, data.token)
       onClose()
     } catch (err) {
@@ -45,15 +72,56 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
     }
   }
 
-  const handleOAuth = (provider: 'google' | 'facebook') => {
-    window.location.href = `/api/auth/${provider}`
+  const handleOAuth = async (e: React.MouseEvent, provider: 'google' | 'facebook') => {
+    e.preventDefault()
+    e.stopPropagation()
+    alert('handleOAuth ejecutado: ' + provider)
+    const authUrl = `https://api.jobshour.dondemorales.cl/api/auth/${provider}?mobile=true`
+    await openExternalBrowser(authUrl)
   }
 
-  if (!isOpen) return null
+  // Escuchar retorno de OAuth en Capacitor via deep link
+  useEffect(() => {
+    if (!isCapacitor()) return
+
+    const handleDeepLink = (url: string) => {
+      try {
+        const urlObj = new URL(url)
+        const token = urlObj.searchParams.get('token')
+        const user = urlObj.searchParams.get('user')
+        const error = urlObj.searchParams.get('error')
+
+        if (error) {
+          setError('Error al autenticar con Google')
+          return
+        }
+
+        if (token && user) {
+          const userData = JSON.parse(decodeURIComponent(user))
+          onSuccess(userData, token)
+          onClose()
+        }
+      } catch (e) {
+        console.error('Error handling deep link:', e)
+      }
+    }
+
+    // Escuchar appUrlOpen (deep link jobshour://auth?token=...)
+    let removeListener: () => void = () => {}
+    import('@capacitor/app').then(({ App }) => {
+      App.addListener('appUrlOpen', (data: { url: string }) => {
+        handleDeepLink(data.url)
+      }).then((listener) => {
+        removeListener = listener.remove
+      })
+    })
+
+    return () => removeListener()
+  }, [onSuccess, onClose])
 
   return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden animate-scale-in">
+    <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto py-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 p-6 relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
@@ -147,6 +215,20 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
               </div>
             </div>
 
+            {/* Remember Me */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="remember"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+              />
+              <label htmlFor="remember" className="text-sm text-slate-600">
+                Recordarme
+              </label>
+            </div>
+
             {/* Forgot Password */}
             <div className="text-right">
               <button
@@ -188,7 +270,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
           {/* OAuth */}
           <div className="space-y-2">
             <button
-              onClick={() => handleOAuth('google')}
+              type="button"
+              onClick={(e) => handleOAuth(e, 'google')}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-semibold transition hover:shadow-md"
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -201,7 +284,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
             </button>
 
             <button
-              onClick={() => handleOAuth('facebook')}
+              type="button"
+              onClick={(e) => handleOAuth(e, 'facebook')}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-semibold transition hover:shadow-md"
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="#1877F2">

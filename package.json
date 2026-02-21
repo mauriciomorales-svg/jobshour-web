@@ -5,9 +5,15 @@
   "scripts": {
     "dev": "next dev -p 3002 -H 0.0.0.0",
     "build": "next build",
+    "build:android": "cross-env NEXT_EXPORT=true NEXT_PUBLIC_API_URL=https://jobshour.dondemorales.cl next build",
     "start": "next start -p 3001"
   },
   "dependencies": {
+    "@capacitor/android": "5.7.8",
+    "@capacitor/app": "^5.0.8",
+    "@capacitor/browser": "^5.2.1",
+    "@capacitor/cli": "5.7.8",
+    "@capacitor/core": "5.7.8",
     "firebase": "^12.9.0",
     "framer-motion": "^12.34.1",
     "html2canvas": "^1.4.1",
@@ -31,6 +37,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.17",
+    "cross-env": "^10.1.0",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"

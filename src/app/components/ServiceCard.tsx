@@ -9,7 +9,7 @@ interface ServiceRequest {
   status: string
   template: 'premium' | 'standard' | 'historical' | 'minimal'
   pos: { lat: number; lng: number }
-  client: { name: string; avatar: string | null }
+  client: { id?: number; name: string; avatar: string | null }
   category: { name: string; color: string; icon?: string }
   offered_price: number
   urgency: string
@@ -46,6 +46,7 @@ interface ServiceCardProps {
   index: number
   onClick: () => void
   isHighlighted?: boolean
+  currentUserId?: number
   onRequestService?: (request: ServiceRequest) => void
   onOpenChat?: (request: ServiceRequest) => void
   onGoToLocation?: (request: ServiceRequest) => void
@@ -172,7 +173,8 @@ function ActionButtons({ request, onRequestService, onOpenChat, onGoToLocation }
   )
 }
 
-export default function ServiceCard({ request, index, onClick, isHighlighted, onRequestService, onOpenChat, onGoToLocation }: ServiceCardProps) {
+export default function ServiceCard({ request, index, onClick, isHighlighted, currentUserId, onRequestService, onOpenChat, onGoToLocation }: ServiceCardProps) {
+  const isOwnDemand = !!(currentUserId && request.client?.id && request.client.id === currentUserId)
   const cfg = TYPE_CONFIG[request.category_type] || TYPE_CONFIG.fixed
 
   if (request.template === 'historical') {
@@ -225,7 +227,12 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, on
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-white font-bold text-sm truncate">{request.client.name}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-white font-bold text-sm truncate">{request.client.name}</p>
+              {isOwnDemand && (
+                <span className="shrink-0 text-[9px] font-black bg-white/20 text-white px-1.5 py-0.5 rounded-full">(yo)</span>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{background: request.category?.color || '#f59e0b', color: 'white'}}>
                 {request.category?.name || cfg.label}

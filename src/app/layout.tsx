@@ -38,6 +38,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              if (typeof window !== 'undefined' && window.Capacitor) {
+                const originalFetch = window.fetch;
+                window.fetch = async function() {
+                  let args = Array.prototype.slice.call(arguments);
+                  if (typeof args[0] === 'string' && args[0].startsWith('/api/')) {
+                    args[0] = 'https://jobshour.dondemorales.cl' + args[0];
+                  }
+                  return originalFetch.apply(this, args);
+                };
+              }
+            `,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
               (function() {
                 if (typeof window === 'undefined') return;
                 const originalError = console.error;

@@ -49,6 +49,17 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
 
   const motivational = MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)]
 
+  // Usar ubicación guardada si ya existe
+  useEffect(() => {
+    const savedLat = localStorage.getItem('user_lat')
+    const savedLng = localStorage.getItem('user_lng')
+    if (savedLat && savedLng) {
+      const lat = parseFloat(savedLat)
+      const lng = parseFloat(savedLng)
+      setData(prev => ({ ...prev, location: { lat, lng, address: `${lat.toFixed(4)}, ${lng.toFixed(4)}` } }))
+    }
+  }, [])
+
   // Fetch categories
   useEffect(() => {
     fetch('/api/v1/categories')

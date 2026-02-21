@@ -392,7 +392,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose }: Props)
                                     const data = await res.json()
                                     if (data.status === 'success') {
                                       setSolicitudes(prev => prev.filter(x => x.id !== s.id))
-                                      window.dispatchEvent(new Event('reload-feed'))
+                                      window.dispatchEvent(new CustomEvent('remove-feed-item', { detail: { id: s.id } }))
                                     } else {
                                       alert(data.message || 'Error al cancelar')
                                     }

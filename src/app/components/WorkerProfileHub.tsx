@@ -599,7 +599,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
                       }}
                     >
                       <span className="text-xl">{iconMap[category.icon] || category.icon || '⚙️'}</span>
-                      <span className="text-sm font-bold whitespace-nowrap">{category.display_name}</span>
+                      <span className="text-sm font-bold whitespace-nowrap">{category.display_name || category.name || '?'}</span>
                       {isSelected && (
                         <motion.div
                           initial={{ scale: 0 }}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">JobsHour</string>
+    <string name="title_activity_main">JobsHour</string>
+    <string name="package_name">cl.dondemorales.jobshour</string>
+    <string name="custom_url_scheme">cl.dondemorales.jobshour</string>
+</resources>

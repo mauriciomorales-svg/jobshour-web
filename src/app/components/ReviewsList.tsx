@@ -38,7 +38,10 @@ export default function ReviewsList({ workerId, showAverage = true, canRespond =
   const fetchReviews = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/v1/workers/${workerId}/reviews`)
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      const response = await fetch(`/api/v1/workers/${workerId}/reviews`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      })
       const data = await response.json()
 
       if (data.status === 'success' && Array.isArray(data.data)) {

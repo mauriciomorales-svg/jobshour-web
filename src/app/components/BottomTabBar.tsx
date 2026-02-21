@@ -13,6 +13,7 @@ interface Props {
   active: TabKey
   onChange: (tab: TabKey) => void
   requestsBadge?: number
+  demandsBadge?: number
   isWorker?: boolean
 }
 
@@ -40,10 +41,10 @@ const ProfileIcon = (active: boolean) => (
   </svg>
 )
 
-export default function BottomTabBar({ active, onChange, requestsBadge = 0, isWorker = false }: Props) {
+export default function BottomTabBar({ active, onChange, requestsBadge = 0, demandsBadge = 0, isWorker = false }: Props) {
   const tabs: Tab[] = [
     { key: 'map',      label: 'Mapa',       icon: MapIcon },
-    { key: 'feed',     label: isWorker ? 'Oportunidades' : 'Demandas', icon: FeedIcon },
+    { key: 'feed',     label: isWorker ? 'Oportunidades' : 'Demandas', icon: FeedIcon, badge: demandsBadge },
     { key: 'requests', label: 'Solicitudes', icon: RequestsIcon, badge: requestsBadge },
     { key: 'profile',  label: 'Perfil',      icon: ProfileIcon },
   ]
