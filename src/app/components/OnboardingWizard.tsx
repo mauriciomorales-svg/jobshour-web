@@ -154,7 +154,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
           category_ids: selectedCategories,
           skills: data.skills,
           bio: data.bio,
-          availability_status: 'intermediate',
+          ...(localStorage.getItem(`onboarding_done_${userName}`) ? {} : { availability_status: 'intermediate' }),
         }),
       })
 
@@ -310,8 +310,8 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
                           : 'bg-slate-800 border-2 border-slate-700 text-slate-400 hover:border-slate-600'
                       }`}
                     >
-                      <span className="text-lg">{getIcon(cat.icon)}</span>
-                      <span className="text-xs font-bold leading-tight flex-1">{cat.name}</span>
+                      <span className="text-xl shrink-0">{getIcon(cat.icon)}</span>
+                      <span className="text-xs font-bold leading-tight flex-1 text-white">{cat.name}</span>
                       {isSelected && <span className="text-teal-400 text-xs font-black">✓</span>}
                     </button>
                   )
