@@ -47,9 +47,10 @@ export default function FlyerPage() {
         .footer .zona { font-size: 11px; color: #2dd4bf; font-weight: 700; }
         .print-btn { position: fixed; bottom: 24px; right: 24px; background: #2dd4bf; color: #0f172a; font-weight: 900; font-size: 15px; padding: 14px 28px; border-radius: 50px; border: none; cursor: pointer; box-shadow: 0 8px 24px rgba(45,212,191,0.4); z-index: 100; }
         @media print {
-          body { background: white; }
-          .print-btn { display: none; }
-          .flyer { width: 210mm; min-height: 297mm; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+          body { background: #0f172a !important; margin: 0; }
+          .print-btn { display: none !important; }
+          .flyer { width: 210mm; min-height: 297mm; margin: 0; }
         }
       `}</style>
 
