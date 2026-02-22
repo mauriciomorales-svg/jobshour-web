@@ -23,6 +23,7 @@ const MisSolicitudes = dynamic(() => import('./components/MisSolicitudes'), { ss
 const ChatHistory = dynamic(() => import('./components/ChatHistory'), { ssr: false })
 const ReviewsList = dynamic(() => import('./components/ReviewsList'), { ssr: false })
 const RatingModal = dynamic(() => import('./components/RatingModal'), { ssr: false })
+const WorkerDetailModal = dynamic(() => import('./components/WorkerDetailModal'), { ssr: false })
 // Temporalmente deshabilitado para debug
 // const TravelModeModal = dynamic(() => import('./components/TravelModeModal'), { ssr: false })
 
@@ -2344,139 +2345,12 @@ export default function Home() {
         <VerificationCard user={user} onClose={() => setShowVerificationCard(false)} />
       )}
 
-      {/* ── WORKER PROFILE DETAIL MODAL (al hacer click en Perfil desde pin) ── */}
+      {/* ── WORKER PROFILE DETAIL MODAL ── */}
       {showWorkerProfileDetail && selectedDetail && (
-        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-              <h2 className="text-xl font-black text-gray-900">Perfil del Trabajador</h2>
-              <button
-                onClick={() => {
-                  setShowWorkerProfileDetail(false)
-                  setSelectedWorkerId(null)
-                }}
-                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition"
-              >
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-6">
-              {/* Avatar y nombre */}
-              <div className="flex items-center gap-4 mb-6">
-                <img
-                  src={selectedDetail.avatar || `https://i.pravatar.cc/100?u=${selectedDetail.id}`}
-                  alt={selectedDetail.name}
-                  className="w-20 h-20 rounded-full object-cover border-4 border-gray-200"
-                />
-                <div>
-                  <h3 className="text-2xl font-black text-gray-900">{selectedDetail.name}</h3>
-                  {selectedDetail.nickname && (
-                    <p className="text-sm text-gray-600">@{selectedDetail.nickname}</p>
-                  )}
-                  {selectedDetail.is_verified && (
-                    <span className="inline-flex items-center gap-1 mt-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-bold">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      Verificado
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Información básica */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {selectedDetail.fresh_score !== undefined && (
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <p className="text-xs text-gray-500 mb-1">Fresh Score</p>
-                    <p className="text-2xl font-black text-gray-900">{selectedDetail.fresh_score}</p>
-                  </div>
-                )}
-                {selectedDetail.hourly_rate && (
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <p className="text-xs text-gray-500 mb-1">Tarifa por Hora</p>
-                    <p className="text-2xl font-black text-blue-600">{formatCLP(selectedDetail.hourly_rate)}/hr</p>
-                  </div>
-                )}
-                {selectedDetail.rating_count !== undefined && (
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <p className="text-xs text-gray-500 mb-1">Calificaciones</p>
-                    <p className="text-2xl font-black text-gray-900">{selectedDetail.rating_count}</p>
-                  </div>
-                )}
-                {selectedDetail.total_jobs !== undefined && (
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <p className="text-xs text-gray-500 mb-1">Trabajos Completados</p>
-                    <p className="text-2xl font-black text-gray-900">{selectedDetail.total_jobs}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Categorías */}
-              {((selectedDetail.categories && selectedDetail.categories.length > 0) || selectedDetail.category) && (
-                <div className="mb-6">
-                  <p className="text-xs text-gray-500 mb-2">Habilidades</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(selectedDetail.categories && selectedDetail.categories.length > 0
-                      ? selectedDetail.categories
-                      : selectedDetail.category ? [selectedDetail.category] : []
-                    ).map((cat, i) => (
-                      <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-bold" style={{ backgroundColor: cat.color || '#2563eb' }}>
-                        <span>{({'truck':'🚛','car':'🚗','wrench':'🔧','hammer':'🔨','zap':'⚡','home':'🏠','scissors':'✂️','shopping-cart':'🛒','heart':'❤️','star':'⭐','briefcase':'💼','tool':'🛠️','package':'📦','user':'👤','users':'👥','map-pin':'📍','clock':'🕐','dollar-sign':'💵','phone':'📞','mail':'📧','camera':'📷','music':'🎵','book':'📚','coffee':'☕','utensils':'🍴','paint-brush':'🎨','tree':'🌳','sun':'☀️','moon':'🌙','cloud':'☁️','wind':'💨','droplet':'💧','fire':'🔥','shield':'🛡️','lock':'🔒','key':'🔑','settings':'⚙️','trash':'🗑️','edit':'✏️','check':'✅','x':'❌','alert':'⚠️','info':'ℹ️','help':'❓','plus':'➕','minus':'➖','search':'🔍','filter':'🔽','sort':'↕️','refresh':'🔄','download':'⬇️','upload':'⬆️','share':'📤','link':'🔗','image':'🖼️','video':'🎥','mic':'🎤','speaker':'🔊','wifi':'📶','bluetooth':'📡','battery':'🔋','cpu':'💻','monitor':'🖥️','printer':'🖨️','keyboard':'⌨️','mouse':'🖱️','headphones':'🎧','gamepad':'🎮','tv':'📺','radio':'📻','watch':'⌚','compass':'🧭','map':'🗺️','globe':'🌍','flag':'🏳️','tag':'🏷️','gift':'🎁','award':'🏆','medal':'🥇','crown':'👑','diamond':'💎','gem':'💎','rocket':'🚀','plane':'✈️','train':'🚂','bus':'🚌','bike':'🚲','anchor':'⚓','sailboat':'⛵'}[cat.icon] || '📌')}</span>
-                        {cat.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Bio/Microcopy */}
-              {selectedDetail.microcopy && (
-                <div className="mb-6">
-                  <p className="text-xs text-gray-500 mb-2">Descripción</p>
-                  <p className="text-gray-700 leading-relaxed">{selectedDetail.microcopy}</p>
-                </div>
-              )}
-
-              {/* Estado */}
-              <div className="mb-6">
-                <p className="text-xs text-gray-500 mb-2">Estado</p>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                  selectedDetail.status === 'active' ? 'bg-green-100 text-green-800' :
-                  selectedDetail.status === 'intermediate' ? 'bg-sky-100 text-sky-800' :
-                  selectedDetail.status === 'demand' ? 'bg-orange-100 text-orange-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {selectedDetail.status === 'active' ? 'Disponible' :
-                   selectedDetail.status === 'intermediate' ? 'Disp. Flexible' :
-                   selectedDetail.status === 'demand' ? 'Demanda activa' :
-                   'No disponible'}
-                </span>
-              </div>
-
-              {/* Video showcase */}
-              {selectedDetail.showcase_video && (
-                <div className="mb-6">
-                  <p className="text-xs text-gray-500 mb-2">Video de Presentación</p>
-                  <div className="bg-gray-100 rounded-xl p-4 text-center">
-                    <p className="text-sm text-gray-600">Video disponible</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Reseñas */}
-              <div className="mb-6">
-                <p className="text-xs text-gray-500 mb-3">Reseñas</p>
-                <ReviewsList workerId={selectedDetail.id} showAverage={true} canRespond={false} />
-              </div>
-            </div>
-          </div>
-        </div>
+        <WorkerDetailModal
+          detail={selectedDetail}
+          onClose={() => { setShowWorkerProfileDetail(false); setSelectedWorkerId(null) }}
+        />
       )}
 
       {/* ── RATING MODAL ── */}
