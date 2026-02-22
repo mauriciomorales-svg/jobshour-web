@@ -132,6 +132,7 @@ export default function Home() {
   const [selectedWorkerId, setSelectedWorkerId] = useState<number | null>(null)
   const [showCategoryManagement, setShowCategoryManagement] = useState(false)
   const [showPublishDemand, setShowPublishDemand] = useState(false)
+  const [dismissEmptyMap, setDismissEmptyMap] = useState(false)
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [ratingRequestId, setRatingRequestId] = useState<number | null>(null)
   const [ratingWorkerInfo, setRatingWorkerInfo] = useState<{ name: string; avatar: string | null } | null>(null)
@@ -1172,9 +1173,10 @@ export default function Home() {
       </div>
 
       {/* ── MENSAJE MAPA VACÍO ── */}
-      {activeTab === 'map' && !loading && filtered.length === 0 && !selectedDetail && (
+      {activeTab === 'map' && !loading && filtered.length === 0 && !selectedDetail && !dismissEmptyMap && (
         <div className="absolute inset-0 pt-[180px] pb-[68px] flex items-center justify-center pointer-events-none z-[150]">
-          <div className="bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-2xl px-6 py-5 mx-6 text-center shadow-2xl pointer-events-auto">
+          <div className="relative bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-2xl px-6 py-5 mx-6 text-center shadow-2xl pointer-events-auto">
+            <button onClick={() => setDismissEmptyMap(true)} className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white transition">✕</button>
             <div className="text-4xl mb-2">🔍</div>
             <p className="text-white font-black text-base mb-1">No hay trabajadores cerca</p>
             <p className="text-slate-400 text-xs leading-relaxed mb-3">Mueve el mapa para buscar en otra zona, o publica lo que necesitas y te contactarán.</p>
