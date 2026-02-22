@@ -33,11 +33,14 @@ interface WorkerData {
   rating_count: number
   total_jobs_completed: number
   skills: string[] | null
+  created_at: string
+  videos: { url: string; thumbnail: string | null; duration: number | null }[]
   user: {
     name: string
     nickname: string | null
     avatar_url: string | null
     avatar: string | null
+    is_pioneer?: boolean
   }
   categories: {
     id: number
