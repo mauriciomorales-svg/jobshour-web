@@ -90,7 +90,17 @@ const ICON_MAP: Record<string, string> = {
   wrench: '🔧', zap: '⚡', paintbrush: '🎨', sparkles: '🧹',
   hammer: '🪵', leaf: '🌿', key: '🔑', building: '🧱',
   scissors: '🧵', 'paw-print': '🐾',
-  'shopping-bag': '🛍️', truck: '🚚', package: '📦',
+  tree: '🌳', ruler: '📐', heart: '❤️', paw: '🐾', book: '📚',
+  laptop: '💻', shield: '🛡️', truck: '🚚', car: '🚗', bike: '🚲',
+  camera: '📷', music: '🎵', utensils: '🍴', coffee: '☕',
+  'paint-brush': '🎨', home: '🏠', star: '⭐', briefcase: '💼',
+  tool: '🛠️', package: '📦', user: '👤', users: '👥',
+  'map-pin': '📍', clock: '🕐', phone: '📞', mail: '📧',
+  globe: '🌍', flag: '🚩', gift: '🎁', award: '🏆',
+  'shopping-cart': '🛒', fire: '🔥', anchor: '⚓', compass: '🧭',
+  mic: '🎤', headphones: '🎧', tv: '📺', wifi: '📶',
+  'chef-hat': '👨‍🍳', graduation: '🎓', stethoscope: '🩺',
+  'paint-roller': '🖌️', shovel: '⛏️', 'shopping-bag': '🛍️',
 }
 
 function formatCLP(val: number) {

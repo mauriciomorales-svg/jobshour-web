@@ -36,6 +36,14 @@ const ICON_MAP: Record<string, string> = {
   flame: '🔥', rabbit: '🐇', droplet: '💧', droplets: '💧',
   'key-round': '🔑', 'hard-hat': '👷', trees: '🌳', home: '🏠',
   package: '📦', broom: '🧹', motorcycle: '🏍️', bicycle: '🚲',
+  tree: '🌳', ruler: '📐', heart: '❤️', paw: '🐾', book: '📚',
+  laptop: '💻', shield: '🛡️', bike: '🚲', coffee: '☕',
+  'paint-brush': '🎨', star: '⭐', briefcase: '💼', tool: '🛠️',
+  user: '👤', users: '👥', 'map-pin': '📍', clock: '🕐',
+  phone: '📞', mail: '📧', globe: '🌍', gift: '🎁', award: '🏆',
+  fire: '🔥', anchor: '⚓', compass: '🧭', mic: '🎤',
+  headphones: '🎧', tv: '📺', stethoscope: '🩺', graduation: '🎓',
+  'paint-roller': '🖌️', shovel: '⛏️', 'shopping-bag': '🛍️',
 }
 
 function getIcon(icon?: string): string {
