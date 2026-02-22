@@ -215,27 +215,27 @@ export default function WorkerPublicProfile() {
         )}
 
         {/* Video */}
-        {showcaseVideo && (
-          <div>
-            <h3 className="text-xs uppercase font-bold text-gray-400 mb-3 tracking-wider">Video de Presentación</h3>
-            <div className="relative w-full h-48 bg-gray-900 rounded-2xl overflow-hidden group cursor-pointer shadow-sm"
-              onClick={() => window.open(showcaseVideo.url, '_blank')}>
-              {showcaseVideo.thumbnail
-                ? <img src={showcaseVideo.thumbnail} alt="Video" className="w-full h-full object-cover opacity-70 group-hover:opacity-50 transition" />
-                : <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900" />}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-14 h-14 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition">
-                  <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z" /></svg>
-                </div>
+        <div>
+          <h3 className="text-xs uppercase font-bold text-gray-400 mb-3 tracking-wider">Video de Presentación</h3>
+          <div className={`relative w-full h-48 bg-gray-900 rounded-2xl overflow-hidden shadow-sm ${showcaseVideo ? 'cursor-pointer group' : ''}`}
+            onClick={() => showcaseVideo && window.open(showcaseVideo.url, '_blank')}>
+            {showcaseVideo?.thumbnail
+              ? <img src={showcaseVideo.thumbnail} alt="Video" className="w-full h-full object-cover opacity-70 group-hover:opacity-50 transition" />
+              : <img src="https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=600&q=80" alt="Video" className="w-full h-full object-cover opacity-40" />
+            }
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+              <div className={`w-14 h-14 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50 transition ${showcaseVideo ? 'group-hover:scale-110' : 'opacity-50'}`}>
+                <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z" /></svg>
               </div>
-              {showcaseVideo.duration && (
-                <span className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-md backdrop-blur-sm">
-                  {Math.floor(showcaseVideo.duration / 60)}:{String(showcaseVideo.duration % 60).padStart(2, '0')}
-                </span>
-              )}
+              {!showcaseVideo && <p className="text-white/70 text-xs font-semibold">Aún sin video de presentación</p>}
             </div>
+            {showcaseVideo?.duration && (
+              <span className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-md backdrop-blur-sm">
+                {Math.floor(showcaseVideo.duration / 60)}:{String(showcaseVideo.duration % 60).padStart(2, '0')}
+              </span>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Bio */}
         {worker.bio && (
