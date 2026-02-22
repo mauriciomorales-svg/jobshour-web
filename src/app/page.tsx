@@ -23,6 +23,7 @@ const PublishDemandModal = dynamic(() => import('./components/PublishDemandModal
 const MisSolicitudes = dynamic(() => import('./components/MisSolicitudes'), { ssr: false })
 const ChatHistory = dynamic(() => import('./components/ChatHistory'), { ssr: false })
 const ReviewsList = dynamic(() => import('./components/ReviewsList'), { ssr: false })
+const StoreOrdersPanel = dynamic(() => import('./components/StoreOrdersPanel'), { ssr: false })
 const RatingModal = dynamic(() => import('./components/RatingModal'), { ssr: false })
 const WorkerDetailModal = dynamic(() => import('./components/WorkerDetailModal'), { ssr: false })
 // Temporalmente deshabilitado para debug
@@ -140,6 +141,7 @@ export default function Home() {
   const [notifBadge, setNotifBadge] = useState(0)
   const [chatBadge, setChatBadge] = useState(0)
   const [showChatHistory, setShowChatHistory] = useState(false)
+  const [showStoreOrders, setShowStoreOrders] = useState(false)
   // const [showTravelModeModal, setShowTravelModeModal] = useState(false)
   const [workerStatus, setWorkerStatus] = useState<'guest' | 'inactive' | 'intermediate' | 'active'>('guest') // Estados del trabajador
   const workerStatusRef = useRef<'guest' | 'inactive' | 'intermediate' | 'active'>('guest')
@@ -2162,6 +2164,18 @@ export default function Home() {
                     </div>
                     <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition">Mi Tienda</span>
                   </a>
+
+                  {workerProfile && (
+                    <button
+                      onClick={() => { setShowStoreOrders(true); setShowSidebar(false) }}
+                      className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
+                    >
+                      <div className="w-9 h-9 bg-orange-500/15 rounded-lg flex items-center justify-center group-hover:bg-orange-500/25 transition">
+                        <span className="text-lg">📦</span>
+                      </div>
+                      <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition">Mis Pedidos</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Separador */}
@@ -2652,6 +2666,10 @@ export default function Home() {
       <OfflineBanner />
 
       {/* ── HISTORIAL DE CHATS ── */}
+      {showStoreOrders && (
+        <StoreOrdersPanel onClose={() => setShowStoreOrders(false)} />
+      )}
+
       {showChatHistory && (
         <ChatHistory
           onClose={() => setShowChatHistory(false)}
