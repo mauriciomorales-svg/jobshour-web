@@ -45,6 +45,7 @@ interface WorkerData {
   categories: {
     id: number
     name: string
+    display_name: string
     icon: string
     color: string
     slug: string
@@ -195,7 +196,7 @@ export default function WorkerPublicProfile() {
               {worker.categories.map(cat => (
                 <span key={cat.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border"
                   style={{ background: `${cat.color}15`, color: cat.color, borderColor: `${cat.color}40` }}>
-                  {getIcon(cat.icon)} {cat.name}
+                  {getIcon(cat.icon)} {cat.display_name || cat.name}
                 </span>
               ))}
             </div>
