@@ -97,7 +97,7 @@ function formatCLP(val: number) {
   return '$' + val.toLocaleString('es-CL')
 }
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshour.dondemorales.cl/api').replace(/\/api$/, '')
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
 
 export default function Home() {
   const [points, setPoints] = useState<MapPoint[]>([])
@@ -315,7 +315,7 @@ export default function Home() {
         if (!authKey) return
         localStorage.removeItem('pending_auth_key')
         try {
-          const res = await fetch(`https://jobshour.dondemorales.cl/api/auth/mobile-token?key=${authKey}`)
+          const res = await fetch(`https://jobshours.com/api/auth/mobile-token?key=${authKey}`)
           if (res.ok) {
             const data = await res.json()
             if (data.token) {
@@ -340,7 +340,7 @@ export default function Home() {
           if (data.url.startsWith('jobshour://auth-success')) {
             const authKey = url.searchParams.get('key')
             if (!authKey) return
-            const res = await fetch(`https://jobshour.dondemorales.cl/api/auth/mobile-token?key=${authKey}`)
+            const res = await fetch(`https://jobshours.com/api/auth/mobile-token?key=${authKey}`)
             if (res.ok) {
               const d = await res.json()
               if (d.token) { localStorage.setItem('auth_token', d.token); fetchUserProfile(d.token) }
@@ -1352,7 +1352,7 @@ export default function Home() {
                     e.stopPropagation()
                     const { openExternalBrowser } = await import('@/lib/capacitor')
                     const isNative = (await import('@capacitor/core')).Capacitor.isNativePlatform()
-                    const url = isNative ? 'https://jobshour.dondemorales.cl/api/auth/google?mobile=true' : 'https://jobshour.dondemorales.cl/api/auth/google'
+                    const url = isNative ? 'https://jobshours.com/api/auth/google?mobile=true' : 'https://jobshours.com/api/auth/google'
                     await openExternalBrowser(url)
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-semibold transition hover:shadow-sm"
@@ -2056,7 +2056,7 @@ export default function Home() {
                           const fd = new FormData()
                           fd.append('avatar', file)
                           try {
-                            const res = await fetch('https://jobshour.dondemorales.cl/api/v1/profile/avatar', {
+                            const res = await fetch('https://jobshours.com/api/v1/profile/avatar', {
                               method: 'POST',
                               headers: { Authorization: `Bearer ${token}` },
                               body: fd,
@@ -2218,7 +2218,7 @@ export default function Home() {
                 <div className="px-4 py-3 space-y-0.5">
                   <button 
                     onClick={() => {
-                      const url = 'https://jobshour.dondemorales.cl'
+                      const url = 'https://jobshours.com'
                       const text = '¡Encuentra servicios cerca de ti en JobsHours! 🔧⚡'
                       if (navigator.share) {
                         navigator.share({ title: 'JobsHours', text, url })
@@ -2263,7 +2263,7 @@ export default function Home() {
               <div className="px-5 py-6 space-y-3">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Iniciar sesión</p>
                 <button 
-                  onClick={async (e) => { e.preventDefault(); const { openExternalBrowser } = await import('@/lib/capacitor'); const isNative = (await import('@capacitor/core')).Capacitor.isNativePlatform(); const url = isNative ? 'https://jobshour.dondemorales.cl/api/auth/google?mobile=true' : 'https://jobshour.dondemorales.cl/api/auth/google'; await openExternalBrowser(url) }}
+                  onClick={async (e) => { e.preventDefault(); const { openExternalBrowser } = await import('@/lib/capacitor'); const isNative = (await import('@capacitor/core')).Capacitor.isNativePlatform(); const url = isNative ? 'https://jobshours.com/api/auth/google?mobile=true' : 'https://jobshours.com/api/auth/google'; await openExternalBrowser(url) }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-sm text-slate-300 font-semibold transition"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -2280,7 +2280,7 @@ export default function Home() {
             
             {/* Footer */}
             <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-5 py-3">
-              <p className="text-[10px] text-slate-600 font-semibold">jobshour.dondemorales.cl</p>
+              <p className="text-[10px] text-slate-600 font-semibold">jobshours.com</p>
             </div>
           </div>
         </>

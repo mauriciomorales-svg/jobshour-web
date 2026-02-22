@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'JobsHours | Encuentra expertos cerca de ti',
     description: 'Publica lo que necesitas y conecta con socios verificados en minutos.',
-    url: 'https://jobshour.dondemorales.cl',
+    url: 'https://jobshours.com',
     siteName: 'JobsHours',
     locale: 'es_CL',
     type: 'website',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     description: 'Conecta con profesionales verificados en tu zona.',
   },
   robots: { index: true, follow: true },
-  alternates: { canonical: 'https://jobshour.dondemorales.cl' },
+  alternates: { canonical: 'https://jobshours.com' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 window.fetch = async function() {
                   let args = Array.prototype.slice.call(arguments);
                   if (typeof args[0] === 'string' && args[0].startsWith('/api/')) {
-                    args[0] = 'https://jobshour.dondemorales.cl' + args[0];
+                    args[0] = 'https://jobshours.com' + args[0];
                   }
                   return originalFetch.apply(this, args);
                 };

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flyer JobsHour</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1e293b; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 30px; font-family: 'Inter', sans-serif; }
+
+  .flyer {
+    width: 210mm;
+    min-height: 297mm;
+    background: linear-gradient(160deg, #0f172a 0%, #0f2a2a 50%, #0f172a 100%);
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    color: white;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Fondo decorativo */
+  .flyer::before {
+    content: '';
+    position: absolute;
+    top: -80px; left: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(45,212,191,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .flyer::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: -80px;
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(20,184,166,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* HEADER */
+  .header {
+    padding: 40px 40px 30px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 1px solid rgba(45,212,191,0.2);
+  }
+  .logo-box {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 8px 32px rgba(45,212,191,0.3);
+  }
+  .logo-box svg { width: 44px; height: 44px; }
+  .brand { flex: 1; }
+  .brand h1 { font-size: 42px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+  .brand h1 span { color: #2dd4bf; }
+  .brand p { font-size: 14px; color: #94a3b8; margin-top: 4px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+  .beta-badge {
+    background: rgba(245,158,11,0.15);
+    border: 1.5px solid rgba(245,158,11,0.5);
+    color: #fbbf24;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* HERO TEXT */
+  .hero { padding: 36px 40px 28px; }
+  .hero h2 { font-size: 38px; font-weight: 900; line-height: 1.15; margin-bottom: 16px; }
+  .hero h2 em { color: #2dd4bf; font-style: normal; }
+  .hero p { font-size: 17px; color: #cbd5e1; line-height: 1.6; max-width: 480px; }
+
+  /* SERVICIOS */
+  .servicios { padding: 0 40px 28px; }
+  .servicios h3 { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    background: rgba(45,212,191,0.08);
+    border: 1.5px solid rgba(45,212,191,0.2);
+    border-radius: 50px;
+    padding: 8px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #e2e8f0;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .chip span:first-child { font-size: 18px; }
+
+  /* PARA TRABAJADORES */
+  .workers {
+    margin: 0 40px 28px;
+    background: rgba(45,212,191,0.06);
+    border: 1.5px solid rgba(45,212,191,0.2);
+    border-radius: 16px;
+    padding: 22px 24px;
+  }
+  .workers h3 { font-size: 17px; font-weight: 900; color: #2dd4bf; margin-bottom: 12px; }
+  .workers ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .workers li { font-size: 15px; color: #cbd5e1; display: flex; align-items: center; gap: 8px; }
+  .workers li::before { content: '✓'; color: #2dd4bf; font-weight: 900; font-size: 14px; }
+
+  /* QR SECTION */
+  .qr-section {
+    margin: 0 40px 28px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    background: white;
+    border-radius: 20px;
+    padding: 24px 28px;
+  }
+  .qr-box canvas, .qr-box { flex-shrink: 0; }
+  .qr-text { flex: 1; }
+  .qr-text h3 { font-size: 22px; font-weight: 900; color: #0f172a; line-height: 1.2; margin-bottom: 8px; }
+  .qr-text p { font-size: 14px; color: #475569; line-height: 1.5; margin-bottom: 12px; }
+  .qr-text .url { font-size: 12px; color: #14b8a6; font-weight: 700; word-break: break-all; }
+  .arrow { font-size: 28px; }
+
+  /* FOOTER */
+  .footer {
+    margin-top: auto;
+    padding: 20px 40px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer p { font-size: 12px; color: #475569; }
+  .footer .zona { font-size: 12px; color: #2dd4bf; font-weight: 700; }
+
+  /* Print */
+  @media print {
+    body { background: white; padding: 0; }
+    .flyer { border-radius: 0; width: 210mm; min-height: 297mm; }
+    .no-print { display: none; }
+  }
+
+  /* Botón imprimir */
+  .print-btn {
+    position: fixed; bottom: 30px; right: 30px;
+    background: #2dd4bf; color: #0f172a;
+    font-weight: 900; font-size: 15px;
+    padding: 14px 28px; border-radius: 50px;
+    border: none; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(45,212,191,0.4);
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+
+<div class="flyer">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-box">
+      <svg viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="512" cy="512" r="480" fill="white" fill-opacity="0.15"/>
+        <circle cx="512" cy="512" r="320" fill="none" stroke="white" stroke-width="48" stroke-dasharray="80 40"/>
+        <circle cx="512" cy="512" r="60" fill="white"/>
+        <line x1="512" y1="512" x2="512" y2="220" stroke="#fbbf24" stroke-width="44" stroke-linecap="round"/>
+        <line x1="512" y1="512" x2="680" y2="420" stroke="white" stroke-width="32" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="brand">
+      <h1><span>Jobs</span>Hour</h1>
+      <p>Trabajo local · En tu comunidad</p>
+    </div>
+    <div class="beta-badge">🚧 VERSIÓN BETA</div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h2>¿Necesitas ayuda<br>en tu casa o negocio?<br><em>Aquí está la solución.</em></h2>
+    <p>Encuentra gasfiteros, electricistas, fleteros, jardineros y más — personas de tu misma zona, disponibles ahora mismo. Sin llamadas, sin esperas.</p>
+  </div>
+
+  <!-- SERVICIOS -->
+  <div class="servicios">
+    <h3>Servicios disponibles</h3>
+    <div class="chips">
+      <div class="chip"><span>🔧</span> Reparaciones</div>
+      <div class="chip"><span>🧹</span> Aseo y limpieza</div>
+      <div class="chip"><span>🚚</span> Fletes</div>
+      <div class="chip"><span>🌿</span> Jardín</div>
+      <div class="chip"><span>📦</span> Mandados</div>
+      <div class="chip"><span>🚗</span> Viajes</div>
+      <div class="chip"><span>⚡</span> Electricidad</div>
+      <div class="chip"><span>💧</span> Gasfitería</div>
+    </div>
+  </div>
+
+  <!-- PARA TRABAJADORES -->
+  <div class="workers">
+    <h3>¿Eres trabajador? Regístrate gratis</h3>
+    <ul>
+      <li>Aparece en el mapa y recibe solicitudes de clientes cercanos</li>
+      <li>Sin comisiones — cobras directo al cliente</li>
+      <li>Activa tu disponibilidad cuando quieras trabajar</li>
+      <li>Solo necesitas una cuenta Google para comenzar</li>
+    </ul>
+  </div>
+
+  <!-- QR -->
+  <div class="qr-section">
+    <div class="qr-box">
+      <canvas id="qr"></canvas>
+    </div>
+    <div class="qr-text">
+      <div class="arrow">👆</div>
+      <h3>Escanea y<br>empieza ahora</h3>
+      <p>Abre la cámara de tu celular y apunta al código QR. Gratis, sin instalación.</p>
+      <div class="url">jobshour.dondemorales.cl/landing</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>© 2026 JobsHour · Versión inicial en pruebas</p>
+    <p class="zona">📍 Renaico · Angol · Los Ángeles · Nacimiento</p>
+  </div>
+
+</div>
+
+<!-- Botón imprimir -->
+<button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir flyer</button>
+
+<script>
+  QRCode.toCanvas(document.getElementById('qr'), 'https://jobshour.dondemorales.cl/landing', {
+    width: 160,
+    margin: 1,
+    color: { dark: '#0f172a', light: '#ffffff' }
+  })
+</script>
+</body>
+</html>

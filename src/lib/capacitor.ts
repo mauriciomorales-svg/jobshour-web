@@ -9,7 +9,7 @@ export function isCapacitor(): boolean {
   return !!(window as any).Capacitor
 }
 
-const BACKEND_URL = 'https://jobshour.dondemorales.cl'
+const BACKEND_URL = 'https://jobshours.com'
 
 // Abrir URL en navegador externo
 export async function openExternalBrowser(url: string): Promise<void> {

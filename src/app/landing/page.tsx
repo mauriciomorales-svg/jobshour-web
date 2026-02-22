@@ -1,7 +1,7 @@
 'use client'
 import { QRCodeSVG } from 'qrcode.react'
 
-const LANDING_URL = 'https://jobshour.dondemorales.cl/landing'
+const LANDING_URL = 'https://jobshours.com/landing'
 
 export default function LandingPage() {
   return (
@@ -51,7 +51,7 @@ export default function LandingPage() {
               📱 Descargar APK Android
             </a>
             <a
-              href="https://jobshour.dondemorales.cl"
+              href="https://jobshours.com"
               className="inline-flex items-center justify-center gap-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-black text-base px-7 py-4 rounded-2xl transition active:scale-95"
             >
               🌐 Abrir versión web
@@ -192,7 +192,7 @@ export default function LandingPage() {
             Descargar para Android
           </a>
           <br />
-          <a href="https://jobshour.dondemorales.cl" className="text-teal-400 text-sm hover:underline">
+          <a href="https://jobshours.com" className="text-teal-400 text-sm hover:underline">
             O usa la versión web →
           </a>
         </div>
@@ -202,7 +202,7 @@ export default function LandingPage() {
       <footer className="border-t border-slate-800 px-6 py-8 text-center text-slate-500 text-xs">
         <p className="font-black text-slate-400 text-base mb-1"><span className="text-teal-400">Jobs</span>Hour</p>
         <p>Conectando comunidades · Renaico, La Araucanía, Chile</p>
-        <p className="mt-2">© 2026 JobsHour · <a href="https://jobshour.dondemorales.cl/privacidad" className="hover:text-teal-400">Privacidad</a> · <a href="https://jobshour.dondemorales.cl/terminos" className="hover:text-teal-400">Términos</a></p>
+        <p className="mt-2">© 2026 JobsHour · <a href="https://jobshours.com/privacidad" className="hover:text-teal-400">Privacidad</a> · <a href="https://jobshours.com/terminos" className="hover:text-teal-400">Términos</a></p>
       </footer>
 
     </div>

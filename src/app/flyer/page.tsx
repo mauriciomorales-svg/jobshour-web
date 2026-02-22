@@ -2,7 +2,7 @@
 import { QRCodeSVG } from 'qrcode.react'
 import { useRef, useState } from 'react'
 
-const LANDING_URL = 'https://jobshour.dondemorales.cl/landing'
+const LANDING_URL = 'https://jobshours.com/landing'
 
 export default function FlyerPage() {
   const flyerRef = useRef<HTMLDivElement>(null)
@@ -133,7 +133,7 @@ export default function FlyerPage() {
           <div className="qr-text">
             <h3>👆 Escanea y<br/>empieza ahora</h3>
             <p>Abre la cámara de tu celular y apunta al código QR. Gratis, sin instalación previa.</p>
-            <div className="url">jobshour.dondemorales.cl/landing</div>
+            <div className="url">jobshours.com/landing</div>
           </div>
         </div>
 
