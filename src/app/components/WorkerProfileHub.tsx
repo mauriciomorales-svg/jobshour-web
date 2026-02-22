@@ -55,6 +55,9 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
   const [feedback, setFeedback] = useState<{ msg: string; type: 'ok' | 'err' | 'info' } | null>(null)
   const [savingSkills, setSavingSkills] = useState(false)
   const [skillSearch, setSkillSearch] = useState('')
+  const [isSeller, setIsSeller] = useState(false)
+  const [storeName, setStoreName] = useState('')
+  const [savingStore, setSavingStore] = useState(false)
   
   const cvInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -87,6 +90,12 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
         }
         if (data.data?.bio_tarjeta) {
           setBioTarjeta(data.data.bio_tarjeta)
+        }
+        if (data.data?.is_seller !== undefined) {
+          setIsSeller(!!data.data.is_seller)
+        }
+        if (data.data?.store_name) {
+          setStoreName(data.data.store_name)
         }
       }
       
@@ -850,6 +859,89 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
               </div>
             )}
           </div>
+        </motion.div>
+
+        {/* TIENDA */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className={`bg-white rounded-2xl border-2 overflow-hidden ${isSeller ? 'border-orange-300' : 'border-gray-100'}`}
+        >
+          <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${isSeller ? 'bg-orange-500' : 'bg-gray-300'}`}>
+              {isSeller ? '✓' : '🛒'}
+            </div>
+            <div className="flex-1">
+              <h2 className="font-black text-gray-900 text-sm">Mi Tienda <span className="text-gray-400 font-normal text-xs">(opcional)</span></h2>
+              <p className="text-xs text-gray-500">Vende productos desde tu perfil en el mapa</p>
+            </div>
+            <button
+              onClick={async () => {
+                const next = !isSeller
+                setIsSeller(next)
+                setSavingStore(true)
+                try {
+                  const token = localStorage.getItem('auth_token')
+                  const res = await fetch('/api/v1/worker/store-toggle', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_seller: next, store_name: storeName || 'Mi Tienda' }),
+                  })
+                  const data = await res.json()
+                  if (res.ok) {
+                    setFeedback({ msg: next ? '🛒 Tienda activada' : 'Tienda desactivada', type: next ? 'ok' : 'info' })
+                    if (data.store_name) setStoreName(data.store_name)
+                  } else {
+                    setIsSeller(!next)
+                    setFeedback({ msg: data.message || 'Error al actualizar', type: 'err' })
+                  }
+                } catch {
+                  setIsSeller(!next)
+                  setFeedback({ msg: 'Error de conexión', type: 'err' })
+                } finally {
+                  setSavingStore(false)
+                  setTimeout(() => setFeedback(null), 3000)
+                }
+              }}
+              disabled={savingStore}
+              className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${isSeller ? 'bg-orange-500' : 'bg-gray-300'} disabled:opacity-50`}
+            >
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isSeller ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+
+          {isSeller && (
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre de tu tienda</label>
+                <input
+                  type="text"
+                  value={storeName}
+                  onChange={e => setStoreName(e.target.value)}
+                  onBlur={async () => {
+                    if (!storeName.trim()) return
+                    const token = localStorage.getItem('auth_token')
+                    await fetch('/api/v1/worker/store-toggle', {
+                      method: 'POST',
+                      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ is_seller: true, store_name: storeName.trim() }),
+                    })
+                  }}
+                  placeholder="Ej: Tienda de Juan"
+                  className="mt-1 w-full px-3 py-2 border-2 border-gray-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm"
+                />
+              </div>
+              <a
+                href={`/tienda/${workerData?.id ?? ''}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 py-2.5 rounded-xl text-sm font-bold transition"
+              >
+                🛒 Ver mi tienda pública ↗
+              </a>
+            </div>
+          )}
         </motion.div>
 
       </div>
