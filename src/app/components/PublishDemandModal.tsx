@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api'
 import dynamic from 'next/dynamic'
 const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
 import CategoryPicker from './CategoryPicker'
+import StoreBrowserInline from './StoreBrowserInline'
 
 interface Category {
   id: number
@@ -21,7 +22,7 @@ interface Props {
   onPublished: () => void
 }
 
-type DemandType = 'fixed_job' | 'ride_share' | 'express_errand'
+type DemandType = 'fixed_job' | 'ride_share' | 'express_errand' | 'buscar_producto'
 type TravelRole = 'driver' | 'passenger'
 
 export default function PublishDemandModal({ userLat, userLng, categories, onClose, onPublished }: Props) {
@@ -263,25 +264,37 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
           {/* Tipo de servicio — PRIMERO y visible */}
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">¿Qué necesitas?</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {([
-                ['fixed_job',  '🔧', 'Trabajo',  'Electricista, plomero...'],
-                ['ride_share', '🚗', 'Viaje',    'Llevarme o traerme'],
-                ['express_errand', '📦', 'Mandado', 'Compras, delivery'],
+                ['fixed_job',       '🔧', 'Trabajo',          'Electricista, plomero...'],
+                ['ride_share',      '🚗', 'Viaje',             'Llevarme o traerme'],
+                ['express_errand',  '📦', 'Mandado',           'Compras, delivery'],
+                ['buscar_producto', '🛒', 'Buscar producto',   'Ver tiendas cercanas'],
               ] as const).map(([val, icon, label, sub]) => (
                 <button key={val} type="button" onClick={() => setDemandType(val as DemandType)}
-                  className={`py-3 px-2 rounded-xl text-left flex flex-col gap-1 transition active:scale-95 ${
+                  className={`py-3 px-3 rounded-xl text-left flex flex-col gap-1 transition active:scale-95 ${
                     demandType === val
-                      ? 'bg-amber-500/20 ring-2 ring-amber-500'
+                      ? val === 'buscar_producto'
+                        ? 'bg-orange-500/20 ring-2 ring-orange-500'
+                        : 'bg-amber-500/20 ring-2 ring-amber-500'
                       : 'bg-slate-800 border border-slate-700 hover:border-slate-600'
                   }`}>
                   <span className="text-2xl">{icon}</span>
-                  <span className={`text-xs font-black leading-tight ${ demandType === val ? 'text-amber-300' : 'text-slate-200'}`}>{label}</span>
+                  <span className={`text-xs font-black leading-tight ${ demandType === val ? (val === 'buscar_producto' ? 'text-orange-300' : 'text-amber-300') : 'text-slate-200'}`}>{label}</span>
                   <span className="text-[10px] text-slate-500 leading-tight">{sub}</span>
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Buscar producto — redirige a tiendas cercanas */}
+          {demandType === 'buscar_producto' && (
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 space-y-3">
+              <p className="text-orange-300 font-black text-sm">🛒 Tiendas cercanas</p>
+              <p className="text-slate-400 text-xs">Workers de tu zona que venden productos. Toca una tienda para ver su catálogo.</p>
+              <StoreBrowserInline userLat={userLat} userLng={userLng} />
+            </div>
+          )}
 
           {/* Categoría — solo para trabajo general */}
           {demandType === 'fixed_job' && (
