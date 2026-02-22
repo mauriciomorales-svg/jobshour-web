@@ -1200,7 +1200,7 @@ export default function Home() {
             }
             setShowPublishDemand(true)
           }}
-          className="absolute bottom-[140px] right-4 z-[200] flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-2xl font-black text-sm shadow-lg shadow-amber-500/40 active:scale-95 transition"
+          className="absolute bottom-[160px] right-4 z-[200] flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-2xl font-black text-sm shadow-lg shadow-amber-500/40 active:scale-95 transition"
         >
           <span className="text-lg">💰</span>
           <span>Necesito ayuda</span>
