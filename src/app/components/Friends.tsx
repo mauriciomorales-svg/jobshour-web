@@ -224,7 +224,7 @@ export default function Friends({ user, onClose }: FriendsProps) {
       
       if (response.ok) {
         const data = await response.json()
-        alert(`${data.matches_found} contactos encontrados en Jobshour!`)
+        alert(`${data.matches_found} contactos encontrados en JobsHours!`)
         loadData()
       }
     } catch (error) {
@@ -303,7 +303,7 @@ export default function Friends({ user, onClose }: FriendsProps) {
                     className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 text-center space-y-4"
                   >
                     <div className="text-5xl mb-2">👥</div>
-                    <h3 className="text-lg font-black text-gray-800">¡Aún no tienes compañeros en JobsHour!</h3>
+                    <h3 className="text-lg font-black text-gray-800">¡Aún no tienes compañeros en JobsHours!</h3>
                     <p className="text-sm text-gray-700 leading-relaxed">
                       Conecta con otros trabajadores de <span className="font-bold text-orange-600">Renaico y alrededores</span>: jóvenes que empiezan, personas con experiencia que buscan nuevas oportunidades, o compañeros para cubrir jobs grandes juntos.
                     </p>
@@ -477,7 +477,7 @@ export default function Friends({ user, onClose }: FriendsProps) {
                 <button
                   onClick={() => {
                     const profileUrl = qrCode || `https://jobshour.dondemorales.cl/worker/${user.token.split('|')[0]}`
-                    const whatsappText = `¿Necesitas ayuda con algo? En JobsHour encontrarás personas con habilidades reales cerca de ti 📍\nMira este perfil: ${profileUrl}`
+                    const whatsappText = `¿Necesitas ayuda con algo? En JobsHours encontrarás personas con habilidades reales cerca de ti 📍\nMira este perfil: ${profileUrl}`
                     window.open(`https://wa.me/?text=${encodeURIComponent(whatsappText)}`, '_blank')
                   }}
                   className="mt-4 w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2"

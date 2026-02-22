@@ -361,7 +361,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
   const completionPct = Math.round((completionSteps.filter(s => s.done).length / completionSteps.length) * 100)
 
   const handleShare = async () => {
-    const text = `¿Necesitas ayuda con algo? Encuentra trabajadores verificados cerca de ti en JobsHour 👇\n${profileUrl}`
+    const text = `¿Necesitas ayuda con algo? Encuentra trabajadores verificados cerca de ti en JobsHours 👇\n${profileUrl}`
     if (typeof navigator !== 'undefined' && navigator.share) {
       try { await navigator.share({ title: profileName, text, url: profileUrl }) } catch {}
     } else {
@@ -470,7 +470,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
             </button>
             <button
               onClick={() => {
-                const text = `¡Hola! Soy ${profileName} y ofrezco mis servicios en JobsHour 🔧\nMírame aquí: ${profileUrl}`
+                const text = `¡Hola! Soy ${profileName} y ofrezco mis servicios en JobsHours 🔧\nMírame aquí: ${profileUrl}`
                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
               }}
               className="flex flex-col items-center gap-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition active:scale-95"

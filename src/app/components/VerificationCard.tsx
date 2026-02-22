@@ -139,7 +139,7 @@ export default function VerificationCard({ user, onClose }: VerificationCardProp
             </div>
             <div className="flex-1">
               <p className="text-sm font-bold text-green-900">Identidad Verificada</p>
-              <p className="text-xs text-green-700">Perfil validado por Jobshour</p>
+              <p className="text-xs text-green-700">Perfil validado por JobsHours</p>
             </div>
           </div>
 
@@ -166,7 +166,7 @@ export default function VerificationCard({ user, onClose }: VerificationCardProp
 
       {/* Jobshour Logo */}
       <div className="mt-6">
-        <p className="text-white text-sm font-bold">Powered by Jobshour</p>
+        <p className="text-white text-sm font-bold">Powered by JobsHours</p>
       </div>
     </div>
   )

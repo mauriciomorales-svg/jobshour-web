@@ -84,12 +84,12 @@ export default function VerificationCardNew({ user, onClose }: Props) {
   const shareWhatsApp = () => {
     if (!cardData) return
     
-    const message = `¡Hola! 👋 Soy ${cardData.name}, trabajador en JobsHour.
+    const message = `¡Hola! 👋 Soy ${cardData.name}, trabajador en JobsHours.
 
 ${cardData.categories.map(c => c.icon + ' ' + c.name).join(' | ')}
 
 📍 ${cardData.city}
-${cardData.total_jobs > 0 ? `⭐ ${cardData.rating}/5 · ${cardData.total_jobs} trabajos completados` : '✨ Perfil verificado en JobsHour'}
+${cardData.total_jobs > 0 ? `⭐ ${cardData.rating}/5 · ${cardData.total_jobs} trabajos completados` : '✨ Perfil verificado en JobsHours'}
 ${availability === 'available' ? '🟢 Disponibilidad inmediata' : '🟡 A convenir'}
 
 ${cardData.bio_tarjeta || 'Trabajador profesional y confiable'}
@@ -97,7 +97,7 @@ ${cardData.bio_tarjeta || 'Trabajador profesional y confiable'}
 Revisa mi perfil completo:
 👉 ${cardData.profile_url}
 
-#JobsHour #TrabajoLocal #${cardData.city.replace(/\s/g, '')}`
+#JobsHours #TrabajoLocal #${cardData.city.replace(/\s/g, '')}`
 
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`
     window.open(url, '_blank')
@@ -138,7 +138,7 @@ Revisa mi perfil completo:
       const y = 10
 
       pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight)
-      pdf.save(`JobsHour-${cardData.name.replace(/\s/g, '_')}.pdf`)
+      pdf.save(`JobsHours-${cardData.name.replace(/\s/g, '_')}.pdf`)
     } catch (err) {
       console.error('Error generating PDF:', err)
       alert('Error al generar PDF. Intenta de nuevo.')
@@ -225,7 +225,7 @@ Revisa mi perfil completo:
                     <path d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                   </svg>
                 </div>
-                <span className="text-slate-900 font-black text-2xl tracking-tight italic">JobsHour</span>
+                <span className="text-slate-900 font-black text-2xl tracking-tight italic">JobsHours</span>
               </div>
               <div className={`flex items-center gap-2 bg-white/60 px-4 py-2 rounded-full border border-yellow-600/30 shadow-inner`}>
                 <span className={`w-3 h-3 ${statusColor} rounded-full animate-pulse ring-2 ring-green-300`}></span>
@@ -303,7 +303,7 @@ Revisa mi perfil completo:
                     <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-sm font-black text-blue-900">Perfil Verificado en JobsHour</span>
+                    <span className="text-sm font-black text-blue-900">Perfil Verificado en JobsHours</span>
                   </div>
                 </div>
               )}
@@ -314,7 +314,7 @@ Revisa mi perfil completo:
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent"></div>
               <div className="relative z-10 text-center">
                 <p className="text-yellow-400 text-xs font-black uppercase tracking-[0.3em] mb-5 italic">
-                  Escanea mi Perfil · JobsHour
+                  Escanea mi Perfil · JobsHours
                 </p>
                 
                 <div className="bg-white/95 p-4 rounded-3xl inline-block shadow-2xl mb-6 ring-4 ring-yellow-400/30">

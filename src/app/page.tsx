@@ -1341,7 +1341,7 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
-                <h3 className="text-base font-black text-slate-800 mb-1">¡Únete a JobsHour!</h3>
+                <h3 className="text-base font-black text-slate-800 mb-1">¡Únete a JobsHours!</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">Inicia sesión para solicitar servicios, conectar con trabajadores cerca de ti y acceder a todas las funciones</p>
               </div>
               <div className="space-y-2">
@@ -1981,7 +1981,7 @@ export default function Home() {
                   </button>
                   <div id="location-denied-msg" style={{display:'none'}} className="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-xl">
                     <p className="text-amber-400 text-xs font-bold">📵 Permiso denegado</p>
-                    <p className="text-slate-400 text-xs mt-0.5">Ve a <strong className="text-white">Ajustes → Apps → JobsHour → Permisos → Ubicación → Permitir</strong></p>
+                    <p className="text-slate-400 text-xs mt-0.5">Ve a <strong className="text-white">Ajustes → Apps → JobsHours → Permisos → Ubicación → Permitir</strong></p>
                   </div>
                 </div>
               </div>
