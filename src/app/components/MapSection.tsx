@@ -30,6 +30,8 @@ export interface MapPoint {
     destination?: { address: string }
     departure_time?: string
   }
+  is_seller?: boolean
+  store_name?: string | null
 }
 
 const STATUS_STYLES = {
@@ -138,8 +140,9 @@ function createPointIcon(p: MapPoint, isHighlighted = false) {
           <img src="${avatar}" style="width:100%;height:100%;border-radius:999px;object-fit:cover;${s.grayscale};pointer-events:none" />
           <div style="position:absolute;bottom:1px;right:1px;width:11px;height:11px;background:${s.dot};border:2px solid white;border-radius:999px;${p.status === 'active' ? 'animation:pulse 2s infinite' : ''};pointer-events:none"></div>
           ${urgentBadge}
+          ${p.is_seller ? `<div style="position:absolute;top:-6px;left:-6px;width:18px;height:18px;background:#f97316;border:2px solid white;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:10px;pointer-events:none;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🛒</div>` : ''}
         </div>
-        <div style="background:${s.bg};color:#ffffff;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:900;font-style:italic;margin-top:5px;box-shadow:0 4px 12px rgba(0,0,0,0.15);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;border:2px solid white;letter-spacing:-0.02em;pointer-events:none">
+        <div style="background:${p.is_seller ? `linear-gradient(135deg,${s.bg},#f97316)` : s.bg};color:#ffffff;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:900;font-style:italic;margin-top:5px;box-shadow:0 4px 12px rgba(0,0,0,0.15);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;border:2px solid white;letter-spacing:-0.02em;pointer-events:none">
           ${label}
         </div>
       </div>
