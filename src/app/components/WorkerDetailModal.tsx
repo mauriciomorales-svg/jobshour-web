@@ -185,12 +185,22 @@ export default function WorkerDetailModal({ detail, onClose }: Props) {
           {detail.is_seller && activeTab === 'tienda' ? (
             <div className="bg-slate-800 rounded-2xl p-4">
               <StoreProductGrid workerId={detail.id} storeName={detail.store_name ?? undefined} />
-              <button
-                onClick={() => setShowCart(true)}
-                className="mt-3 w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-2.5 rounded-xl transition text-sm"
-              >
-                Ver carrito 🛒
-              </button>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => setShowCart(true)}
+                  className="flex-1 bg-orange-500 hover:bg-orange-400 text-white font-black py-2.5 rounded-xl transition text-sm"
+                >
+                  Ver carrito 🛒
+                </button>
+                <a
+                  href={`/tienda/${detail.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center px-3 bg-slate-600 hover:bg-slate-500 text-white rounded-xl transition text-xs font-bold"
+                >
+                  Ver tienda ↗
+                </a>
+              </div>
             </div>
           ) : (
             <>
