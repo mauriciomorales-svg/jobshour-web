@@ -35,6 +35,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [isTyping, setIsTyping] = useState(false)
   const [otherTyping, setOtherTyping] = useState(false)
+  const [requestingPayment, setRequestingPayment] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const subscribedRequestIdRef = useRef<number | null>(null)
   const boundConnectionRef = useRef(false)
@@ -342,6 +343,31 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                         <p className="text-sm mb-1">📍 Ubicación compartida</p>
                         <a href={m.body} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-300 underline">Ver en mapa</a>
                       </div>
+                    ) : m.type === 'payment_link' ? (
+                      (() => {
+                        try {
+                          const pd = JSON.parse(m.body)
+                          return (
+                            <div className="min-w-[200px]">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-lg">💳</span>
+                                <span className="text-sm font-bold">Solicitud de pago</span>
+                              </div>
+                              <p className="text-xs mb-3 opacity-80">Monto: <span className="font-bold">${Math.round(pd.amount).toLocaleString('es-CL')} CLP</span></p>
+                              <a
+                                href={pd.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-full text-center bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black py-2 px-3 rounded-xl transition"
+                              >
+                                Pagar ahora →
+                              </a>
+                            </div>
+                          )
+                        } catch {
+                          return <p className="text-sm">{m.body}</p>
+                        }
+                      })()
                     ) : (
                       <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
                     )}
@@ -374,6 +400,33 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
             </div>
           )}
           <div className="flex items-center gap-2">
+            {myRole === 'trabajador' && (
+              <button
+                onClick={async () => {
+                  if (requestingPayment) return
+                  setRequestingPayment(true)
+                  try {
+                    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+                    const r = await apiFetch('/api/v1/payments/mp/create-link', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                      body: JSON.stringify({ service_request_id: requestId }),
+                    })
+                    const data = await r.json()
+                    if (!r.ok) alert(data.message || 'Error al generar link')
+                  } catch { alert('Error de conexión') }
+                  finally { setRequestingPayment(false) }
+                }}
+                disabled={requestingPayment}
+                className="w-9 h-9 bg-emerald-700 hover:bg-emerald-600 rounded-xl flex items-center justify-center text-white transition disabled:opacity-50 shrink-0"
+                title="Solicitar pago"
+              >
+                {requestingPayment
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <span className="text-base">💳</span>
+                }
+              </button>
+            )}
             <ChatImageUpload onImageSelected={setSelectedImage} disabled={sending} />
             <button
               onClick={handleShareLocation}
