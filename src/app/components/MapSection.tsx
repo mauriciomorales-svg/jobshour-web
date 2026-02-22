@@ -61,6 +61,8 @@ function createPointIcon(p: MapPoint, isHighlighted = false) {
       ? 'rgba(59,130,246,0.5)'
       : 'rgba(245,158,11,0.5)'
     const travelEmoji = isDriver ? '🚗' : isPassenger ? '🙋' : ''
+    const demandTypeEmoji = isDriver ? '🚗' : isPassenger ? '🙋' : (p.payload?.request_type === 'express_errand' ? '🛒' : '🔨')
+    const typeBadge = `<div style="position:absolute;top:-6px;left:-6px;width:18px;height:18px;background:white;border-radius:50%;border:1.5px solid ${pinColor};display:flex;align-items:center;justify-content:center;font-size:10px;pointer-events:none;box-shadow:0 2px 4px rgba(0,0,0,0.2);">${demandTypeEmoji}</div>`
     const seats = p.payload?.seats ? `·${p.payload.seats}💺` : ''
     const dest = p.payload?.destination_name || p.payload?.destination_address || ''
     const destShort = dest.length > 12 ? dest.slice(0, 12) + '…' : dest
@@ -89,6 +91,7 @@ function createPointIcon(p: MapPoint, isHighlighted = false) {
           <div style="width:${size}px;height:${size}px;border-radius:999px;padding:2.5px;background:white;box-shadow:${isHighlighted ? `0 0 30px rgba(239,68,68,0.6),0 8px 24px ${pinGlow}` : `0 8px 24px ${pinGlow}`};position:relative;border:3px solid ${isHighlighted ? '#ef4444' : pinColor};pointer-events:none">
             <img src="${avatar}" style="width:100%;height:100%;border-radius:999px;object-fit:cover;pointer-events:none" />
             <div style="position:absolute;bottom:1px;right:1px;width:11px;height:11px;background:${pinColor};border:2px solid white;border-radius:999px;animation:pulse 2s infinite;pointer-events:none"></div>
+            ${typeBadge}
             ${urgentBadge}
             ${highlightRing}
           </div>
