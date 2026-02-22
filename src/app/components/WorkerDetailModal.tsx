@@ -26,7 +26,7 @@ interface Category { id?: number; name: string; display_name?: string; icon: str
 interface Props {
   detail: {
     id: number
-    user_id?: number
+    user_id?: number | null
     name: string
     nickname?: string | null
     avatar?: string | null
