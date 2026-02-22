@@ -890,16 +890,35 @@ export default function Home() {
       })
   }, [userLat, userLng, user])
 
-  // Obtener ubicación — si ya la tenemos en localStorage, usarla
-  // Si no, mostrar prompt persuasivo
+  // Obtener ubicación — si ya la tenemos en localStorage, usarla y centrar mapa
+  // Si no, pedir GPS automáticamente
   useEffect(() => {
     const savedLat = localStorage.getItem('user_lat')
     const savedLng = localStorage.getItem('user_lng')
     if (savedLat && savedLng) {
-      setUserLat(parseFloat(savedLat))
-      setUserLng(parseFloat(savedLng))
+      const lat = parseFloat(savedLat)
+      const lng = parseFloat(savedLng)
+      setUserLat(lat)
+      setUserLng(lng)
+      setTimeout(() => mapRef.current?.flyTo([lat, lng], 14), 2000)
+    } else if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude
+          const lng = pos.coords.longitude
+          setUserLat(lat)
+          setUserLng(lng)
+          localStorage.setItem('user_lat', String(lat))
+          localStorage.setItem('user_lng', String(lng))
+          setTimeout(() => mapRef.current?.flyTo([lat, lng], 14), 2000)
+        },
+        () => {
+          const timer = setTimeout(() => setShowLocationPrompt(true), 2000)
+          return () => clearTimeout(timer)
+        },
+        { timeout: 8000 }
+      )
     } else {
-      // Mostrar prompt después de 2s para no interrumpir la carga
       const timer = setTimeout(() => setShowLocationPrompt(true), 2000)
       return () => clearTimeout(timer)
     }
