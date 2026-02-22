@@ -288,6 +288,9 @@ export default function Home() {
         if (data.data?.categories) {
           setWorkerCategories(data.data.categories.map((c: any) => c.id))
         }
+        if (data.data?.id) {
+          setWorkerProfile(data.data)
+        }
       }
     } catch (err) {
       console.error('Error fetching worker data:', err)
@@ -2146,6 +2149,19 @@ export default function Home() {
                     </div>
                     <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition">Mis Categorías</span>
                   </button>
+
+                  <a
+                    href={user ? `/tienda/${workerProfile?.id ?? ''}` : '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowSidebar(false)}
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group"
+                  >
+                    <div className="w-9 h-9 bg-orange-500/15 rounded-lg flex items-center justify-center group-hover:bg-orange-500/25 transition">
+                      <span className="text-lg">🛒</span>
+                    </div>
+                    <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition">Mi Tienda</span>
+                  </a>
                 </div>
 
                 {/* Separador */}
