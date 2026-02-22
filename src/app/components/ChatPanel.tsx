@@ -36,6 +36,14 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
   const [isTyping, setIsTyping] = useState(false)
   const [otherTyping, setOtherTyping] = useState(false)
   const [requestingPayment, setRequestingPayment] = useState(false)
+  const [serviceStatus, setServiceStatus] = useState<string | null>(null)
+  const [serviceRequestDbId, setServiceRequestDbId] = useState<number | null>(null)
+  const [completing, setCompleting] = useState(false)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [reviewStars, setReviewStars] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
+  const [reviewDone, setReviewDone] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const subscribedRequestIdRef = useRef<number | null>(null)
   const boundConnectionRef = useRef(false)
@@ -48,6 +56,21 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
     for (const m of incoming) map.set(m.id, m)
     return Array.from(map.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   }
+
+  // Fetch estado del servicio
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    apiFetch(`/api/v1/requests/${requestId}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+      .then(r => r.json())
+      .then(data => {
+        const sr = data.data ?? data
+        if (sr?.status) setServiceStatus(sr.status)
+        if (sr?.id) setServiceRequestDbId(sr.id)
+      })
+      .catch(() => {})
+  }, [requestId])
 
   // Fetch existing messages
   useEffect(() => {
@@ -400,6 +423,38 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
             </div>
           )}
           <div className="flex items-center gap-2">
+            {myRole === 'cliente' && serviceStatus && ['accepted','in_progress','pending_payment'].includes(serviceStatus) && !reviewDone && (
+              <button
+                onClick={async () => {
+                  if (completing) return
+                  if (!confirm('¿Confirmas que el trabajo fue completado?')) return
+                  setCompleting(true)
+                  try {
+                    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+                    const r = await apiFetch(`/api/v1/requests/${requestId}/complete`, {
+                      method: 'POST',
+                      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    })
+                    if (r.ok) {
+                      setServiceStatus('completed')
+                      setShowReviewModal(true)
+                    } else {
+                      const d = await r.json()
+                      alert(d.message || 'Error al completar')
+                    }
+                  } catch { alert('Error de conexión') }
+                  finally { setCompleting(false) }
+                }}
+                disabled={completing}
+                className="w-9 h-9 bg-green-700 hover:bg-green-600 rounded-xl flex items-center justify-center text-white transition disabled:opacity-50 shrink-0"
+                title="Marcar trabajo completado"
+              >
+                {completing
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <span className="text-base">✅</span>
+                }
+              </button>
+            )}
             {myRole === 'trabajador' && (
               <button
                 onClick={async () => {
@@ -462,6 +517,83 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
         </div>
         )}
       </div>
+
+      {/* Modal de Reseña */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-[400] bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            {reviewDone ? (
+              <div className="text-center py-4">
+                <div className="text-5xl mb-3">🎉</div>
+                <h3 className="text-lg font-black text-gray-900 mb-1">¡Gracias por tu reseña!</h3>
+                <p className="text-sm text-gray-500 mb-4">Tu opinión ayuda a otros clientes.</p>
+                <button onClick={() => setShowReviewModal(false)} className="px-6 py-2.5 bg-emerald-500 text-white rounded-xl font-bold">Cerrar</button>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-lg font-black text-gray-900 mb-1">¿Cómo fue el trabajo?</h3>
+                <p className="text-sm text-gray-500 mb-4">Califica a {otherPersonName ?? 'el trabajador'}</p>
+
+                {/* Estrellas */}
+                <div className="flex justify-center gap-2 mb-4">
+                  {[1,2,3,4,5].map(s => (
+                    <button key={s} onClick={() => setReviewStars(s)} className="text-3xl transition-transform hover:scale-110">
+                      <span className={s <= reviewStars ? 'text-yellow-400' : 'text-gray-300'}>★</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Comentario */}
+                <textarea
+                  value={reviewComment}
+                  onChange={e => setReviewComment(e.target.value)}
+                  placeholder="Cuéntanos cómo fue la experiencia (opcional)..."
+                  rows={3}
+                  maxLength={500}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-emerald-400 resize-none mb-4"
+                />
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowReviewModal(false)}
+                    className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold text-sm transition"
+                  >
+                    Ahora no
+                  </button>
+                  <button
+                    disabled={submittingReview}
+                    onClick={async () => {
+                      setSubmittingReview(true)
+                      try {
+                        const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+                        const r = await apiFetch('/api/v1/reviews', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                          body: JSON.stringify({
+                            service_request_id: serviceRequestDbId ?? requestId,
+                            stars: reviewStars,
+                            comment: reviewComment.trim() || null,
+                          }),
+                        })
+                        if (r.ok) {
+                          setReviewDone(true)
+                        } else {
+                          const d = await r.json()
+                          alert(d.message || 'Error al enviar reseña')
+                        }
+                      } catch { alert('Error de conexión') }
+                      finally { setSubmittingReview(false) }
+                    }}
+                    className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-bold text-sm transition disabled:opacity-50"
+                  >
+                    {submittingReview ? 'Enviando...' : 'Enviar reseña'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
