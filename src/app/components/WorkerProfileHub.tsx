@@ -361,7 +361,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
   const completionPct = Math.round((completionSteps.filter(s => s.done).length / completionSteps.length) * 100)
 
   const handleShare = async () => {
-    const text = `¡Hola! Ofrezco mis servicios en JobsHour. Puedes contratarme aquí: ${profileUrl}`
+    const text = `¿Necesitas ayuda con algo? Encuentra trabajadores verificados cerca de ti en JobsHour 👇\n${profileUrl}`
     if (typeof navigator !== 'undefined' && navigator.share) {
       try { await navigator.share({ title: profileName, text, url: profileUrl }) } catch {}
     } else {

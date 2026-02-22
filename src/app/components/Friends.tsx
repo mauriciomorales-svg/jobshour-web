@@ -477,7 +477,7 @@ export default function Friends({ user, onClose }: FriendsProps) {
                 <button
                   onClick={() => {
                     const profileUrl = qrCode || `https://jobshour.dondemorales.cl/worker/${user.token.split('|')[0]}`
-                    const whatsappText = `¡Hola! Soy ${user.firstName || user.name}, trabajador en JobsHour. Guarda mi perfil para futuros trabajos: ${profileUrl}`
+                    const whatsappText = `¿Necesitas ayuda con algo? En JobsHour encontrarás personas con habilidades reales cerca de ti 📍\nMira este perfil: ${profileUrl}`
                     window.open(`https://wa.me/?text=${encodeURIComponent(whatsappText)}`, '_blank')
                   }}
                   className="mt-4 w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2"
