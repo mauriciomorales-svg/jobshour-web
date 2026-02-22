@@ -21,7 +21,7 @@ function formatCLP(n: number) {
   return '$' + Math.round(n).toLocaleString('es-CL')
 }
 
-interface Category { id?: number; name: string; display_name?: string; icon: string; color: string }
+interface Category { id?: number; name: string; display_name?: string; slug?: string; icon: string; color: string }
 
 interface Props {
   detail: {
@@ -40,8 +40,8 @@ interface Props {
     microcopy?: string
     skills?: string[]
     categories?: Category[]
-    category?: Category
-    showcase_video?: string | null
+    category?: Category | null
+    showcase_video?: string | { url: string; thumbnail: string | null; duration: number | null } | null
   }
   onClose: () => void
 }
