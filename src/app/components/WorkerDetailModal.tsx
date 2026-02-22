@@ -1,17 +1,7 @@
 'use client'
 
 import ReviewsList from './ReviewsList'
-
-const ICON_MAP: Record<string, string> = {
-  wrench: '🔧', zap: '⚡', paintbrush: '🎨', sparkles: '✨', hammer: '🔨',
-  leaf: '🌿', key: '🔑', building: '🏗️', scissors: '✂️', 'paw-print': '🐾',
-  truck: '🚚', car: '🚗', baby: '👶', dog: '🐕', music: '🎵',
-  utensils: '🍽️', 'chef-hat': '👨‍🍳', camera: '📷', monitor: '💻',
-  flame: '🔥', droplet: '💧', home: '🏠', package: '📦', broom: '🧹',
-  tree: '🌳', ruler: '📐', heart: '❤️', paw: '🐾', book: '📚',
-  laptop: '💻', shield: '🛡️', star: '⭐', briefcase: '💼', tool: '🛠️',
-  motorcycle: '🏍️', 'graduation-cap': '🎓', 'hard-hat': '👷',
-}
+import { ICON_MAP } from '@/lib/iconMap'
 
 function getIcon(icon?: string) {
   return ICON_MAP[icon || ''] || '📌'
