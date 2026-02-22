@@ -1188,24 +1188,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── FAB CREAR DEMANDA ── */}
-      {activeTab === 'map' && !selectedDetail && (
-        <button
-          onClick={() => {
-            const authCheck = checkAuthAndProfile()
-            if (!authCheck.canInteract) {
-              if (authCheck.reason === 'login') setShowLoginModal(true)
-              else setShowOnboarding(true)
-              return
-            }
-            setShowPublishDemand(true)
-          }}
-          className="absolute bottom-4 right-4 z-[200] flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl font-black text-sm shadow-lg shadow-amber-500/40 active:scale-95 transition"
-        >
-          <span className="text-lg">💰</span>
-          <span>Necesito ayuda</span>
-        </button>
-      )}
 
       {/* ── HEADER MODERNO CON GRADIENTES ── */}
       <div className="absolute top-0 left-0 right-0 z-[100] pointer-events-none">
@@ -2403,7 +2385,7 @@ export default function Home() {
                 <div className="mb-6">
                   <p className="text-xs text-gray-500 mb-2">Categoría</p>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">{selectedDetail.category.icon || '📌'}</span>
+                    <span className="text-2xl">{({'truck':'🚛','car':'🚗','wrench':'🔧','hammer':'🔨','zap':'⚡','home':'🏠','scissors':'✂️','shopping-cart':'🛒','heart':'❤️','star':'⭐','briefcase':'💼','tool':'🛠️','package':'📦','user':'👤','users':'👥','map-pin':'📍','clock':'🕐','dollar-sign':'💵','phone':'📞','mail':'📧','camera':'📷','music':'🎵','book':'📚','coffee':'☕','utensils':'🍴','paint-brush':'🎨','tree':'🌳','sun':'☀️','moon':'🌙','cloud':'☁️','wind':'💨','droplet':'💧','fire':'🔥','shield':'🛡️','lock':'🔒','key':'🔑','settings':'⚙️','trash':'🗑️','edit':'✏️','check':'✅','x':'❌','alert':'⚠️','info':'ℹ️','help':'❓','plus':'➕','minus':'➖','search':'🔍','filter':'🔽','sort':'↕️','refresh':'🔄','download':'⬇️','upload':'⬆️','share':'📤','link':'🔗','image':'🖼️','video':'🎥','mic':'🎤','speaker':'🔊','wifi':'📶','bluetooth':'📡','battery':'🔋','cpu':'💻','monitor':'🖥️','printer':'🖨️','keyboard':'⌨️','mouse':'🖱️','headphones':'🎧','gamepad':'🎮','tv':'📺','radio':'📻','watch':'⌚','compass':'🧭','map':'🗺️','globe':'🌍','flag':'🏳️','tag':'🏷️','gift':'🎁','award':'🏆','medal':'🥇','crown':'👑','diamond':'💎','gem':'💎','rocket':'🚀','plane':'✈️','train':'🚂','bus':'🚌','bike':'🚲','anchor':'⚓','sailboat':'⛵'}[selectedDetail.category.icon] || selectedDetail.category.icon || '📌')}</span>
                     <span className="font-bold text-gray-900">{selectedDetail.category.name}</span>
                   </div>
                 </div>
@@ -2574,6 +2556,27 @@ export default function Home() {
       />
 
       {/* ── BOTONES INFERIORES MODERNOS ── */}
+      {/* ── FAB CREAR DEMANDA (encima del bottom tab) ── */}
+      {activeTab === 'map' && !selectedDetail && (
+        <div className="fixed bottom-[68px] right-4 z-[91]">
+          <button
+            onClick={() => {
+              const authCheck = checkAuthAndProfile()
+              if (!authCheck.canInteract) {
+                if (authCheck.reason === 'login') setShowLoginModal(true)
+                else setShowOnboarding(true)
+                return
+              }
+              setShowPublishDemand(true)
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl font-black text-sm shadow-lg shadow-amber-500/40 active:scale-95 transition"
+          >
+            <span className="text-lg">💰</span>
+            <span>Necesito ayuda</span>
+          </button>
+        </div>
+      )}
+
       {/* ── WORKER STATUS PILL (encima del bottom tab) ── */}
       {activeTab === 'map' && (
         <div className="fixed bottom-[68px] left-4 z-[91]">
