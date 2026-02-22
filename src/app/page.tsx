@@ -52,6 +52,7 @@ interface ExpertDetail {
   is_verified: boolean
   status: 'active' | 'intermediate' | 'inactive' | 'demand'
   category: { slug: string; name: string; color: string; icon: string } | null
+  categories?: { slug: string; name: string; color: string; icon: string }[]
   videos_count: number
   showcase_video?: { url: string; thumbnail: string | null; duration: number | null } | null
   pos: { lat: number; lng: number }
@@ -1402,11 +1403,18 @@ export default function Home() {
                 <div className="pb-6">
                   {/* Hero banner con gradiente de categoría */}
                   <div className="px-5 pt-4 pb-5 relative" style={{ background: `linear-gradient(135deg, ${_catColor}15 0%, ${_catColor}05 100%)` }}>
-                    {/* Categoría top-right */}
-                    <div className="absolute top-3 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                      style={{ background: `${_catColor}25`, color: _catColor }}>
-                      <span>{selectedDetail.category?.icon ? (ICON_MAP[selectedDetail.category.icon] || '⚙️') : '⚙️'}</span>
-                      <span>{selectedDetail.category?.name || 'General'}</span>
+                    {/* Categorías top-right — todas las habilidades */}
+                    <div className="absolute top-3 right-4 flex flex-wrap justify-end gap-1 max-w-[55%]">
+                      {(selectedDetail.categories && selectedDetail.categories.length > 0
+                        ? selectedDetail.categories
+                        : selectedDetail.category ? [selectedDetail.category] : []
+                      ).map((cat, i) => (
+                        <div key={i} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
+                          style={{ background: `${cat.color || _catColor}25`, color: cat.color || _catColor }}>
+                          <span>{ICON_MAP[cat.icon] || '⚙️'}</span>
+                          <span>{cat.name}</span>
+                        </div>
+                      ))}
                     </div>
 
                     {/* Avatar + info */}
@@ -2399,13 +2407,20 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Categoría */}
-              {selectedDetail.category && (
+              {/* Categorías */}
+              {((selectedDetail.categories && selectedDetail.categories.length > 0) || selectedDetail.category) && (
                 <div className="mb-6">
-                  <p className="text-xs text-gray-500 mb-2">Categoría</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{({'truck':'🚛','car':'🚗','wrench':'🔧','hammer':'🔨','zap':'⚡','home':'🏠','scissors':'✂️','shopping-cart':'🛒','heart':'❤️','star':'⭐','briefcase':'💼','tool':'🛠️','package':'📦','user':'👤','users':'👥','map-pin':'📍','clock':'🕐','dollar-sign':'💵','phone':'📞','mail':'📧','camera':'📷','music':'🎵','book':'📚','coffee':'☕','utensils':'🍴','paint-brush':'🎨','tree':'🌳','sun':'☀️','moon':'🌙','cloud':'☁️','wind':'💨','droplet':'💧','fire':'🔥','shield':'🛡️','lock':'🔒','key':'🔑','settings':'⚙️','trash':'🗑️','edit':'✏️','check':'✅','x':'❌','alert':'⚠️','info':'ℹ️','help':'❓','plus':'➕','minus':'➖','search':'🔍','filter':'🔽','sort':'↕️','refresh':'🔄','download':'⬇️','upload':'⬆️','share':'📤','link':'🔗','image':'🖼️','video':'🎥','mic':'🎤','speaker':'🔊','wifi':'📶','bluetooth':'📡','battery':'🔋','cpu':'💻','monitor':'🖥️','printer':'🖨️','keyboard':'⌨️','mouse':'🖱️','headphones':'🎧','gamepad':'🎮','tv':'📺','radio':'📻','watch':'⌚','compass':'🧭','map':'🗺️','globe':'🌍','flag':'🏳️','tag':'🏷️','gift':'🎁','award':'🏆','medal':'🥇','crown':'👑','diamond':'💎','gem':'💎','rocket':'🚀','plane':'✈️','train':'🚂','bus':'🚌','bike':'🚲','anchor':'⚓','sailboat':'⛵'}[selectedDetail.category.icon] || selectedDetail.category.icon || '📌')}</span>
-                    <span className="font-bold text-gray-900">{selectedDetail.category.name}</span>
+                  <p className="text-xs text-gray-500 mb-2">Habilidades</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(selectedDetail.categories && selectedDetail.categories.length > 0
+                      ? selectedDetail.categories
+                      : selectedDetail.category ? [selectedDetail.category] : []
+                    ).map((cat, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-bold" style={{ backgroundColor: cat.color || '#2563eb' }}>
+                        <span>{({'truck':'🚛','car':'🚗','wrench':'🔧','hammer':'🔨','zap':'⚡','home':'🏠','scissors':'✂️','shopping-cart':'🛒','heart':'❤️','star':'⭐','briefcase':'💼','tool':'🛠️','package':'📦','user':'👤','users':'👥','map-pin':'📍','clock':'🕐','dollar-sign':'💵','phone':'📞','mail':'📧','camera':'📷','music':'🎵','book':'📚','coffee':'☕','utensils':'🍴','paint-brush':'🎨','tree':'🌳','sun':'☀️','moon':'🌙','cloud':'☁️','wind':'💨','droplet':'💧','fire':'🔥','shield':'🛡️','lock':'🔒','key':'🔑','settings':'⚙️','trash':'🗑️','edit':'✏️','check':'✅','x':'❌','alert':'⚠️','info':'ℹ️','help':'❓','plus':'➕','minus':'➖','search':'🔍','filter':'🔽','sort':'↕️','refresh':'🔄','download':'⬇️','upload':'⬆️','share':'📤','link':'🔗','image':'🖼️','video':'🎥','mic':'🎤','speaker':'🔊','wifi':'📶','bluetooth':'📡','battery':'🔋','cpu':'💻','monitor':'🖥️','printer':'🖨️','keyboard':'⌨️','mouse':'🖱️','headphones':'🎧','gamepad':'🎮','tv':'📺','radio':'📻','watch':'⌚','compass':'🧭','map':'🗺️','globe':'🌍','flag':'🏳️','tag':'🏷️','gift':'🎁','award':'🏆','medal':'🥇','crown':'👑','diamond':'💎','gem':'💎','rocket':'🚀','plane':'✈️','train':'🚂','bus':'🚌','bike':'🚲','anchor':'⚓','sailboat':'⛵'}[cat.icon] || '📌')}</span>
+                        {cat.name}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
