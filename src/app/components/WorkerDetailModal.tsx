@@ -1,7 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import ReviewsList from './ReviewsList'
 import { ICON_MAP } from '@/lib/iconMap'
+import dynamic from 'next/dynamic'
+const StoreProductGrid = dynamic(() => import('./StoreProductGrid'), { ssr: false })
+const StoreCartDrawer = dynamic(() => import('./StoreCartDrawer'), { ssr: false })
 
 function getIcon(icon?: string) {
   return ICON_MAP[icon || ''] || '📌'
@@ -32,11 +36,15 @@ interface Props {
     categories?: Category[]
     category?: Category | null
     showcase_video?: string | { url: string; thumbnail: string | null; duration: number | null } | null
+    is_seller?: boolean
+    store_name?: string | null
   }
   onClose: () => void
 }
 
 export default function WorkerDetailModal({ detail, onClose }: Props) {
+  const [activeTab, setActiveTab] = useState<'perfil' | 'tienda'>('perfil')
+  const [showCart, setShowCart] = useState(false)
   const isActive = detail.status === 'active'
   const isIntermediate = detail.status === 'intermediate'
   const cats = detail.categories?.length ? detail.categories : detail.category ? [detail.category] : []
@@ -156,11 +164,46 @@ export default function WorkerDetailModal({ detail, onClose }: Props) {
             </div>
           )}
 
-          {/* Reseñas */}
-          <div>
-            <h3 className="text-xs uppercase font-bold text-gray-400 mb-2 tracking-wider">Reseñas</h3>
-            <ReviewsList workerId={detail.id} showAverage={true} canRespond={false} />
-          </div>
+          {/* Tabs si tiene tienda */}
+          {detail.is_seller && (
+            <div className="flex gap-2 border-b border-gray-200 -mx-6 px-6">
+              {(['perfil', 'tienda'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-2 text-sm font-bold capitalize transition border-b-2 -mb-px ${
+                    activeTab === tab ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  {tab === 'tienda' ? '🛒 Tienda' : '👤 Perfil'}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Tab Tienda */}
+          {detail.is_seller && activeTab === 'tienda' ? (
+            <div className="bg-slate-800 rounded-2xl p-4">
+              <StoreProductGrid workerId={detail.id} storeName={detail.store_name ?? undefined} />
+              <button
+                onClick={() => setShowCart(true)}
+                className="mt-3 w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-2.5 rounded-xl transition text-sm"
+              >
+                Ver carrito 🛒
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Reseñas */}
+              <div>
+                <h3 className="text-xs uppercase font-bold text-gray-400 mb-2 tracking-wider">Reseñas</h3>
+                <ReviewsList workerId={detail.id} showAverage={true} canRespond={false} />
+              </div>
+            </>
+          )}
+
+          {/* Cart Drawer */}
+          {showCart && <StoreCartDrawer onClose={() => setShowCart(false)} />}
 
           {/* Compartir */}
           <div className="flex gap-3 pt-2 border-t border-gray-200">

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { StoreCartProvider } from '@/lib/storeCartContext'
 // Importar para ejecutar el script de filtrado inmediatamente
 import './console-error-suppressor'
 
@@ -133,7 +134,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="antialiased font-sans bg-white">{children}</body>
+      <body className="antialiased font-sans bg-white"><StoreCartProvider>{children}</StoreCartProvider></body>
     </html>
   )
 }
