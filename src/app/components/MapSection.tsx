@@ -171,18 +171,18 @@ function MapClickHandler({ onClick }: { onClick: () => void }) {
   return null
 }
 
-// Componente simple para mostrar marcadores
+// Componente simple para mostrar marcadores sin clustering
 function MapMarkers({ points, onPointClick, highlightedId }: { points: MapPoint[]; onPointClick?: (p: MapPoint) => void; highlightedId?: number | null }) {
   return (
     <>
-      {points.map((p) => {
+      {points.map((p, idx) => {
         if (!p.pos || typeof p.pos.lat !== 'number' || typeof p.pos.lng !== 'number' || isNaN(p.pos.lat) || isNaN(p.pos.lng)) {
           return null
         }
         const isHighlighted = highlightedId === p.id && p.pin_type === 'demand'
         return (
           <Marker
-            key={`${p.pin_type || 'point'}-${p.id}`}
+            key={`${p.pin_type || 'point'}-${p.id}-${idx}-${isHighlighted ? 'hl' : ''}`}
             position={[p.pos.lat, p.pos.lng]}
             icon={createPointIcon(p, isHighlighted)}
             zIndexOffset={isHighlighted ? 1000 : 0}
@@ -190,6 +190,9 @@ function MapMarkers({ points, onPointClick, highlightedId }: { points: MapPoint[
               click: (e) => {
                 e.originalEvent.stopPropagation()
                 e.originalEvent.stopImmediatePropagation()
+                if (e.originalEvent) {
+                  e.originalEvent.preventDefault()
+                }
                 console.log('📍 Pin clickeado:', p.pin_type || 'worker', p.id, p.name)
                 onPointClick?.(p)
               },
