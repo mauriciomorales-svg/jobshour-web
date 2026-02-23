@@ -55,6 +55,9 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
   const [acting, setActing] = useState<number | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [showRejectInput, setShowRejectInput] = useState<number | null>(null)
+  const [showCodeInput, setShowCodeInput] = useState<number | null>(null)
+  const [confirmCode, setConfirmCode] = useState('')
+  const [codeError, setCodeError] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -75,13 +78,22 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => { load() }, [])
 
   const confirm = async (id: number) => {
+    setCodeError('')
     setActing(id)
     try {
       const token = localStorage.getItem('auth_token')
-      await apiFetch(`/api/v1/store/orders/${id}/confirm`, {
+      const res = await apiFetch(`/api/v1/store/orders/${id}/confirm`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: confirmCode })
       })
+      const data = await res.json()
+      if (!res.ok) {
+        setCodeError(data.message || 'Código incorrecto')
+        return
+      }
+      setShowCodeInput(null)
+      setConfirmCode('')
       await load()
     } finally {
       setActing(null)
@@ -172,7 +184,32 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                     )}
 
                     {/* Botones confirmar/rechazar */}
-                    {showRejectInput === order.id ? (
+                    {showCodeInput === order.id ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-slate-400">Pide el código de 4 dígitos al comprador</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            maxLength={4}
+                            value={confirmCode}
+                            onChange={e => { setConfirmCode(e.target.value.replace(/\D/g,'')); setCodeError('') }}
+                            placeholder="0000"
+                            className="flex-1 bg-slate-800 border border-slate-600 text-white text-center text-xl font-black rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 tracking-widest"
+                          />
+                        </div>
+                        {codeError && <p className="text-red-400 text-xs">{codeError}</p>}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button onClick={() => { setShowCodeInput(null); setConfirmCode(''); setCodeError('') }}
+                            className="py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-xs font-bold transition">
+                            Cancelar
+                          </button>
+                          <button onClick={() => confirm(order.id)} disabled={acting === order.id || confirmCode.length !== 4}
+                            className="py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition disabled:opacity-50">
+                            {acting === order.id ? '...' : '✅ Confirmar'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : showRejectInput === order.id ? (
                       <div className="space-y-2">
                         <input
                           type="text"
@@ -198,10 +235,9 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                           className="flex items-center justify-center gap-1.5 py-2.5 bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 rounded-xl text-xs font-bold transition">
                           <XCircle className="w-4 h-4" /> Rechazar
                         </button>
-                        <button onClick={() => confirm(order.id)} disabled={acting === order.id}
-                          className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition disabled:opacity-50">
-                          <CheckCircle className="w-4 h-4" />
-                          {acting === order.id ? '...' : 'Confirmar'}
+                        <button onClick={() => { setShowCodeInput(order.id); setConfirmCode(''); setCodeError('') }}
+                          className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition">
+                          <CheckCircle className="w-4 h-4" /> Ingresar código
                         </button>
                       </div>
                     )}

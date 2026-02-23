@@ -53,6 +53,10 @@ export default function TiendaPage() {
   const [paying, setPaying] = useState(false)
   const [done, setDone] = useState(false)
   const [payLink, setPayLink] = useState<string | null>(null)
+  const [confirmationCode, setConfirmationCode] = useState<string | null>(null)
+  const [buyerName, setBuyerName] = useState('')
+  const [buyerEmail, setBuyerEmail] = useState('')
+  const [buyerPhone, setBuyerPhone] = useState('')
   const [notFound, setNotFound] = useState(false)
 
   // Fetch worker info
@@ -108,6 +112,10 @@ export default function TiendaPage() {
   const totalFinal = cartTotal + commission
 
   const handlePay = async () => {
+    if (!buyerName.trim() || !buyerEmail.trim()) {
+      alert('Ingresa tu nombre y email para continuar')
+      return
+    }
     setPaying(true)
     try {
       const r = await fetch(`${API_BASE}/v1/store/orders`, {
@@ -117,13 +125,17 @@ export default function TiendaPage() {
           worker_id: workerId,
           items: cart.map(i => ({ idproducto: i.idproducto, nombre: i.nombre, cantidad: i.cantidad, precio: i.precio_venta ?? i.precio })),
           total: totalFinal,
-          wants_delivery: wantsDelivery,
+          buyer_name: buyerName.trim(),
+          buyer_email: buyerEmail.trim(),
+          buyer_phone: buyerPhone.trim() || null,
+          delivery: wantsDelivery,
           delivery_address: wantsDelivery ? address : null,
         }),
       })
       const data = await r.json()
       if (r.ok && data.payment_link) {
         setPayLink(data.payment_link)
+        setConfirmationCode(data.confirmation_code ?? null)
         setDone(true)
         setCart([])
       } else {
@@ -371,6 +383,20 @@ export default function TiendaPage() {
                 </div>
               </div>
 
+              {/* Datos del comprador */}
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tus datos</p>
+                <input type="text" value={buyerName} onChange={e => setBuyerName(e.target.value)}
+                  placeholder="Tu nombre *"
+                  className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400" />
+                <input type="email" value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)}
+                  placeholder="Tu email *"
+                  className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400" />
+                <input type="tel" value={buyerPhone} onChange={e => setBuyerPhone(e.target.value)}
+                  placeholder="Teléfono (opcional)"
+                  className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400" />
+              </div>
+
               {/* Delivery */}
               <div className="bg-gray-50 rounded-xl p-3">
                 <button onClick={() => setWantsDelivery(!wantsDelivery)} className={`flex items-center gap-2 w-full text-sm font-bold transition ${wantsDelivery ? 'text-orange-500' : 'text-gray-500'}`}>
@@ -378,19 +404,15 @@ export default function TiendaPage() {
                   {wantsDelivery ? '✅ Con delivery' : 'Solicitar delivery (opcional)'}
                 </button>
                 {wantsDelivery && (
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={e => setAddress(e.target.value)}
+                  <input type="text" value={address} onChange={e => setAddress(e.target.value)}
                     placeholder="Dirección de entrega..."
-                    className="mt-2 w-full bg-white border border-gray-200 text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400"
-                  />
+                    className="mt-2 w-full bg-white border border-gray-200 text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400" />
                 )}
               </div>
 
               <button
                 onClick={handlePay}
-                disabled={paying || (wantsDelivery && !address.trim())}
+                disabled={paying || !buyerName.trim() || !buyerEmail.trim() || (wantsDelivery && !address.trim())}
                 className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <CreditCard className="w-4 h-4" />
@@ -405,16 +427,22 @@ export default function TiendaPage() {
       {done && payLink && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" />
-          <div className="relative bg-white rounded-2xl w-full max-w-sm p-8 text-center shadow-2xl">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-3" />
+          <div className="relative bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl">
+            <CheckCircle className="w-14 h-14 text-green-500 mx-auto mb-3" />
             <h3 className="text-gray-900 font-black text-xl mb-1">¡Pedido creado!</h3>
-            <p className="text-gray-500 text-sm mb-6">El vendedor fue notificado. Completa el pago para confirmar tu pedido.</p>
-            <a
-              href={payLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition mb-3"
-            >
+            <p className="text-gray-500 text-sm mb-4">Paga y guarda tu código. Lo necesitarás al recibir el producto.</p>
+
+            {/* Código de confirmación */}
+            {confirmationCode && (
+              <div className="bg-orange-50 border-2 border-orange-300 rounded-2xl p-4 mb-5">
+                <p className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Tu código de entrega</p>
+                <p className="text-5xl font-black text-orange-500 tracking-widest">{confirmationCode}</p>
+                <p className="text-xs text-gray-500 mt-2">Dáselo al vendedor cuando recibas tu pedido</p>
+              </div>
+            )}
+
+            <a href={payLink} target="_blank" rel="noopener noreferrer"
+              className="block w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition mb-3">
               Pagar {formatPrice(totalFinal)} →
             </a>
             <button onClick={() => { setDone(false); setShowCheckout(false) }} className="text-gray-400 hover:text-gray-600 text-sm transition">
