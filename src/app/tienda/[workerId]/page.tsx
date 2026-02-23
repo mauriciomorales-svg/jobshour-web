@@ -58,20 +58,22 @@ export default function TiendaPage() {
   const [buyerEmail, setBuyerEmail] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
   const [notFound, setNotFound] = useState(false)
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null) // null = cargando
 
-  // Autocompletar datos desde sesión JobsHours
+  // Verificar sesión JobsHours y autocompletar datos
   useEffect(() => {
     const token = localStorage.getItem('auth_token')
-    if (!token) return
+    if (!token) { setLoggedIn(false); return }
     fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (!data) return
+        if (!data) { setLoggedIn(false); return }
+        setLoggedIn(true)
         if (data.name)  setBuyerName(data.name)
         if (data.email) setBuyerEmail(data.email)
         if (data.phone) setBuyerPhone(data.phone ?? '')
       })
-      .catch(() => {})
+      .catch(() => setLoggedIn(false))
   }, [])
 
   // Fetch worker info
@@ -363,9 +365,21 @@ export default function TiendaPage() {
                 <div className="flex justify-between font-black text-gray-900">
                   <span>Subtotal</span><span>{formatPrice(cartTotal)}</span>
                 </div>
-                <button onClick={() => { setShowCart(false); setShowCheckout(true) }} className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition">
-                  Ir al pago →
-                </button>
+                {loggedIn === false ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-center text-gray-500">Debes iniciar sesión para comprar</p>
+                    <a
+                      href={`https://jobshours.com?redirect=/tienda/${workerId}`}
+                      className="block w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl transition text-center"
+                    >
+                      Iniciar sesión en JobsHours →
+                    </a>
+                  </div>
+                ) : (
+                  <button onClick={() => { setShowCart(false); setShowCheckout(true) }} className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition">
+                    Ir al pago →
+                  </button>
+                )}
               </div>
             )}
           </div>
