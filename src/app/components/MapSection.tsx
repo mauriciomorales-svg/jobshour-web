@@ -171,50 +171,43 @@ function MapClickHandler({ onClick }: { onClick: () => void }) {
   return null
 }
 
-// Componente simple para mostrar marcadores sin clustering
+// Componente que maneja marcadores via API nativa de Leaflet (sin react-leaflet Marker)
 function MapMarkers({ points, onPointClick, highlightedId }: { points: MapPoint[]; onPointClick?: (p: MapPoint) => void; highlightedId?: number | null }) {
   const map = useMap()
+  const markersRef = useRef<L.Marker[]>([])
 
-  // Limpiar TODOS los marcadores de Leaflet cuando cambia el set de points
   useEffect(() => {
-    map.eachLayer((layer: any) => {
-      if (layer instanceof L.Marker) {
-        map.removeLayer(layer)
-      }
-    })
-  }, [map, points])
+    // Eliminar todos los marcadores anteriores del mapa
+    markersRef.current.forEach(m => m.remove())
+    markersRef.current = []
 
-  return (
-    <>
-      {points.map((p) => {
-        if (!p.pos || typeof p.pos.lat !== 'number' || typeof p.pos.lng !== 'number' || isNaN(p.pos.lat) || isNaN(p.pos.lng)) {
-          return null
-        }
-        const isHighlighted = highlightedId === p.id && p.pin_type === 'demand'
-        return (
-          <Marker
-            key={`${p.pin_type || 'point'}-${p.id}-${isHighlighted ? 'hl' : 'n'}`}
-            position={[p.pos.lat, p.pos.lng]}
-            icon={createPointIcon(p, isHighlighted)}
-            zIndexOffset={isHighlighted ? 1000 : 0}
-            eventHandlers={{
-              click: (e) => {
-                e.originalEvent.stopPropagation()
-                e.originalEvent.stopImmediatePropagation()
-                if (e.originalEvent) {
-                  e.originalEvent.preventDefault()
-                }
-                console.log('📍 Pin clickeado:', p.pin_type || 'worker', p.id, p.name)
-                onPointClick?.(p)
-              },
-            }}
-            interactive={true}
-            bubblingMouseEvents={false}
-          />
-        )
-      })}
-    </>
-  )
+    // Crear marcadores nuevos con API nativa
+    points.forEach((p) => {
+      if (!p.pos || typeof p.pos.lat !== 'number' || typeof p.pos.lng !== 'number' || isNaN(p.pos.lat) || isNaN(p.pos.lng)) return
+      const isHighlighted = highlightedId === p.id && p.pin_type === 'demand'
+      const marker = L.marker([p.pos.lat, p.pos.lng], {
+        icon: createPointIcon(p, isHighlighted),
+        zIndexOffset: isHighlighted ? 1000 : 0,
+        interactive: true,
+        bubblingMouseEvents: false,
+      })
+      marker.on('click', (e) => {
+        e.originalEvent.stopPropagation()
+        e.originalEvent.stopImmediatePropagation()
+        console.log('📍 Pin clickeado:', p.pin_type || 'worker', p.id, p.name)
+        onPointClick?.(p)
+      })
+      marker.addTo(map)
+      markersRef.current.push(marker)
+    })
+
+    return () => {
+      markersRef.current.forEach(m => m.remove())
+      markersRef.current = []
+    }
+  }, [map, points, highlightedId, onPointClick])
+
+  return null
 }
 
 function MapMoveHandler({ onMove }: { onMove: (lat: number, lng: number) => void }) {
@@ -372,7 +365,7 @@ const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapP
       <MapController onMapReady={handleMapReady} />
       {onMapClick && <MapClickHandler onClick={onMapClick} />}
       {onMapMove && <MapMoveHandler onMove={onMapMove} />}
-      <MapMarkers key={points.map(p => `${p.pin_type}-${p.id}`).join(',')} points={points} onPointClick={onPointClick} highlightedId={highlightedId} />
+      <MapMarkers points={points} onPointClick={onPointClick} highlightedId={highlightedId} />
     </MapContainer>
   )
 })
