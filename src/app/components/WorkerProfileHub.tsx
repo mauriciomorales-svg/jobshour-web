@@ -58,6 +58,14 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
   const [isSeller, setIsSeller] = useState(false)
   const [storeName, setStoreName] = useState('')
   const [savingStore, setSavingStore] = useState(false)
+  const [misProductos, setMisProductos] = useState<any[]>([])
+  const [loadingProductos, setLoadingProductos] = useState(false)
+  const [showAddProducto, setShowAddProducto] = useState(false)
+  const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', precio: '', descripcion: '', stock_actual: '1' })
+  const [savingProducto, setSavingProducto] = useState(false)
+  const [misCategorias, setMisCategorias] = useState<any[]>([])
+  const [showAddCategoria, setShowAddCategoria] = useState(false)
+  const [nuevaCategoria, setNuevaCategoria] = useState('')
   
   const cvInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -110,6 +118,69 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
     } catch (err) {
       console.error('Error fetching worker data:', err)
     }
+  }
+
+  const fetchMisProductos = async (wid?: number) => {
+    const id = wid ?? workerData?.id
+    if (!id) return
+    setLoadingProductos(true)
+    try {
+      const r = await fetch(`/inventario/productos/buscar?worker_id=${id}&limite=100`)
+      const data = await r.json()
+      setMisProductos(data.data ?? [])
+    } catch { setMisProductos([]) }
+    finally { setLoadingProductos(false) }
+  }
+
+  const fetchMisCategorias = async (wid?: number) => {
+    const id = wid ?? workerData?.id
+    if (!id) return
+    const r = await fetch(`/inventario/categorias?worker_id=${id}`)
+    const data = await r.json()
+    setMisCategorias(data.data ?? [])
+  }
+
+  const handleAddProducto = async () => {
+    if (!nuevoProducto.nombre.trim() || !nuevoProducto.precio) return
+    setSavingProducto(true)
+    try {
+      const r = await fetch('/inventario/worker-productos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: nuevoProducto.nombre.trim(),
+          precio: parseInt(nuevoProducto.precio),
+          descripcion: nuevoProducto.descripcion || null,
+          stock_actual: parseInt(nuevoProducto.stock_actual) || 1,
+          worker_id: workerData?.id,
+        }),
+      })
+      if (r.ok) {
+        setNuevoProducto({ nombre: '', precio: '', descripcion: '', stock_actual: '1' })
+        setShowAddProducto(false)
+        fetchMisProductos()
+        setFeedback({ msg: '✅ Producto agregado', type: 'ok' })
+        setTimeout(() => setFeedback(null), 3000)
+      }
+    } finally { setSavingProducto(false) }
+  }
+
+  const handleDeleteProducto = async (id: number) => {
+    if (!confirm('¿Eliminar este producto?')) return
+    await fetch(`/inventario/worker-productos/${id}`, { method: 'DELETE' })
+    fetchMisProductos()
+  }
+
+  const handleAddCategoria = async () => {
+    if (!nuevaCategoria.trim()) return
+    await fetch('/inventario/categorias', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: nuevaCategoria.trim(), worker_id: workerData?.id }),
+    })
+    setNuevaCategoria('')
+    setShowAddCategoria(false)
+    fetchMisCategorias()
   }
 
   const fetchCategories = async () => {
@@ -940,6 +1011,75 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
               >
                 🛒 Ver mi tienda pública ↗
               </a>
+
+              {/* Gestión de Categorías */}
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Categorías</span>
+                  <button onClick={() => { setShowAddCategoria(!showAddCategoria); fetchMisCategorias() }} className="text-xs text-orange-500 font-bold">+ Nueva</button>
+                </div>
+                {showAddCategoria && (
+                  <div className="flex gap-2 mb-2">
+                    <input value={nuevaCategoria} onChange={e => setNuevaCategoria(e.target.value)} placeholder="Ej: Ropa, Comida..." className="flex-1 px-2 py-1.5 border-2 border-gray-200 rounded-lg text-sm focus:border-orange-400 focus:outline-none" />
+                    <button onClick={handleAddCategoria} className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-bold">OK</button>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-1">
+                  {misCategorias.map((c: any) => (
+                    <span key={c.idcategoria} className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">{c.nombre}</span>
+                  ))}
+                  {misCategorias.length === 0 && <span className="text-xs text-gray-400">Sin categorías aún</span>}
+                </div>
+              </div>
+
+              {/* Gestión de Productos */}
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mis Productos ({misProductos.length})</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => fetchMisProductos()} className="text-xs text-gray-400 font-bold">↻</button>
+                    <button onClick={() => { setShowAddProducto(!showAddProducto); fetchMisCategorias() }} className="text-xs text-orange-500 font-bold">+ Agregar</button>
+                  </div>
+                </div>
+
+                {showAddProducto && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-3 space-y-2">
+                    <input value={nuevoProducto.nombre} onChange={e => setNuevoProducto(p => ({...p, nombre: e.target.value}))} placeholder="Nombre del producto *" className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-orange-400 focus:outline-none" />
+                    <div className="flex gap-2">
+                      <input value={nuevoProducto.precio} onChange={e => setNuevoProducto(p => ({...p, precio: e.target.value}))} placeholder="Precio *" type="number" className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-orange-400 focus:outline-none" />
+                      <input value={nuevoProducto.stock_actual} onChange={e => setNuevoProducto(p => ({...p, stock_actual: e.target.value}))} placeholder="Stock" type="number" className="w-20 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-orange-400 focus:outline-none" />
+                    </div>
+                    <input value={nuevoProducto.descripcion} onChange={e => setNuevoProducto(p => ({...p, descripcion: e.target.value}))} placeholder="Descripción (opcional)" className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-orange-400 focus:outline-none" />
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowAddProducto(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm text-gray-600">Cancelar</button>
+                      <button onClick={handleAddProducto} disabled={savingProducto} className="flex-1 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold disabled:opacity-50">
+                        {savingProducto ? '...' : 'Guardar'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {loadingProductos ? (
+                  <div className="text-center py-4 text-gray-400 text-sm">Cargando...</div>
+                ) : misProductos.length === 0 ? (
+                  <div className="text-center py-4 text-gray-400 text-sm">
+                    <p>Sin productos aún.</p>
+                    <button onClick={() => setShowAddProducto(true)} className="text-orange-500 font-bold text-sm mt-1">+ Agregar tu primer producto</button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {misProductos.map((p: any) => (
+                      <div key={p.idproducto} className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-3 py-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{p.nombre}</p>
+                          <p className="text-xs text-gray-500">${Number(p.precio).toLocaleString('es-CL')} · Stock: {p.stock_actual}</p>
+                        </div>
+                        <button onClick={() => handleDeleteProducto(p.idproducto)} className="ml-2 text-red-400 hover:text-red-600 text-xs font-bold shrink-0">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </motion.div>

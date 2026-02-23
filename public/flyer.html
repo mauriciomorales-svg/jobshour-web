@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flyer JobsHour</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+    body { background: #f5f5f5; margin: 0; padding: 20px; }
+    .btn-download {
+      display: block;
+      margin: 0 auto 20px;
+      padding: 12px 32px;
+      background: #ea580c;
+      color: white;
+      font-weight: 900;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: center;
+      max-width: 420px;
+    }
+    .btn-download:hover { background: #c2410c; }
+    @media print {
+      .btn-download { display: none !important; }
+      body { padding: 0; background: white; }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="btn-download" onclick="descargar()">⬇️ Descargar como imagen PNG</button>
+
+  <!-- FLYER -->
+  <div id="flyer" style="width:420px;margin:0 auto;background:white;border-radius:24px;overflow:hidden;border:2px solid #fed7aa;box-shadow:0 25px 50px rgba(0,0,0,0.15);">
+
+    <!-- HEADER -->
+    <div style="background:linear-gradient(135deg,#f97316,#ea580c,#c2410c);padding:32px 24px 24px;position:relative;">
+      <div style="text-align:center;">
+        <h1 style="margin:0;font-size:38px;font-weight:900;color:white;letter-spacing:-1px;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,0.3);">
+          MÁRCATE EN EL MAPA
+        </h1>
+        <p style="margin:8px 0 0;font-size:20px;font-weight:900;color:#fef08a;font-style:italic;text-shadow:0 1px 4px rgba(0,0,0,0.2);">
+          ¡GANA PLATA EXTRA YA!
+        </p>
+      </div>
+
+      <!-- MAPA SIMULADO: wrapper sin overflow para que el QR no se corte -->
+      <div style="position:relative;width:100%;height:220px;margin-top:20px;border-radius:16px;border:4px solid rgba(255,255,255,0.7);box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+
+        <!-- Fondo del mapa CON overflow:hidden -->
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,#dbeafe,#dcfce7,#fef9c3);border-radius:12px;overflow:hidden;">
+          <div style="position:absolute;inset:0;background-image:linear-gradient(to right,#cbd5e1 1px,transparent 1px),linear-gradient(to bottom,#cbd5e1 1px,transparent 1px);background-size:28px 28px;opacity:0.25;"></div>
+        </div>
+
+        <!-- Pin 1: Trabajo — arriba izquierda -->
+        <div style="position:absolute;top:10px;left:10px;width:72px;height:72px;background:white;border-radius:50%;border:2.5px solid #f97316;box-shadow:0 4px 12px rgba(0,0,0,0.2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;z-index:11;">
+          <span style="font-size:22px;line-height:1;">&#x1F528;</span>
+          <span style="font-size:8px;font-weight:900;color:#ea580c;margin-top:3px;text-align:center;line-height:1.1;">Trabajo cerca</span>
+        </div>
+
+        <!-- Pin 2: Viaje — abajo izquierda -->
+        <div style="position:absolute;top:120px;left:10px;width:72px;height:72px;background:white;border-radius:50%;border:2.5px solid #3b82f6;box-shadow:0 4px 12px rgba(0,0,0,0.2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;z-index:11;">
+          <span style="font-size:22px;line-height:1;">&#x1F697;</span>
+          <span style="font-size:8px;font-weight:900;color:#2563eb;margin-top:3px;text-align:center;line-height:1.1;">Viaje Angol</span>
+        </div>
+
+        <!-- Pin 3: Mandado — arriba centro -->
+        <div style="position:absolute;top:10px;left:176px;width:72px;height:72px;background:white;border-radius:50%;border:2.5px solid #22c55e;box-shadow:0 4px 12px rgba(0,0,0,0.2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;z-index:11;">
+          <span style="font-size:22px;line-height:1;">&#x1F6D2;</span>
+          <span style="font-size:8px;font-weight:900;color:#16a34a;margin-top:3px;text-align:center;line-height:1.1;">Mandado express</span>
+        </div>
+
+        <!-- Pin 4: Tu puesto — centro derecha -->
+        <div style="position:absolute;top:75px;left:248px;width:72px;height:72px;background:white;border-radius:50%;border:2.5px dashed #7c3aed;box-shadow:0 4px 12px rgba(124,58,237,0.2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;z-index:11;">
+          <span style="font-size:22px;line-height:1;">&#x2753;</span>
+          <span style="font-size:8px;font-weight:900;color:#7c3aed;margin-top:3px;text-align:center;line-height:1.1;">Tu puesto</span>
+        </div>
+
+        <!-- TÚ AQUÍ — centro -->
+        <div style="position:absolute;top:88px;left:128px;width:20px;height:20px;background:#2563eb;border-radius:50%;border:4px solid white;box-shadow:0 0 16px rgba(37,99,235,0.7);z-index:20;"></div>
+        <div style="position:absolute;top:112px;left:108px;background:rgba(255,255,255,0.92);font-size:9px;font-weight:900;color:#1e3a8a;padding:2px 8px;border-radius:999px;white-space:nowrap;z-index:20;">TÚ AQUÍ</div>
+
+        <!-- Zona -->
+        <div style="position:absolute;bottom:8px;left:80px;background:rgba(255,255,255,0.88);font-size:9px;font-weight:700;padding:3px 10px;border-radius:999px;z-index:10;color:#374151;white-space:nowrap;">Renaico · Angol · Los Ángeles</div>
+
+
+      </div>
+    </div>
+
+    <!-- PEDIDOS -->
+    <div style="padding:20px 16px 12px;">
+      <h2 style="margin:0 0 14px;text-align:center;color:#c2410c;font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:0.5px;">
+        Pedidos reales que pagan hoy:
+      </h2>
+
+      <!-- Trabajo general -->
+      <div style="background:linear-gradient(to right,#fff7ed,#ffedd5);border-radius:14px;padding:12px;margin-bottom:10px;border:1px solid #fed7aa;display:flex;align-items:flex-start;gap:12px;">
+        <div style="background:#fed7aa;padding:8px;border-radius:10px;font-size:20px;line-height:1;flex-shrink:0;">🔨⚡🎨</div>
+        <div>
+          <span style="font-size:10px;font-weight:900;color:#c2410c;text-transform:uppercase;letter-spacing:0.5px;">Trabajo General</span>
+          <p style="margin:3px 0 0;font-size:11px;color:#292524;font-style:italic;">"Gasfiter, electricista, pintor, jardinero... ¡lo que necesites!"</p>
+        </div>
+      </div>
+
+      <!-- Viaje -->
+      <div style="background:linear-gradient(to right,#eff6ff,#dbeafe);border-radius:14px;padding:12px;margin-bottom:10px;border:1px solid #bfdbfe;display:flex;align-items:flex-start;gap:12px;">
+        <div style="background:#bfdbfe;padding:8px;border-radius:10px;font-size:22px;line-height:1;flex-shrink:0;">🚗</div>
+        <div>
+          <span style="font-size:10px;font-weight:900;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.5px;">Viaje Compartido</span>
+          <p style="margin:3px 0 0;font-size:11px;color:#292524;font-style:italic;">"Renaico → Angol Sáb 09:00"</p>
+        </div>
+      </div>
+
+      <!-- Mandado -->
+      <div style="background:linear-gradient(to right,#f0fdf4,#dcfce7);border-radius:14px;padding:12px;border:1px solid #bbf7d0;display:flex;align-items:flex-start;gap:12px;">
+        <div style="background:#bbf7d0;padding:8px;border-radius:10px;font-size:22px;line-height:1;flex-shrink:0;">🛒</div>
+        <div>
+          <span style="font-size:10px;font-weight:900;color:#15803d;text-transform:uppercase;letter-spacing:0.5px;">Mandado Express</span>
+          <p style="margin:3px 0 0;font-size:11px;color:#292524;font-style:italic;">"Unimarc: pan, leche, huevos + encargo"</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA + QR -->
+    <div style="padding:12px 20px 16px;">
+      <div style="background:linear-gradient(to right,#ea580c,#dc2626);border-radius:16px;padding:16px;box-shadow:0 8px 20px rgba(234,88,12,0.35);display:flex;align-items:center;gap:14px;">
+        <div style="flex:1;">
+          <p style="margin:0;font-size:18px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:0.5px;">📍 ¡ENTRA Y MARCATE YA!</p>
+          <p style="margin:5px 0 0;font-size:11px;color:#fed7aa;font-weight:700;">Es gratis · Solo 2 minutos</p>
+        </div>
+        <div id="qr-container" style="width:72px;height:72px;background:white;border-radius:10px;flex-shrink:0;overflow:hidden;"></div>
+      </div>
+    </div>
+
+    <!-- DESCARGA APP TIENDA -->
+    <div style="padding:0 20px 24px;">
+      <div style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-radius:16px;padding:16px;box-shadow:0 8px 20px rgba(29,78,216,0.35);display:flex;align-items:center;gap:14px;">
+        <div style="flex:1;">
+          <p style="margin:0;font-size:13px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:0.5px;">🛒 App Gestión de Tienda</p>
+          <p style="margin:4px 0 0;font-size:10px;color:#bfdbfe;font-weight:700;">Inventario · Compras · Etiquetas</p>
+          <a href="https://jobshours.com/descargas/jobshour-tienda.apk" style="display:inline-block;margin-top:8px;background:white;color:#1d4ed8;font-size:11px;font-weight:900;padding:6px 14px;border-radius:999px;text-decoration:none;">⬇️ Descargar APK Android</a>
+        </div>
+        <div id="qr-app" style="width:72px;height:72px;background:white;border-radius:10px;flex-shrink:0;overflow:hidden;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Generar QR localmente
+    window.addEventListener('load', function() {
+      new QRCode(document.getElementById('qr-container'), {
+        text: 'https://jobshour.dondemorales.cl',
+        width: 72,
+        height: 72,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      })
+      new QRCode(document.getElementById('qr-app'), {
+        text: 'https://jobshours.com/descargas/jobshour-tienda.apk',
+        width: 72,
+        height: 72,
+        colorDark: '#1d4ed8',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      })
+    })
+
+    async function descargar() {
+      const btn = document.querySelector('.btn-download')
+      btn.textContent = '⏳ Generando imagen...'
+      btn.disabled = true
+      try {
+        const el = document.getElementById('flyer')
+        const canvas = await html2canvas(el, {
+          scale: 3,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        })
+        const link = document.createElement('a')
+        link.download = 'flyer-jobshour.png'
+        link.href = canvas.toDataURL('image/png')
+        link.click()
+      } catch(e) {
+        alert('Error al generar imagen: ' + e.message)
+      }
+      btn.textContent = '⬇️ Descargar como imagen PNG'
+      btn.disabled = false
+    }
+  </script>
+
+</body>
+</html>

@@ -59,6 +59,8 @@ export default function TiendaPage() {
   const [buyerPhone, setBuyerPhone] = useState('')
   const [notFound, setNotFound] = useState(false)
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null) // null = cargando
+  const [categorias, setCategorias] = useState<{idcategoria: number, nombre: string}[]>([])
+  const [categoriaFiltro, setCategoriaFiltro] = useState<number | null>(null)
 
   // Verificar sesión JobsHours y autocompletar datos
   useEffect(() => {
@@ -91,24 +93,33 @@ export default function TiendaPage() {
       .catch(() => setNotFound(true))
   }, [workerId])
 
+  // Fetch categorías del worker
+  useEffect(() => {
+    if (!workerId) return
+    fetch(`${INVENTARIO_API}/categorias?worker_id=${workerId}`)
+      .then(r => r.json())
+      .then(data => setCategorias(data.data ?? []))
+      .catch(() => {})
+  }, [workerId])
+
   // Fetch productos
   const fetchProductos = useCallback(async () => {
     setLoading(true)
     try {
-      const url = buscar
-        ? `${INVENTARIO_API}/productos/buscar?q=${encodeURIComponent(buscar)}&limite=100`
-        : `${INVENTARIO_API}/productos/buscar?limite=100`
+      let url = `${INVENTARIO_API}/productos/buscar?worker_id=${workerId}&limite=100`
+      if (buscar) url += `&q=${encodeURIComponent(buscar)}`
+      if (categoriaFiltro) url += `&categoria=${categoriaFiltro}`
       const r = await fetch(url)
       const data = await r.json()
-      setProductos((data.data ?? []).filter((p: Producto) => p.activo && p.stock_actual > 0))
+      setProductos((data.data ?? []).filter((p: any) => p.stock_actual > 0))
     } catch {
       setProductos([])
     } finally {
       setLoading(false)
     }
-  }, [buscar])
+  }, [buscar, workerId, categoriaFiltro])
 
-  useEffect(() => { fetchProductos() }, [fetchProductos])
+  useEffect(() => { if (workerId) fetchProductos() }, [fetchProductos, workerId])
 
   // Cart helpers
   const addToCart = (p: Producto) => {
@@ -250,8 +261,8 @@ export default function TiendaPage() {
         </div>
       </div>
 
-      {/* Buscador */}
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      {/* Buscador + Categorías */}
+      <div className="max-w-5xl mx-auto px-4 py-6 space-y-3">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -262,6 +273,21 @@ export default function TiendaPage() {
             className="w-full bg-white border border-gray-200 text-gray-800 pl-9 pr-4 py-2.5 rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-orange-400 text-sm"
           />
         </div>
+        {categorias.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setCategoriaFiltro(null)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold border transition ${!categoriaFiltro ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-400'}`}
+            >Todos</button>
+            {categorias.map(c => (
+              <button
+                key={c.idcategoria}
+                onClick={() => setCategoriaFiltro(categoriaFiltro === c.idcategoria ? null : c.idcategoria)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition ${categoriaFiltro === c.idcategoria ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-400'}`}
+              >{c.nombre}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Grid productos */}
