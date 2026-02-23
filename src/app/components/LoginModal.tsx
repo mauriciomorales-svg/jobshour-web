@@ -75,8 +75,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
   const handleOAuth = async (e: React.MouseEvent, provider: 'google' | 'facebook') => {
     e.preventDefault()
     e.stopPropagation()
-    alert('handleOAuth ejecutado: ' + provider)
-    const authUrl = `https://api.jobshour.dondemorales.cl/api/auth/${provider}?mobile=true`
+    const authUrl = `https://jobshours.com/api/auth/${provider}?mobile=true`
     await openExternalBrowser(authUrl)
   }
 

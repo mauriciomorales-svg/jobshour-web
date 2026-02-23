@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3002 -H 0.0.0.0",
     "build": "next build",
-    "build:android": "cross-env NEXT_EXPORT=true NEXT_PUBLIC_API_URL=https://jobshour.dondemorales.cl next build",
+    "build:android": "cross-env NEXT_EXPORT=true NEXT_PUBLIC_API_URL=https://jobshours.com next build",
     "start": "next start -p 3001"
   },
   "dependencies": {
