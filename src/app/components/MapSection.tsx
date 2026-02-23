@@ -173,9 +173,20 @@ function MapClickHandler({ onClick }: { onClick: () => void }) {
 
 // Componente simple para mostrar marcadores sin clustering
 function MapMarkers({ points, onPointClick, highlightedId }: { points: MapPoint[]; onPointClick?: (p: MapPoint) => void; highlightedId?: number | null }) {
+  const map = useMap()
+
+  // Limpiar TODOS los marcadores de Leaflet cuando cambia el set de points
+  useEffect(() => {
+    map.eachLayer((layer: any) => {
+      if (layer instanceof L.Marker) {
+        map.removeLayer(layer)
+      }
+    })
+  }, [map, points])
+
   return (
     <>
-      {points.map((p, idx) => {
+      {points.map((p) => {
         if (!p.pos || typeof p.pos.lat !== 'number' || typeof p.pos.lng !== 'number' || isNaN(p.pos.lat) || isNaN(p.pos.lng)) {
           return null
         }
@@ -188,10 +199,8 @@ function MapMarkers({ points, onPointClick, highlightedId }: { points: MapPoint[
             zIndexOffset={isHighlighted ? 1000 : 0}
             eventHandlers={{
               click: (e) => {
-                // Prevenir que el evento se propague al mapa
                 e.originalEvent.stopPropagation()
                 e.originalEvent.stopImmediatePropagation()
-                // Prevenir el evento de Leaflet también
                 if (e.originalEvent) {
                   e.originalEvent.preventDefault()
                 }
