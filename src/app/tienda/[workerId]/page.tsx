@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, MapPin, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle } from 'lucide-react'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://jobshours.com/api'
-const INVENTARIO_API = '/inventario'
+const INVENTARIO_API = 'https://jobshours.com/inventario'
 
 interface Producto {
   idproducto: number
@@ -190,6 +190,20 @@ export default function TiendaPage() {
     } finally {
       setPaying(false)
     }
+  }
+
+  if (!loading && worker && worker.status !== 'active' && worker.status !== 'intermediate') {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-center p-6">
+        <div>
+          <div className="text-6xl mb-4">🔒</div>
+          <h1 className="text-white text-2xl font-black mb-2">Tienda cerrada</h1>
+          <p className="text-slate-400 mb-2">Esta tienda no está disponible en este momento.</p>
+          <p className="text-slate-500 text-sm mb-6">El vendedor está inactivo. Vuelve más tarde.</p>
+          <a href="https://jobshours.com" className="bg-orange-500 text-white px-6 py-3 rounded-xl font-bold">Volver a JobsHours →</a>
+        </div>
+      </div>
+    )
   }
 
   if (notFound) {

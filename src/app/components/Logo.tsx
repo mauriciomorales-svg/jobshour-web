@@ -52,6 +52,18 @@ export default function Logo({ size = 'lg', showTagline = true }: Props) {
             Servicios ahora, cerca de ti
           </p>
         )}
+        {showTagline && (
+          <div className="mt-3 flex items-center gap-3">
+            <span className="flex items-center gap-1.5 bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-semibold px-3 py-1 rounded-full">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+              Tienda online incluida
+            </span>
+            <span className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold px-3 py-1 rounded-full">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              Servicios cerca
+            </span>
+          </div>
+        )}
       </div>
     )
   }
