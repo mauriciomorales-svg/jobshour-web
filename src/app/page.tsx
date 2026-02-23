@@ -1198,7 +1198,7 @@ export default function Home() {
 
       {/* ── MAPA FULLSCREEN (always visible in background) ── */}
       <div className="absolute inset-0 pt-[180px] pb-[68px]">
-        <MapSection ref={mapRef} points={filtered} onPointClick={handlePointClick} onMapClick={handleMapClick} highlightedId={highlightedRequestId} onMapMove={(lat, lng) => fetchNearby(activeCategory, lat, lng)} />
+        <MapSection key={points.filter(p=>p.pin_type!=='demand').map(p=>p.id).sort().join('-')} ref={mapRef} points={filtered} onPointClick={handlePointClick} onMapClick={handleMapClick} highlightedId={highlightedRequestId} onMapMove={(lat, lng) => fetchNearby(activeCategory, lat, lng)} />
       </div>
 
       {/* ── MENSAJE MAPA VACÍO ── */}

@@ -222,6 +222,10 @@ function MapController({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
   
   useEffect(() => {
     if (map) {
+      // Limpiar TODOS los marcadores viejos del DOM de Leaflet al inicializar
+      map.eachLayer((layer) => {
+        if (layer instanceof L.Marker) map.removeLayer(layer)
+      })
       console.log('🗺️ MapController: Mapa inicializado, notificando...')
       onMapReady(map)
     }
