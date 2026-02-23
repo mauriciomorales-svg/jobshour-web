@@ -182,7 +182,7 @@ function MapMarkers({ points, onPointClick, highlightedId }: { points: MapPoint[
         const isHighlighted = highlightedId === p.id && p.pin_type === 'demand'
         return (
           <Marker
-            key={`${p.pin_type || 'point'}-${p.id}-${idx}-${isHighlighted ? 'hl' : ''}`}
+            key={`${p.pin_type || 'point'}-${p.id}-${isHighlighted ? 'hl' : 'n'}`}
             position={[p.pos.lat, p.pos.lng]}
             icon={createPointIcon(p, isHighlighted)}
             zIndexOffset={isHighlighted ? 1000 : 0}
