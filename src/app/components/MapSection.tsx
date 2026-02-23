@@ -363,7 +363,7 @@ const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapP
       <MapController onMapReady={handleMapReady} />
       {onMapClick && <MapClickHandler onClick={onMapClick} />}
       {onMapMove && <MapMoveHandler onMove={onMapMove} />}
-      <MapMarkers points={points} onPointClick={onPointClick} highlightedId={highlightedId} />
+      <MapMarkers key={points.map(p => `${p.pin_type}-${p.id}`).join(',')} points={points} onPointClick={onPointClick} highlightedId={highlightedId} />
     </MapContainer>
   )
 })
