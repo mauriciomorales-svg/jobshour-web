@@ -59,6 +59,21 @@ export default function TiendaPage() {
   const [buyerPhone, setBuyerPhone] = useState('')
   const [notFound, setNotFound] = useState(false)
 
+  // Autocompletar datos desde sesión JobsHours
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token')
+    if (!token) return
+    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return
+        if (data.name)  setBuyerName(data.name)
+        if (data.email) setBuyerEmail(data.email)
+        if (data.phone) setBuyerPhone(data.phone ?? '')
+      })
+      .catch(() => {})
+  }, [])
+
   // Fetch worker info
   useEffect(() => {
     if (!workerId) return
