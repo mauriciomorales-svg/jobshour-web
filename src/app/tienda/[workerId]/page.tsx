@@ -162,9 +162,10 @@ export default function TiendaPage() {
     }
     setPaying(true)
     try {
+      const token = localStorage.getItem('auth_token')
       const r = await fetch(`${API_BASE}/v1/store/orders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
           worker_id: workerId,
           items: cart.map(i => ({ idproducto: i.idproducto, nombre: i.nombre, cantidad: i.cantidad, precio: i.precio_venta ?? i.precio })),
