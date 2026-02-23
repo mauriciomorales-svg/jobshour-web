@@ -183,6 +183,7 @@ export default function TiendaPage() {
         setConfirmationCode(data.confirmation_code ?? null)
         setDone(true)
         setCart([])
+        window.location.href = data.payment_link
       } else {
         alert(data.message || 'Error al procesar el pedido')
       }
