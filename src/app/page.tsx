@@ -935,7 +935,7 @@ export default function Home() {
   }, [])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchNearby() }, [])
+  useEffect(() => { fetchNearbyRef.current.lastCall = 0; fetchNearby() }, [])
 
   // Listener para abrir PublishDemand desde el estado vacío del feed
   useEffect(() => {
