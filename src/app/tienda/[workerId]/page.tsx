@@ -59,6 +59,7 @@ export default function TiendaPage() {
   const [buyerPhone, setBuyerPhone] = useState('')
   const [notFound, setNotFound] = useState(false)
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null) // null = cargando
+  const [isOwner, setIsOwner] = useState(false)
   const [categorias, setCategorias] = useState<{idcategoria: number, nombre: string}[]>([])
   const [categoriaFiltro, setCategoriaFiltro] = useState<number | null>(null)
 
@@ -74,6 +75,8 @@ export default function TiendaPage() {
         if (data.name)  setBuyerName(data.name)
         if (data.email) setBuyerEmail(data.email)
         if (data.phone) setBuyerPhone(data.phone ?? '')
+        // Verificar si es dueño de esta tienda
+        if (data.worker?.id && Number(data.worker.id) === workerId) setIsOwner(true)
       })
       .catch(() => setLoggedIn(false))
   }, [])
@@ -134,6 +137,19 @@ export default function TiendaPage() {
     if (qty <= 0) { removeFromCart(id); return }
     setCart(prev => prev.map(i => i.idproducto === id ? { ...i, cantidad: Math.min(qty, i.stock_actual) } : i))
   }
+  const eliminarProducto = async (idproducto: number, nombre: string) => {
+    if (!confirm(`¿Eliminar "${nombre}" de la tienda?`)) return
+    const token = localStorage.getItem('auth_token')
+    try {
+      const r = await fetch(`${INVENTARIO_API}/productos/${idproducto}?worker_id=${workerId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token ?? ''}` }
+      })
+      if (r.ok) fetchProductos()
+      else alert('No se pudo eliminar el producto')
+    } catch { alert('Error de conexión') }
+  }
+
   const cartTotal = cart.reduce((s, i) => s + (i.precio_venta ?? i.precio) * i.cantidad, 0)
   const cartCount = cart.reduce((s, i) => s + i.cantidad, 0)
   const commission = Math.round(cartTotal * 0.08)
@@ -317,7 +333,18 @@ export default function TiendaPage() {
                     </div>
                   )}
                   <div className="p-3">
-                    <p className="text-gray-800 text-sm font-bold line-clamp-2 min-h-[2.5rem]">{p.nombre}</p>
+                    <div className="flex items-start justify-between gap-1">
+                      <p className="text-gray-800 text-sm font-bold line-clamp-2 min-h-[2.5rem]">{p.nombre}</p>
+                      {isOwner && (
+                        <button
+                          onClick={() => eliminarProducto(p.idproducto, p.nombre)}
+                          className="shrink-0 w-6 h-6 bg-red-100 hover:bg-red-500 text-red-500 hover:text-white rounded-md flex items-center justify-center transition"
+                          title="Eliminar producto"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                     <p className="text-orange-500 font-black text-base mt-1">{formatPrice(precio)}</p>
                     <p className="text-gray-400 text-xs mb-3">{p.stock_actual} disponibles</p>
                     {enCarrito ? (
