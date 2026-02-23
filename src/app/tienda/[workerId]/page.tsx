@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, MapPin, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle } from 'lucide-react'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://jobshours.com/api'
-const INVENTARIO_API = 'https://jobshours.com/inventario'
+const INVENTARIO_API = '/inventario'
 
 interface Producto {
   idproducto: number
