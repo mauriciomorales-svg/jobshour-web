@@ -93,7 +93,7 @@ function formatCLP(val: number) {
   return '$' + val.toLocaleString('es-CL')
 }
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshour.dondemorales.cl').replace(/\/api$/, '')
 
 export default function Home() {
   const [points, setPoints] = useState<MapPoint[]>([])
