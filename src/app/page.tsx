@@ -848,6 +848,7 @@ export default function Home() {
         .catch(() => ({ data: [], meta: {} })) // Si falla, continuar sin demandas
     ])
       .then(([expertsData, demandsData]) => {
+        console.log('🔍 nearby IDs:', (expertsData.data ?? []).map((w: any) => `id=${w.id} name=${w.name}`))
         // Combinar workers y demandas
         const workers = (expertsData.data ?? []).map((w: any) => ({
           ...w,
