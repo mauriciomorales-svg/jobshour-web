@@ -781,9 +781,10 @@ export default function Home() {
   }, [])
 
   // Fetch puntos ligeros desde API v1 (workers + demandas doradas)
-  const fetchNearbyRef = useRef<{ lastCall: number; timeoutId: NodeJS.Timeout | null }>({ 
+  const fetchNearbyRef = useRef<{ lastCall: number; timeoutId: NodeJS.Timeout | null; abortController: AbortController | null }>({ 
     lastCall: 0, 
-    timeoutId: null 
+    timeoutId: null,
+    abortController: null,
   })
   
   const fetchNearby = useCallback((categoryId?: number | null, overrideLat?: number, overrideLng?: number) => {
@@ -810,6 +811,13 @@ export default function Home() {
     }
 
     fetchNearbyRef.current.lastCall = now
+
+    // Cancelar fetch anterior si existe
+    if (fetchNearbyRef.current.abortController) {
+      fetchNearbyRef.current.abortController.abort()
+    }
+    const abortController = new AbortController()
+    fetchNearbyRef.current.abortController = abortController
     
     // No mostrar pantalla de loading al mover el mapa
     if (!overrideLat) setLoading(true)
@@ -833,9 +841,9 @@ export default function Home() {
     
     // Fetch workers y demandas en paralelo
     Promise.all([
-      fetch(`${API_BASE}/api/v1/experts/nearby?${params}`, { headers })
+      fetch(`${API_BASE}/api/v1/experts/nearby?${params}`, { headers, signal: abortController.signal })
         .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
-      fetch(`${API_BASE}/api/v1/demand/nearby?${params}`, { headers })
+      fetch(`${API_BASE}/api/v1/demand/nearby?${params}`, { headers, signal: abortController.signal })
         .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
         .catch(() => ({ data: [], meta: {} })) // Si falla, continuar sin demandas
     ])
@@ -886,6 +894,7 @@ export default function Home() {
         setLoading(false)
       })
       .catch((err) => {
+        if (err?.name === 'AbortError') return // fetch cancelado, ignorar
         console.error('Error fetching experts/demands:', err);
         setLoading(false)
       })
