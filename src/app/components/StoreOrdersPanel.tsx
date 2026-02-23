@@ -21,6 +21,7 @@ interface StoreOrder {
   delivery: boolean
   delivery_address: string | null
   status: 'pending' | 'confirmed' | 'rejected' | 'expired' | 'paid'
+  mp_status: string | null
   expires_at: string
   confirmed_at: string | null
   rejected_at: string | null
@@ -181,6 +182,19 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
 
                     {order.delivery && (
                       <p className="text-xs text-blue-400 mb-3">🚚 Delivery: {order.delivery_address}</p>
+                    )}
+
+                    {/* Estado de pago */}
+                    {(order as any).mp_status !== 'approved' ? (
+                      <div className="bg-slate-700/50 border border-slate-600 rounded-xl px-3 py-2 mb-3 flex items-center gap-2">
+                        <span className="text-lg">⏳</span>
+                        <p className="text-xs text-slate-400">Esperando que el comprador complete el pago</p>
+                      </div>
+                    ) : (
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-xl px-3 py-2 mb-3 flex items-center gap-2">
+                        <span className="text-lg">✅</span>
+                        <p className="text-xs text-green-400 font-bold">Pago confirmado — ingresa el código del comprador</p>
+                      </div>
                     )}
 
                     {/* Botones confirmar/rechazar */}
