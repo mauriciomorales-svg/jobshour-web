@@ -114,7 +114,7 @@ export default function TiendaPage() {
       if (categoriaFiltro) url += `&categoria=${categoriaFiltro}`
       const r = await fetch(url)
       const data = await r.json()
-      setProductos((data.data ?? []).filter((p: any) => p.stock_actual > 0))
+      setProductos(data.data ?? [])
     } catch {
       setProductos([])
     } finally {
@@ -238,6 +238,16 @@ export default function TiendaPage() {
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo tienda */}
           <div className="flex items-center gap-3">
+            <a href="https://jobshours.com" className="hidden sm:inline-flex items-center gap-0 bg-slate-900 rounded-xl px-3 py-1.5 shrink-0 font-black text-sm tracking-tight leading-none">
+              <span className="text-white">Jobs&nbsp;</span>
+              <span className="text-white">H</span>
+              <span className="relative inline-flex items-center justify-center w-[14px] h-[14px]">
+                <span className="absolute inset-0 rounded-full border-[1.5px] border-teal-400"></span>
+                <span className="absolute w-[1.5px] rounded-full bg-teal-300 origin-bottom" style={{height:'5px',bottom:'50%',left:'calc(50% - 0.75px)',animation:'spin 4s linear infinite'}}></span>
+                <span className="w-1 h-1 rounded-full bg-amber-400 z-10 absolute"></span>
+              </span>
+              <span className="text-white">urs</span>
+            </a>
             {worker?.avatar ? (
               <img src={worker.avatar} alt={worker.name} className="w-10 h-10 rounded-full object-cover border-2 border-orange-400" />
             ) : (
@@ -473,8 +483,11 @@ export default function TiendaPage() {
                     <span className="font-bold">{formatPrice((i.precio_venta ?? i.precio) * i.cantidad)}</span>
                   </div>
                 ))}
-                <div className="border-t pt-2 mt-2 flex justify-between text-xs text-gray-400">
-                  <span>Comisión plataforma (8%)</span><span>{formatPrice(commission)}</span>
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>Servicio completo (8%)</span><span>{formatPrice(commission)}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">Incluye pago seguro con retención, comisión bancaria y respaldo digital</p>
                 </div>
                 <div className="flex justify-between font-black text-gray-900 text-base">
                   <span>Total</span><span className="text-orange-500">{formatPrice(totalFinal)}</span>

@@ -144,7 +144,7 @@
         <div style="flex:1;">
           <p style="margin:0;font-size:13px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:0.5px;">🛒 App Gestión de Tienda</p>
           <p style="margin:4px 0 0;font-size:10px;color:#bfdbfe;font-weight:700;">Inventario · Compras · Etiquetas</p>
-          <a href="https://jobshours.com/descargas/jobshour-tienda.apk" style="display:inline-block;margin-top:8px;background:white;color:#1d4ed8;font-size:11px;font-weight:900;padding:6px 14px;border-radius:999px;text-decoration:none;">⬇️ Descargar APK Android</a>
+          <a href="https://jobshours.com/downloads/jh-inventario.apk" style="display:inline-block;margin-top:8px;background:white;color:#1d4ed8;font-size:11px;font-weight:900;padding:6px 14px;border-radius:999px;text-decoration:none;">⬇️ Descargar APK Android</a>
         </div>
         <div id="qr-app" style="width:72px;height:72px;background:white;border-radius:10px;flex-shrink:0;overflow:hidden;"></div>
       </div>
@@ -156,7 +156,7 @@
     // Generar QR localmente
     window.addEventListener('load', function() {
       new QRCode(document.getElementById('qr-container'), {
-        text: 'https://jobshour.dondemorales.cl',
+        text: 'https://jobshours.com/downloads/jobshours.apk',
         width: 72,
         height: 72,
         colorDark: '#000000',
@@ -164,7 +164,7 @@
         correctLevel: QRCode.CorrectLevel.M
       })
       new QRCode(document.getElementById('qr-app'), {
-        text: 'https://jobshours.com/descargas/jobshour-tienda.apk',
+        text: 'https://jobshours.com/downloads/jh-inventario.apk',
         width: 72,
         height: 72,
         colorDark: '#1d4ed8',

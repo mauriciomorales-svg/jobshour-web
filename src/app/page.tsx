@@ -1619,19 +1619,11 @@ export default function Home() {
                                 Cómo llegar
                               </a>
                             ) : (
-                              <>
-                                <button onClick={() => { setSelectedWorkerId(selectedDetail.id); setShowWorkerProfileDetail(true) }}
-                                  className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-2xl text-sm font-bold transition active:scale-95">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                                  Ver perfil
-                                </button>
-                                {(selectedDetail as any).is_seller && (
-                                  <a href={`/tienda/${selectedDetail.id}`} target="_blank" rel="noopener noreferrer"
-                                    className="flex items-center justify-center gap-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 py-3 rounded-2xl text-sm font-bold transition active:scale-95">
-                                    🛒 Ver tienda
-                                  </a>
-                                )}
-                              </>
+                              <button onClick={() => { setSelectedWorkerId(selectedDetail.id); setShowWorkerProfileDetail(true) }}
+                                className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-2xl text-sm font-bold transition active:scale-95">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                Ver perfil
+                              </button>
                             )}
                             {selectedDetail.status === 'inactive' ? (
                               <button disabled className="flex items-center justify-center gap-2 bg-gray-100 text-gray-400 py-3 rounded-2xl text-sm font-bold cursor-not-allowed">No disponible</button>
@@ -1646,6 +1638,12 @@ export default function Home() {
                                 className={`flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition active:scale-95 ${selectedDetail.status === 'active' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-amber-400 hover:bg-amber-500 text-white'}`}>
                                 {selectedDetail.status === 'active' ? '⚡ Solicitar ahora' : '💬 Consultar'}
                               </button>
+                            )}
+                            {!isDemand && (selectedDetail as any).is_seller && (
+                              <a href={`/tienda/${selectedDetail.id}`} target="_blank" rel="noopener noreferrer"
+                                className="col-span-2 flex items-center justify-center gap-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 py-3 rounded-2xl text-sm font-bold transition active:scale-95">
+                                🛒 Ver tienda
+                              </a>
                             )}
                             {selectedDetail.phone && (
                               <button onClick={() => { const a = checkAuthAndProfile(); if (!a.canInteract) { setShowLoginModal(true); toast('Inicia sesión para ver el teléfono', 'info'); return }; window.open(`tel:${selectedDetail.phone}`, '_self') }}

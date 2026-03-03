@@ -149,6 +149,27 @@ export default function FlyerPage() {
           {downloading ? '⏳ Generando...' : '⬇️ Descargar PNG'}
         </button>
       </div>
+
+      {/* Descarga APKs - fuera del flyer, no se imprime */}
+      <div style={{maxWidth:500,margin:'24px auto',padding:'0 16px',display:'flex',flexDirection:'column',gap:12}}>
+        <p style={{color:'#94a3b8',fontSize:13,fontWeight:700,textAlign:'center',letterSpacing:'0.05em',textTransform:'uppercase'}}>Descargar aplicaciones</p>
+        <a href="/downloads/jobshours.apk" download style={{display:'flex',alignItems:'center',gap:14,background:'#0f172a',border:'1.5px solid rgba(45,212,191,0.3)',borderRadius:16,padding:'14px 20px',textDecoration:'none',color:'white'}}>
+          <span style={{fontSize:32}}>📱</span>
+          <div>
+            <p style={{fontWeight:900,fontSize:15}}>JobsHours</p>
+            <p style={{fontSize:12,color:'#94a3b8'}}>App principal · Busca servicios y workers</p>
+          </div>
+          <span style={{marginLeft:'auto',background:'#2dd4bf',color:'#0f172a',fontWeight:900,fontSize:11,padding:'6px 12px',borderRadius:50}}>APK</span>
+        </a>
+        <a href="/downloads/jh-inventario.apk" download style={{display:'flex',alignItems:'center',gap:14,background:'#0f172a',border:'1.5px solid rgba(99,102,241,0.3)',borderRadius:16,padding:'14px 20px',textDecoration:'none',color:'white'}}>
+          <span style={{fontSize:32}}>🗂️</span>
+          <div>
+            <p style={{fontWeight:900,fontSize:15}}>JH Inventario</p>
+            <p style={{fontSize:12,color:'#94a3b8'}}>Para workers · Gestiona tu tienda y productos</p>
+          </div>
+          <span style={{marginLeft:'auto',background:'#6366f1',color:'white',fontWeight:900,fontSize:11,padding:'6px 12px',borderRadius:50}}>APK</span>
+        </a>
+      </div>
     </>
   )
 }

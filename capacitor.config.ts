@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'cl.dondemorales.jobshour',
-  appName: 'JobsHour',
+  appName: 'JobsHours',
   webDir: 'public',
   server: {
     url: 'https://jobshours.com',

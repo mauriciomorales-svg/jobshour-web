@@ -6,7 +6,9 @@ import { WorkerStatus } from './WorkerStatusPill'
 interface Props {
   current: WorkerStatus
   loading?: boolean
+  isSeller?: boolean
   onSelect: (next: 'active' | 'intermediate' | 'inactive') => void
+  onToggleSeller?: () => void
   onClose: () => void
 }
 
@@ -67,7 +69,7 @@ const LAMPS = [
   },
 ]
 
-export default function WorkerStatusSemaphore({ current, loading, onSelect, onClose }: Props) {
+export default function WorkerStatusSemaphore({ current, loading, isSeller, onSelect, onToggleSeller, onClose }: Props) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handleKey)
@@ -141,8 +143,23 @@ export default function WorkerStatusSemaphore({ current, loading, onSelect, onCl
             })}
           </div>
 
+          {/* Toggle tienda */}
+          {onToggleSeller && (
+            <button
+              onClick={() => { onToggleSeller(); onClose() }}
+              className={`mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-2xl border transition-all text-[10px] font-black tracking-wide ${
+                isSeller
+                  ? 'border-orange-400 bg-orange-900/40 text-orange-300 shadow-[0_0_16px_rgba(251,146,60,0.3)]'
+                  : 'border-slate-600/50 bg-slate-800/40 text-slate-500 hover:text-orange-400 hover:border-orange-500/50'
+              }`}
+            >
+              <span>🛒</span>
+              <span>{isSeller ? 'Tienda ON' : 'Tienda OFF'}</span>
+            </button>
+          )}
+
           {/* Pie del semáforo */}
-          <div className="mt-4 flex justify-center">
+          <div className="mt-3 flex justify-center">
             <span className="text-[8px] font-black tracking-[0.3em] text-slate-600 uppercase italic">JobsHours</span>
           </div>
         </div>

@@ -9,8 +9,10 @@ interface Props {
   status: WorkerStatus
   loading?: boolean
   isLoggedIn?: boolean
+  isSeller?: boolean
   onActivate: () => void
   onChangeTo: (next: 'active' | 'intermediate' | 'inactive') => void
+  onToggleSeller?: () => void
   onShowLogin: () => void
 }
 
@@ -41,7 +43,7 @@ const STATUS_CONFIG: Record<WorkerStatus, { dot: string; pill: string; label: st
   },
 }
 
-export default function WorkerStatusPill({ status, loading, isLoggedIn, onActivate, onChangeTo, onShowLogin }: Props) {
+export default function WorkerStatusPill({ status, loading, isLoggedIn, isSeller, onActivate, onChangeTo, onToggleSeller, onShowLogin }: Props) {
   const [semaphoreOpen, setSemaphoreOpen] = useState(false)
 
   // Usuario logueado sin perfil worker: tratar como inactive visualmente
@@ -91,7 +93,9 @@ export default function WorkerStatusPill({ status, loading, isLoggedIn, onActiva
         <WorkerStatusSemaphore
           current={effectiveStatus}
           loading={loading}
+          isSeller={isSeller}
           onSelect={handleSemaphoreSelect}
+          onToggleSeller={onToggleSeller}
           onClose={() => setSemaphoreOpen(false)}
         />
       )}
