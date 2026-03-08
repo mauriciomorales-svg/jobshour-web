@@ -35,9 +35,10 @@ interface Props {
   user: any
   onClose: () => void
   onCategorySelected?: () => void // Callback cuando se selecciona una categoría
+  onSellerChange?: (val: boolean) => void // Callback cuando cambia el modo vendedor
 }
 
-export default function WorkerProfileHub({ user, onClose, onCategorySelected }: Props) {
+export default function WorkerProfileHub({ user, onClose, onCategorySelected, onSellerChange }: Props) {
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [cvUploaded, setCvUploaded] = useState(false)
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -100,7 +101,9 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
           setBioTarjeta(data.data.bio_tarjeta)
         }
         if (data.data?.is_seller !== undefined) {
-          setIsSeller(!!data.data.is_seller)
+          const seller = !!data.data.is_seller
+          setIsSeller(seller)
+          onSellerChange?.(seller)
         }
         if (data.data?.store_name) {
           setStoreName(data.data.store_name)
@@ -963,6 +966,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected }: 
                   if (res.ok) {
                     setFeedback({ msg: next ? '🛒 Tienda activada' : 'Tienda desactivada', type: next ? 'ok' : 'info' })
                     if (data.store_name) setStoreName(data.store_name)
+                    onSellerChange?.(next)
                   } else {
                     setIsSeller(!next)
                     setFeedback({ msg: data.message || 'Error al actualizar', type: 'err' })
