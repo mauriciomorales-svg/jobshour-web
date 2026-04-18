@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 
@@ -98,6 +98,72 @@ function formatCLP(val: number) {
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshour.dondemorales.cl').replace(/\/api$/, '')
 
+/** Mapa y búsqueda por defecto: Angol (no Renaico). `user_lat`/`user_lng` guardan GPS del perfil — no deben pisar solos el mapa. */
+const DEFAULT_MAP_LAT = -37.798
+const DEFAULT_MAP_LNG = -72.708
+/** v2: al subir una versión nueva al servidor, los navegadores dejan de usar centros viejos atascados en Renaico. */
+const LS_MAP_VIEW_LAT = 'jobs_map_view_lat_v2'
+const LS_MAP_VIEW_LNG = 'jobs_map_view_lng_v2'
+const LS_MAP_VIEW_LAT_LEGACY = 'jobs_map_view_lat'
+const LS_MAP_VIEW_LNG_LEGACY = 'jobs_map_view_lng'
+/** Pixel-default histórico de la app (~Plaza Renaico). Solo eso migramos a Angol — no todo un radio en km (había gente real en Renaico). */
+const LEGACY_RENAICO_LAT = -37.6672
+const LEGACY_RENAICO_LNG = -72.573
+const LEGACY_MATCH_EPS = 0.003
+
+function normalizeStoredMapCoords(lat: number, lng: number): { lat: number; lng: number } {
+  if (
+    Math.abs(lat - LEGACY_RENAICO_LAT) < LEGACY_MATCH_EPS &&
+    Math.abs(lng - LEGACY_RENAICO_LNG) < LEGACY_MATCH_EPS
+  ) {
+    return { lat: DEFAULT_MAP_LAT, lng: DEFAULT_MAP_LNG }
+  }
+  return { lat, lng }
+}
+
+function persistMapViewStorage(lat: number, lng: number) {
+  try {
+    localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
+    localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
+    localStorage.removeItem(LS_MAP_VIEW_LAT_LEGACY)
+    localStorage.removeItem(LS_MAP_VIEW_LNG_LEGACY)
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Centro inicial: vista v2, migración desde claves viejas, o Angol. */
+function readInitialMapCoords(): { lat: number; lng: number } {
+  const fallback = { lat: DEFAULT_MAP_LAT, lng: DEFAULT_MAP_LNG }
+  if (typeof window === 'undefined') return fallback
+  try {
+    const readPair = (latKey: string, lngKey: string): { lat: number; lng: number } | null => {
+      const ml = localStorage.getItem(latKey)
+      const mg = localStorage.getItem(lngKey)
+      if (!ml || !mg) return null
+      const lat = parseFloat(ml)
+      const lng = parseFloat(mg)
+      if (Number.isNaN(lat) || Number.isNaN(lng)) return null
+      return normalizeStoredMapCoords(lat, lng)
+    }
+
+    const fromV2 = readPair(LS_MAP_VIEW_LAT, LS_MAP_VIEW_LNG)
+    if (fromV2) {
+      persistMapViewStorage(fromV2.lat, fromV2.lng)
+      return fromV2
+    }
+
+    const fromLegacy = readPair(LS_MAP_VIEW_LAT_LEGACY, LS_MAP_VIEW_LNG_LEGACY)
+    if (fromLegacy) {
+      persistMapViewStorage(fromLegacy.lat, fromLegacy.lng)
+      return fromLegacy
+    }
+  } catch {
+    /* ignore */
+  }
+  return fallback
+}
+
 export default function Home() {
   const [points, setPoints] = useState<MapPoint[]>([])
   const [categories, setCategories] = useState<ApiCategory[]>([])
@@ -178,8 +244,19 @@ export default function Home() {
     workerStatusRef.current = workerStatus
   }, [workerStatus])
 
-  const [userLat, setUserLat] = useState<number>(-37.6672) // Latitud del usuario
-  const [userLng, setUserLng] = useState<number>(-72.5730) // Longitud del usuario
+  const [userLat, setUserLat] = useState<number>(DEFAULT_MAP_LAT)
+  const [userLng, setUserLng] = useState<number>(DEFAULT_MAP_LNG)
+  /** Si había otra vista guardada, remontar MapSection para que el centro inicial sea correcto (sin flyTo). */
+  const [mapSectionKey, setMapSectionKey] = useState(0)
+
+  useLayoutEffect(() => {
+    const v = readInitialMapCoords()
+    setUserLat(v.lat)
+    setUserLng(v.lng)
+    const differs =
+      Math.abs(v.lat - DEFAULT_MAP_LAT) > 1e-4 || Math.abs(v.lng - DEFAULT_MAP_LNG) > 1e-4
+    if (differs) setMapSectionKey((k) => k + 1)
+  }, [])
   const [workerCount, setWorkerCount] = useState<{ count: number; label: string } | null>(null)
   const chatNotifySeenIdsRef = useRef<Set<number>>(new Set())
   const chatNotifySubscribedIdsRef = useRef<Set<number>>(new Set())
@@ -831,11 +908,15 @@ export default function Home() {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     
     // Usar coordenadas override (mover mapa), luego GPS usuario, luego fallback
-    const lat = overrideLat ?? userLat ?? -38.7359
-    const lng = overrideLng ?? userLng ?? -72.5904
+    const lat = overrideLat ?? userLat ?? DEFAULT_MAP_LAT
+    const lng = overrideLng ?? userLng ?? DEFAULT_MAP_LNG
     
     
-    const params = new URLSearchParams({ lat: String(lat), lng: String(lng) })
+    const params = new URLSearchParams({
+      lat: String(lat),
+      lng: String(lng),
+      radius: '50',
+    })
     if (categoryId) params.append('categories[]', String(categoryId))
     
     // Headers con autenticación para incluir al usuario actual en los resultados
@@ -907,46 +988,63 @@ export default function Home() {
       })
   }, [userLat, userLng, user])
 
-  // Obtener ubicación — si ya la tenemos en localStorage, usarla y centrar mapa
-  // Si no, pedir GPS automáticamente
-  useEffect(() => {
-    const savedLat = localStorage.getItem('user_lat')
-    const savedLng = localStorage.getItem('user_lng')
-    if (savedLat && savedLng) {
-      const lat = parseFloat(savedLat)
-      const lng = parseFloat(savedLng)
+  const mapViewportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleMapViewportMove = useCallback(
+    (lat: number, lng: number) => {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) < 0.01) return
+      mapPannedByUserRef.current = true
+      // Guardar vista y estado al instante: si el mapa se remonta (React/Strict), el centro no vuelve a Renaico/Angol.
+      try {
+        localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
+        localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
+      } catch {
+        /* ignore */
+      }
       setUserLat(lat)
       setUserLng(lng)
-      setTimeout(() => {
-        if (!mapPannedByUserRef.current) mapRef.current?.flyTo([lat, lng], 14)
-      }, 2000)
-    } else if (navigator.geolocation) {
+
+      if (mapViewportTimerRef.current) clearTimeout(mapViewportTimerRef.current)
+      mapViewportTimerRef.current = setTimeout(() => {
+        mapViewportTimerRef.current = null
+        fetchNearby(activeCategory, lat, lng)
+      }, 400)
+    },
+    [activeCategory, fetchNearby],
+  )
+
+  // Primera carga nearby (el centro visible ya viene de readInitialMapCoords + MapSection; sin flyTo).
+  useEffect(() => {
+    let cancelled = false
+    fetchNearbyRef.current.lastCall = 0
+    queueMicrotask(() => {
+      if (!cancelled) fetchNearby()
+    })
+
+    if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const lat = pos.coords.latitude
-          const lng = pos.coords.longitude
-          setUserLat(lat)
-          setUserLng(lng)
-          localStorage.setItem('user_lat', String(lat))
-          localStorage.setItem('user_lng', String(lng))
-          setTimeout(() => {
-            if (!mapPannedByUserRef.current) mapRef.current?.flyTo([lat, lng], 14)
-          }, 2000)
+          try {
+            localStorage.setItem('user_lat', String(pos.coords.latitude))
+            localStorage.setItem('user_lng', String(pos.coords.longitude))
+          } catch {
+            /* ignore */
+          }
         },
-        () => {
-          const timer = setTimeout(() => setShowLocationPrompt(true), 2000)
-          return () => clearTimeout(timer)
-        },
-        { timeout: 8000 }
+        () => {},
+        { timeout: 12000, maximumAge: 600_000 },
       )
-    } else {
-      const timer = setTimeout(() => setShowLocationPrompt(true), 2000)
-      return () => clearTimeout(timer)
     }
-  }, [])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchNearbyRef.current.lastCall = 0; fetchNearby() }, [])
+    return () => {
+      cancelled = true
+      if (mapViewportTimerRef.current) {
+        clearTimeout(mapViewportTimerRef.current)
+        mapViewportTimerRef.current = null
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- montaje: una sola carga inicial / restauración
+  }, [])
 
   // Listener para abrir PublishDemand desde el estado vacío del feed
   useEffect(() => {
@@ -1131,7 +1229,7 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/api/v1/worker/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ status: apiStatus, lat: userLat || -37.67, lng: userLng || -72.57, categories: next === 'active' ? workerCategories : undefined }),
+        body: JSON.stringify({ status: apiStatus, lat: userLat || DEFAULT_MAP_LAT, lng: userLng || DEFAULT_MAP_LNG, categories: next === 'active' ? workerCategories : undefined }),
       })
       const data = await res.json()
       if (data.status === 'success') {
@@ -1214,16 +1312,14 @@ export default function Home() {
       {/* ── MAPA FULLSCREEN (always visible in background) ── */}
       <div className="absolute inset-0 pt-[180px] pb-[68px]">
         <MapSection
+          key={mapSectionKey}
           ref={mapRef}
           points={filtered}
           onPointClick={handlePointClick}
           onMapClick={handleMapClick}
           highlightedId={highlightedRequestId}
           initialCenter={{ lat: userLat, lng: userLng }}
-          onMapMove={(lat, lng) => {
-            mapPannedByUserRef.current = true
-            fetchNearby(activeCategory, lat, lng)
-          }}
+          onMapMove={handleMapViewportMove}
         />
       </div>
 
@@ -1716,10 +1812,7 @@ export default function Home() {
               userLng={userLng}
               currentUserId={user?.id}
               onCardClick={(request) => {
-                // Fly to map location
-                if (mapRef.current) {
-                  mapRef.current.flyTo([request.pos.lat, request.pos.lng], 18).catch(console.error)
-                }
+                // Resaltar el pin sin recentrar el mapa (el usuario pidió evitar autocentradas).
                 setHighlightedRequestId(request.id)
                 setTimeout(() => setHighlightedRequestId(null), 3000)
                 setSelectedDetail(null)
@@ -1971,8 +2064,7 @@ export default function Home() {
                       if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition(
                           (pos) => {
-                            setUserLat(pos.coords.latitude)
-                            setUserLng(pos.coords.longitude)
+                            // Solo perfil/recomendaciones: no mover el mapa ni el centro de búsqueda.
                             localStorage.setItem('user_lat', String(pos.coords.latitude))
                             localStorage.setItem('user_lng', String(pos.coords.longitude))
                             setShowLocationPrompt(false)

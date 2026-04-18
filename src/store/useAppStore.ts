@@ -89,8 +89,8 @@ export const useAppStore = create<AppStore>()(
         })),
       removePoint: (id) =>
         set((state) => ({ points: state.points.filter((p) => p.id !== id) })),
-      userLat: -37.6672,
-      userLng: -72.573,
+      userLat: -37.798,
+      userLng: -72.708,
       setUserLocation: (userLat, userLng) => set({ userLat, userLng }),
 
       // UI

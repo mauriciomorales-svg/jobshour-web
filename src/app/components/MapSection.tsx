@@ -253,10 +253,8 @@ function MapController({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
   
   useEffect(() => {
     if (map) {
-      // Limpiar TODOS los marcadores viejos del DOM de Leaflet al inicializar
-      map.eachLayer((layer) => {
-        if (layer instanceof L.Marker) map.removeLayer(layer)
-      })
+      // No borrar marcadores aquí: MapMarkers usa <Marker /> y react-leaflet registra sus
+      // capas como L.Marker; eliminarlas en este efecto deja el mapa sin pines (p. ej. Angol).
       console.log('🗺️ MapController: Mapa inicializado, notificando...')
       onMapReady(map)
     }
@@ -265,7 +263,8 @@ function MapController({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
   return null
 }
 
-const DEFAULT_CENTER: [number, number] = [-37.6672, -72.5730]
+/** Angol — alineado con page.tsx DEFAULT_MAP_* (evita Renaico como fallback del mapa) */
+const DEFAULT_CENTER: [number, number] = [-37.798, -72.708]
 
 const MapSection = forwardRef<any, {
   points: MapPoint[]
