@@ -20,7 +20,7 @@ export interface MapPoint {
   microcopy?: string
   has_video?: boolean
   urgency?: 'normal' | 'urgent'
-  pin_type?: 'worker' | 'demand'
+  pin_type?: 'worker' | 'demand' | 'premium_store'
   travel_role?: 'driver' | 'passenger' | null
   payload?: Record<string, any> | null
   description?: string
@@ -32,6 +32,8 @@ export interface MapPoint {
   }
   is_seller?: boolean
   store_name?: string | null
+  store_plan?: 'basic' | 'premium' | 'self_service' | string
+  store_url?: string | null
 }
 
 const STATUS_STYLES = {
@@ -42,6 +44,34 @@ const STATUS_STYLES = {
 }
 
 function createPointIcon(p: MapPoint, isHighlighted = false) {
+  // Pines Premium Store (negocios tipo dondemorales.cl)
+  if (p.pin_type === 'premium_store') {
+    const avatar = p.avatar || `https://i.pravatar.cc/100?u=${p.id}`
+    const title = p.store_name || p.name
+    const label = `⭐ ${title} • Premium`
+    const size = isHighlighted ? 60 : 48
+    const iconW = isHighlighted ? 190 : 170
+    const iconH = isHighlighted ? 110 : 90
+
+    return L.divIcon({
+      className: 'leaflet-marker-icon-premium',
+      iconSize: [iconW, iconH],
+      iconAnchor: [iconW / 2, iconH],
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;opacity:1;transition:opacity 0.3s;pointer-events:auto;${isHighlighted ? 'z-index:9999!important;' : ''}">
+          <div style="width:${size}px;height:${size}px;border-radius:999px;padding:2.5px;background:white;box-shadow:${isHighlighted ? '0 0 30px rgba(168,85,247,0.55),0 8px 24px rgba(168,85,247,0.25)' : '0 8px 24px rgba(168,85,247,0.25)'};position:relative;border:3px solid #a855f7;pointer-events:none">
+            <img src="${avatar}" style="width:100%;height:100%;border-radius:999px;object-fit:cover;pointer-events:none" />
+            <div style="position:absolute;bottom:1px;right:1px;width:11px;height:11px;background:#a855f7;border:2px solid white;border-radius:999px;animation:pulse 2s infinite;pointer-events:none"></div>
+            <div style="position:absolute;top:-6px;left:-6px;width:18px;height:18px;background:#a855f7;border:2px solid white;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:10px;pointer-events:none;box-shadow:0 2px 4px rgba(0,0,0,0.3);">⭐</div>
+          </div>
+          <div style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#ffffff;padding:${isHighlighted ? '5px 14px' : '4px 10px'};border-radius:999px;font-size:${isHighlighted ? '13px' : '10px'};font-weight:900;font-style:italic;margin-top:5px;box-shadow:0 4px 12px rgba(124,58,237,0.25);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;border:2px solid white;letter-spacing:-0.02em;pointer-events:none">
+            ${label}
+          </div>
+        </div>
+      `,
+    })
+  }
+
   // Pines dorados para demanda - con avatar del worker
   if (p.pin_type === 'demand') {
     const avatar = p.avatar || `https://i.pravatar.cc/100?u=${p.id}`
@@ -160,7 +190,8 @@ function MapClickHandler({ onClick }: { onClick: () => void }) {
       if (target && (
         target.closest('.leaflet-marker-icon') || 
         target.closest('.leaflet-marker-icon-demand') ||
-        target.closest('.leaflet-marker-icon-worker')
+        target.closest('.leaflet-marker-icon-worker') ||
+        target.closest('.leaflet-marker-icon-premium')
       )) {
         // El click fue en un marcador, no cerrar
         return
@@ -234,7 +265,18 @@ function MapController({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
   return null
 }
 
-const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapPoint) => void | Promise<void>; onMapClick?: () => void; mapCenter?: { lat: number; lng: number; zoom: number } | null; highlightedId?: number | null; onMapMove?: (lat: number, lng: number) => void }>(({ points, onPointClick, onMapClick, mapCenter, highlightedId, onMapMove }, ref) => {
+const DEFAULT_CENTER: [number, number] = [-37.6672, -72.5730]
+
+const MapSection = forwardRef<any, {
+  points: MapPoint[]
+  onPointClick?: (p: MapPoint) => void | Promise<void>
+  onMapClick?: () => void
+  mapCenter?: { lat: number; lng: number; zoom: number } | null
+  /** Centro inicial (solo al montar). Evita hardcodear siempre Renaico cuando el usuario tiene otra ubicación guardada. */
+  initialCenter?: { lat: number; lng: number }
+  highlightedId?: number | null
+  onMapMove?: (lat: number, lng: number) => void
+}>(({ points, onPointClick, onMapClick, mapCenter, initialCenter, highlightedId, onMapMove }, ref) => {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   // Usar ref para acceder siempre al valor más reciente de mapInstance
   const mapInstanceRef = useRef<L.Map | null>(null)
@@ -348,9 +390,12 @@ const MapSection = forwardRef<any, { points: MapPoint[]; onPointClick?: (p: MapP
     isReady: () => mapInstanceRef.current !== null || getMapInstance() !== null
   }), [getMapInstance])
   
+  const centerLat = typeof initialCenter?.lat === 'number' && !isNaN(initialCenter.lat) ? initialCenter.lat : DEFAULT_CENTER[0]
+  const centerLng = typeof initialCenter?.lng === 'number' && !isNaN(initialCenter.lng) ? initialCenter.lng : DEFAULT_CENTER[1]
+
   return (
     <MapContainer
-      center={[-37.6672, -72.5730]}
+      center={[centerLat, centerLng]}
       zoom={15}
       minZoom={10}
       maxZoom={19}

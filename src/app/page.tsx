@@ -55,13 +55,15 @@ interface ExpertDetail {
   total_jobs: number
   is_verified: boolean
   status: 'active' | 'intermediate' | 'inactive' | 'demand'
-  category: { slug: string; name: string; color: string; icon: string } | null
-  categories?: { slug: string; name: string; color: string; icon: string }[]
+  category: { slug: string; name: string; display_name?: string; color: string; icon: string } | null
+  categories?: { slug: string; name: string; display_name?: string; color: string; icon: string }[]
   videos_count: number
   showcase_video?: { url: string; thumbnail: string | null; duration: number | null } | null
   pos: { lat: number; lng: number }
   client_id?: number
   microcopy?: string
+  is_seller?: boolean
+  store_name?: string | null
   travel_role?: 'driver' | 'passenger' | null
   payload?: Record<string, any> | null
   active_route?: {
@@ -854,7 +856,7 @@ export default function Home() {
         // Combinar workers y demandas
         const workers = (expertsData.data ?? []).map((w: any) => ({
           ...w,
-          pin_type: 'worker' as const,
+          pin_type: (w.pin_type ?? 'worker') as any,
           // Incluir información de active_route si existe (modo viaje)
           active_route: w.active_route || null,
           // Asegurar que user_id esté disponible
@@ -947,18 +949,11 @@ export default function Home() {
     return () => window.removeEventListener('open-publish-demand', handler)
   }, [])
 
-  // Filtro local por búsqueda de texto Y estado del usuario
+  // Filtro local por búsqueda de texto (el propio marcador siempre visible para poder abrirlo y ver Mi perfil / Ver tienda)
   const filtered = (() => {
     let result = points
     
-    // Si el usuario está en estado 'inactive' (plomo), NO mostrar su pin en el mapa
-    if (user && workerStatus === 'inactive') {
-      result = result.filter(p => {
-        // Excluir el pin del usuario actual si está en estado inactive
-        const isCurrentUser = (p.user_id && p.user_id === user.id) || (p.id && p.id === user.id)
-        return !isCurrentUser
-      })
-    }
+    // Ya no ocultamos el pin del usuario cuando está inactive: así puede hacer clic y ver modal con Mi perfil / Ver mi tienda
     
     // Filtro por búsqueda de texto
     const q = searchQuery.trim().toLowerCase()
@@ -980,6 +975,16 @@ export default function Home() {
 
   // Fetch detalle on-demand al hacer click en marcador
   const handlePointClick = async (point: MapPoint) => {
+    // Premium store: solo abrir el negocio (sin modal de worker/demand)
+    if (point.pin_type === 'premium_store') {
+      setSelectedDetail(null)
+      setLoadingDetail(false)
+      const url = point.store_url || point.payload?.store_url || 'https://dondemorales.cl'
+      try {
+        window.open(url, '_blank', 'noopener,noreferrer')
+      } catch {}
+      return
+    }
     setLoadingDetail(true)
     setSelectedDetail(null)
     try {
@@ -1202,7 +1207,15 @@ export default function Home() {
 
       {/* ── MAPA FULLSCREEN (always visible in background) ── */}
       <div className="absolute inset-0 pt-[180px] pb-[68px]">
-        <MapSection key={points.filter(p=>p.pin_type!=='demand').map(p=>p.id).sort().join('-')} ref={mapRef} points={filtered} onPointClick={handlePointClick} onMapClick={handleMapClick} highlightedId={highlightedRequestId} onMapMove={(lat, lng) => fetchNearby(activeCategory, lat, lng)} />
+        <MapSection
+          ref={mapRef}
+          points={filtered}
+          onPointClick={handlePointClick}
+          onMapClick={handleMapClick}
+          highlightedId={highlightedRequestId}
+          initialCenter={{ lat: userLat, lng: userLng }}
+          onMapMove={(lat, lng) => fetchNearby(activeCategory, lat, lng)}
+        />
       </div>
 
       {/* ── MENSAJE MAPA VACÍO ── */}
@@ -1397,7 +1410,7 @@ export default function Home() {
                         <div key={i} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
                           style={{ background: `${cat.color || _catColor}25`, color: cat.color || _catColor }}>
                           <span>{ICON_MAP[cat.icon] || '⚙️'}</span>
-                          <span>{cat.name}</span>
+                          <span>{cat.display_name || cat.name}</span>
                         </div>
                       ))}
                     </div>
@@ -1528,7 +1541,7 @@ export default function Home() {
 
                   {/* Action buttons */}
                   {(() => {
-                    const isSelf = !!(user && selectedDetail.user_id && user.id === selectedDetail.user_id)
+                    const isSelf = !!(user && selectedDetail.user_id && user.id === selectedDetail.user_id) || !!(workerProfile?.id && selectedDetail.id && Number(workerProfile.id) === Number(selectedDetail.id))
                     const isDemand = selectedDetail.status === 'demand'
                     const isTravelPin = isDemand && !!selectedDetail.travel_role
                     const isOwnDemand = isDemand && selectedDetail.client_id === user?.id
@@ -1556,13 +1569,21 @@ export default function Home() {
                     return (
                       <div className="px-5 mt-4">
                         {isSelf || isOwnDemand ? (
-                          <button
-                            onClick={() => setActiveSection('profile')}
-                            className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-2xl text-sm font-bold transition active:scale-95"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                            Mi perfil
-                          </button>
+                          <div className="space-y-2.5">
+                            <button
+                              onClick={() => setActiveSection('profile')}
+                              className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-2xl text-sm font-bold transition active:scale-95"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                              Mi perfil
+                            </button>
+                            {!isDemand && selectedDetail.is_seller && (
+                              <a href={`/tienda/${selectedDetail.id}`} target="_blank" rel="noopener noreferrer"
+                                className="w-full flex items-center justify-center gap-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 py-3.5 rounded-2xl text-sm font-bold transition active:scale-95">
+                                🛒 Ver mi tienda
+                              </a>
+                            )}
+                          </div>
                         ) : isTravelPin ? (
                           /* Botones de match para viaje */
                           <div className="space-y-2.5">
@@ -1615,7 +1636,7 @@ export default function Home() {
                                 {selectedDetail.status === 'active' ? '⚡ Solicitar ahora' : '💬 Consultar'}
                               </button>
                             )}
-                            {!isDemand && (selectedDetail as any).is_seller && (
+                            {!isDemand && selectedDetail.is_seller && (
                               <a href={`/tienda/${selectedDetail.id}`} target="_blank" rel="noopener noreferrer"
                                 className="col-span-2 flex items-center justify-center gap-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 py-3 rounded-2xl text-sm font-bold transition active:scale-95">
                                 🛒 Ver tienda
@@ -1760,7 +1781,7 @@ export default function Home() {
                         status: 'active' as const,
                         category: request.category ? {
                           slug: (request.category as any)?.slug || '',
-                          name: request.category?.name || 'Servicio',
+                          name: (request.category as any)?.display_name || request.category?.name || 'Servicio',
                           color: request.category?.color || '#6b7280',
                           icon: request.category?.icon || '📌',
                         } : { slug: '', name: 'Servicio', color: '#6b7280', icon: '📌' },
