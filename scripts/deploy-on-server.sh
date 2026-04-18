@@ -21,10 +21,10 @@ git fetch origin
 git checkout -f master
 git reset --hard origin/master
 
-export NODE_ENV=production
 export NODE_OPTIONS="--max-old-space-size=1536"
-
+# npm ci con NODE_ENV=production NO instala devDependencies → falta tailwindcss en el build
 npm ci --prefer-offline
+export NODE_ENV=production
 npm run build
 
 pm2 reload jobshour-web --update-env
