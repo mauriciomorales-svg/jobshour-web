@@ -17,7 +17,8 @@ echo "=== JobsHour Web deploy ==="
 echo "PWD=$(pwd)  NODE=$(node -v 2>/dev/null || echo ?)  GIT=$(git rev-parse --short HEAD 2>/dev/null || echo ?)"
 
 git fetch origin
-git checkout master
+# -f: descarta cambios locales en el VPS que rompen el deploy
+git checkout -f master
 git reset --hard origin/master
 
 export NODE_ENV=production
