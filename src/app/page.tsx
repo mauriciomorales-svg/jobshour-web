@@ -1191,16 +1191,8 @@ export default function Home() {
     )
   }, [toast])
 
-  const mapDebugRef = useRef<HTMLDivElement | null>(null)
   const logMapEvent = (msg: string) => {
-    console.error('[MAP-DEBUG] ' + msg)
-    if (mapDebugRef.current) {
-      mapDebugRef.current.insertAdjacentHTML('afterbegin',
-        `<div style="font-size:10px;border-bottom:1px solid #333;padding:1px 0">${msg}</div>`)
-      // Mantener solo 8 líneas
-      const children = mapDebugRef.current.children
-      while (children.length > 8) mapDebugRef.current.removeChild(children[children.length - 1])
-    }
+    console.log('[MAP-DEBUG]', msg)
   }
 
   const handleLeafletMapReady = useCallback((map: LeafletMap) => {
@@ -2879,17 +2871,6 @@ export default function Home() {
           />
         </div>
       )}
-
-      {/* ── DEBUG MAP PANEL (quitar cuando se resuelva el bug) ── */}
-      <div
-        ref={mapDebugRef}
-        style={{
-          position:'fixed', top:0, right:0, zIndex:99999,
-          background:'rgba(0,0,0,0.85)', color:'#0f0', fontFamily:'monospace',
-          padding:'4px 6px', maxWidth:'280px', minWidth:'180px', maxHeight:'120px',
-          overflow:'hidden', fontSize:'9px', pointerEvents:'none',
-        }}
-      />
 
       {/* ── BOTTOM TAB NAVIGATION ── */}
       <BottomTabBar
