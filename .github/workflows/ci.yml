@@ -58,5 +58,10 @@ jobs:
             export NODE_OPTIONS="--max-old-space-size=1536"
             npm ci --prefer-offline
             npm run build
-            pm2 reload jobshour-web --update-env
+            echo "=== BUILD OK, reiniciando procesos Next.js ==="
+            pm2 reload jobshour-web --update-env || true
+            pm2 reload jobshours-web --update-env || true
+            pm2 reload jobshours --update-env || true
+            pm2 reload nextjs --update-env || true
             echo "=== DEPLOY OK: $(date) ==="
+            pm2 list | grep -E "(online|stopped|errored)" || true

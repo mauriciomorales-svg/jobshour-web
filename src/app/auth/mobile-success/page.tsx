@@ -11,10 +11,23 @@ function MobileSuccessContent() {
     if (!authKey) return
     // Guardar key en localStorage para que browserFinished la recupere
     try { localStorage.setItem('pending_auth_key', authKey) } catch(e) {}
-    // Intentar deep link para cerrar el Custom Tab automáticamente
+    // Intentar deep link para cerrar el Custom Tab automáticamente (app nativa)
     setTimeout(() => {
       window.location.href = 'jobshour://auth-success?key=' + encodeURIComponent(authKey)
     }, 800)
+    // Fallback para navegador web: si el deep link no funciona, recuperar token via API
+    setTimeout(async () => {
+      try {
+        const res = await fetch('/api/auth/mobile-token?key=' + encodeURIComponent(authKey))
+        if (res.ok) {
+          const data = await res.json()
+          if (data.token) {
+            try { localStorage.setItem('auth_token', data.token) } catch(e) {}
+            window.location.href = '/?token=' + encodeURIComponent(data.token) + '&login=success'
+          }
+        }
+      } catch(e) {}
+    }, 2500)
   }, [authKey])
 
   return (

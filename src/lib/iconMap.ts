@@ -14,4 +14,8 @@ export const ICON_MAP: Record<string, string> = {
   'chef-hat': '👨‍🍳', graduation: '🎓', stethoscope: '🩺',
   'paint-roller': '🖌️', shovel: '⛏️', 'shopping-bag': '🛍️',
   baby: '👶', dog: '🐕',
+  shirt: '👕', box: '📦', sprout: '🌱', fish: '🐟',
+  broom: '🧹', motorcycle: '🏍️', droplet: '💧', 'hard-hat': '🪖',
+  flame: '🔥', pipette: '🔩', hand: '🤝', calculator: '🧮',
+  bus: '🚌',
 }

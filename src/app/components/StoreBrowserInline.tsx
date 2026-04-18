@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { Search, Package, Store, Loader2 } from 'lucide-react'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://jobshours.com/api'
-const INVENTARIO_API = 'http://64.227.55.223:8003/api'
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
+const INVENTARIO_API = '/inventario'
 
 interface Tienda {
   id: number
@@ -38,7 +38,7 @@ export default function StoreBrowserInline({ userLat, userLng }: { userLat: numb
   // Cargar tiendas cercanas
   useEffect(() => {
     setLoadingTiendas(true)
-    fetch(`${API_BASE}/v1/experts/nearby?lat=${userLat}&lng=${userLng}&radius=50`)
+    fetch(`${API_BASE}/api/v1/experts/nearby?lat=${userLat}&lng=${userLng}&radius=50`)
       .then(r => r.json())
       .then(data => {
         const sellers = (data.data ?? []).filter((w: any) => w.is_seller)
@@ -63,7 +63,7 @@ export default function StoreBrowserInline({ userLat, userLng }: { userLat: numb
   useEffect(() => {
     if (!tiendaSeleccionada) return
     setLoadingProductos(true)
-    fetch(`${INVENTARIO_API}/productos/buscar?limite=20`)
+    fetch(`${INVENTARIO_API}/productos/buscar?worker_id=${tiendaSeleccionada.id}&limite=20`)
       .then(r => r.json())
       .then(data => setProductos((data.data ?? []).filter((p: Producto) => p.stock_actual > 0)))
       .catch(() => setProductos([]))

@@ -433,21 +433,24 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
             </div>
           )}
 
-          {/* Botón Publicar */}
-          <button
-            onClick={handlePublish}
-            disabled={saving}
-            className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-2xl font-black text-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
-          >
-            {saving ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                Publicando...
-              </span>
-            ) : '✨ Publicar demanda'}
-          </button>
-
-          <p className="text-[10px] text-slate-600 text-center pb-2">Los trabajadores cercanos recibirán una notificación</p>
+          {/* Botón Publicar — no aplica en buscar_producto */}
+          {demandType !== 'buscar_producto' && (
+            <>
+              <button
+                onClick={handlePublish}
+                disabled={saving}
+                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-2xl font-black text-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
+              >
+                {saving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    Publicando...
+                  </span>
+                ) : '✨ Publicar demanda'}
+              </button>
+              <p className="text-[10px] text-slate-600 text-center pb-2">Los trabajadores cercanos recibirán una notificación</p>
+            </>
+          )}
         </div>
       </div>
     </div>

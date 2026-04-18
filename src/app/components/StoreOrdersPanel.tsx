@@ -27,6 +27,20 @@ interface StoreOrder {
   rejected_at: string | null
   reject_reason: string | null
   created_at: string
+  integrated_quote_id?: number | null
+  integrated_quote?: {
+    id: number
+    status: string
+    service_amount: number
+    service_type?: string | null
+    service_description?: string | null
+  } | null
+  service_request?: {
+    id: number
+    status: string
+    offered_price: number | null
+    completed_at: string | null
+  } | null
 }
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -47,6 +61,22 @@ function timeLeft(expiresAt: string): string {
   const h = Math.floor(diff / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
   return `${h}h ${m}m restantes`
+}
+
+function hasService(order: StoreOrder): boolean {
+  const q = order.integrated_quote
+  if (!q) return false
+  return (q.service_amount ?? 0) > 0 || !!q.service_type || !!q.service_description
+}
+
+function quoteStepState(order: StoreOrder) {
+  const q = order.integrated_quote
+  const withService = hasService(order)
+  const paymentDone = order.status === 'paid' || q?.status === 'paid'
+  const materialsDone = order.status === 'confirmed' || q?.status === 'materials_confirmed' || q?.status === 'closed'
+  const serviceDone = withService && (q?.status === 'service_completed' || q?.status === 'closed')
+  const closed = q?.status === 'closed'
+  return { withService, paymentDone, materialsDone, serviceDone, closed }
 }
 
 export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
@@ -197,6 +227,33 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                       </div>
                     )}
 
+                    {order.integrated_quote_id && (
+                      <div className="mt-3 bg-slate-900/60 border border-slate-700 rounded-xl p-3 space-y-2">
+                        {(() => {
+                          const s = quoteStepState(order)
+                          return (
+                            <>
+                              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Timeline integrado</p>
+                              <div className="text-xs text-slate-300 flex items-center gap-2">
+                                <span>{s.paymentDone ? '✅' : '⏳'}</span><span>Pago MP</span>
+                              </div>
+                              <div className="text-xs text-slate-300 flex items-center gap-2">
+                                <span>{s.materialsDone ? '✅' : '⏳'}</span><span>PIN materiales</span>
+                              </div>
+                              {s.withService && (
+                                <div className="text-xs text-slate-300 flex items-center gap-2">
+                                  <span>{s.serviceDone ? '✅' : '⏳'}</span><span>Servicio</span>
+                                </div>
+                              )}
+                              <div className="text-xs text-slate-300 flex items-center gap-2">
+                                <span>{s.closed ? '✅' : '⏳'}</span><span>Cierre</span>
+                              </div>
+                            </>
+                          )
+                        })()}
+                      </div>
+                    )}
+
                     {/* Botones confirmar/rechazar */}
                     {showCodeInput === order.id ? (
                       <div className="space-y-2">
@@ -290,6 +347,32 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                           ))}
                           {order.reject_reason && (
                             <p className="text-xs text-red-400 mt-2">Motivo: {order.reject_reason}</p>
+                          )}
+                          {order.integrated_quote_id && (
+                            <div className="mt-3 bg-slate-900/60 border border-slate-700 rounded-xl p-3 space-y-2">
+                              {(() => {
+                                const s = quoteStepState(order)
+                                return (
+                                  <>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Timeline integrado</p>
+                                    <div className="text-xs text-slate-300 flex items-center gap-2">
+                                      <span>{s.paymentDone ? '✅' : '⏳'}</span><span>Pago MP</span>
+                                    </div>
+                                    <div className="text-xs text-slate-300 flex items-center gap-2">
+                                      <span>{s.materialsDone ? '✅' : '⏳'}</span><span>PIN materiales</span>
+                                    </div>
+                                    {s.withService && (
+                                      <div className="text-xs text-slate-300 flex items-center gap-2">
+                                        <span>{s.serviceDone ? '✅' : '⏳'}</span><span>Servicio</span>
+                                      </div>
+                                    )}
+                                    <div className="text-xs text-slate-300 flex items-center gap-2">
+                                      <span>{s.closed ? '✅' : '⏳'}</span><span>Cierre</span>
+                                    </div>
+                                  </>
+                                )
+                              })()}
+                            </div>
                           )}
                         </div>
                       )}

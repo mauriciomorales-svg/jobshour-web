@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff } from 'lucide-react'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://jobshours.com/api'
+// Misma lógica que page.tsx: base sin /api para llamadas a jobshours API
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
 const INVENTARIO_API = '/inventario'
 
 interface Producto {
@@ -480,6 +481,9 @@ export default function TiendaPage() {
   const [done, setDone] = useState(false)
   const [payLink, setPayLink] = useState<string | null>(null)
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null)
+  const [laborEnabled, setLaborEnabled] = useState(false)
+  const [laborAmount, setLaborAmount] = useState('')
+  const [laborDesc, setLaborDesc] = useState('')
   const [buyerName, setBuyerName] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
@@ -495,35 +499,72 @@ export default function TiendaPage() {
   const [stats, setStats] = useState<any>(null)
   const [loadingStats, setLoadingStats] = useState(false)
 
-  // Sesión (auth_token o token como fallback)
-  useEffect(() => {
+  // Comprobar sesión — URL absoluta con origin actual (igual que servidor antiguo)
+  const checkAuth = useCallback(() => {
+    if (typeof window === 'undefined') return
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-    if (!token) { setLoggedIn(false); return }
-    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` }, credentials: 'include' })
+    if (!token) { setLoggedIn(false); setMyWorkerId(null); return }
+    const apiUrl = `${window.location.origin}/api`
+    fetch(`${apiUrl}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      credentials: 'include',
+    })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (!data) { setLoggedIn(false); return }
+        if (!data) { setLoggedIn(false); setMyWorkerId(null); return }
         setLoggedIn(true)
         if (data.name) setBuyerName(data.name)
         if (data.email) setBuyerEmail(data.email)
         if (data.phone) setBuyerPhone(data.phone ?? '')
-        if (data.worker?.id) setMyWorkerId(Number(data.worker.id))
+        const wid = data.worker?.id != null ? Number(data.worker.id) : null
+        if (wid != null) setMyWorkerId(wid)
       })
-      .catch(() => setLoggedIn(false))
+      .catch(() => { setLoggedIn(false); setMyWorkerId(null) })
   }, [])
 
-  // Verificar ownership cuando myWorkerId y workerId estén disponibles
   useEffect(() => {
-    if (!myWorkerId || !workerId) return
-    if (myWorkerId === workerId) setIsOwner(true)
+    // Si llegamos con token en la URL (ej. redirect OAuth), guardarlo y usarlo
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tokenFromUrl = params.get('token')
+      const loginSuccess = params.get('login')
+      if (tokenFromUrl && loginSuccess === 'success') {
+        try {
+          localStorage.setItem('auth_token', tokenFromUrl)
+          window.history.replaceState({}, '', window.location.pathname)
+        } catch (e) {}
+      }
+    }
+    checkAuth()
+  }, [checkAuth])
+
+  // Re-comprobar sesión al volver a la pestaña (por si el usuario inició sesión en otra pestaña)
+  useEffect(() => {
+    const onFocus = () => checkAuth()
+    window.addEventListener('focus', onFocus)
+    const onVis = () => { if (document.visibilityState === 'visible') checkAuth() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [checkAuth])
+
+  // Verificar ownership cuando myWorkerId y workerId estén disponibles (comparar como número)
+  useEffect(() => {
+    if (myWorkerId == null || workerId == null || Number.isNaN(workerId)) return
+    if (Number(myWorkerId) === Number(workerId)) setIsOwner(true)
   }, [myWorkerId, workerId])
 
   // Stats (solo owner)
   const fetchStats = useCallback(async () => {
     if (!isOwner) return
     setLoadingStats(true)
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') || localStorage.getItem('token')) : null
     try {
-      const r = await fetch(`${INVENTARIO_API}/worker-stats/${workerId}`)
+      const r = await fetch(`${INVENTARIO_API}/worker-stats/${workerId}`, {
+        headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' },
+      })
       const d = await r.json()
       if (d.success) setStats(d.data)
     } catch {}
@@ -532,10 +573,11 @@ export default function TiendaPage() {
 
   useEffect(() => { if (isOwner && tab === 'stats') fetchStats() }, [isOwner, tab])
 
-  // Worker info
+  // Worker info (mismo origen vía origin)
   useEffect(() => {
-    if (!workerId) return
-    fetch(`${API_BASE}/v1/experts/${workerId}`)
+    if (!workerId || typeof window === 'undefined') return
+    const apiUrl = `${window.location.origin}/api`
+    fetch(`${apiUrl}/v1/experts/${workerId}`, { headers: { Accept: 'application/json' } })
       .then(r => r.json())
       .then(data => {
         if (data.data && data.data.is_seller) setWorker(data.data)
@@ -595,26 +637,40 @@ export default function TiendaPage() {
   const cartTotal = cart.reduce((s, i) => s + (i.precio_venta ?? i.precio) * i.cantidad, 0)
   const cartCount = cart.reduce((s, i) => s + i.cantidad, 0)
   const commission = Math.round(cartTotal * 0.08)
-  const totalFinal = cartTotal + commission
+  const laborAmountNum = Math.max(0, parseInt(laborAmount || '0', 10) || 0)
+  const totalFinal = cartTotal + commission + (laborEnabled ? laborAmountNum : 0)
 
   const handlePay = async () => {
     if (!buyerName.trim() || !buyerEmail.trim()) { alert('Ingresa tu nombre y email'); return }
     setPaying(true)
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-      const r = await fetch(`${API_BASE}/v1/store/orders`, {
+      const apiUrl = `${window.location.origin}/api`
+      const r = await fetch(`${apiUrl}/v1/integrated-quotes/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
           worker_id: workerId,
           items: cart.map(i => ({ idproducto: i.idproducto, nombre: i.nombre, cantidad: i.cantidad, precio: i.precio_venta ?? i.precio })),
-          total: totalFinal, buyer_name: buyerName.trim(), buyer_email: buyerEmail.trim(),
-          buyer_phone: buyerPhone.trim() || null, delivery: wantsDelivery,
+          buyer_name: buyerName.trim(),
+          buyer_email: buyerEmail.trim(),
+          buyer_phone: buyerPhone.trim() || null,
+          wants_delivery: wantsDelivery,
           delivery_address: wantsDelivery ? address : null,
+          // Mano de obra opcional (servicio pre-asignado al mismo worker)
+          service: laborEnabled ? {
+            type: wantsDelivery ? 'express_errand' : 'fixed_job',
+            description: laborDesc.trim() || null,
+            offered_price: laborAmountNum,
+          } : null,
         }),
       })
       const data = await r.json()
       if (r.ok && data.payment_link) {
+        try {
+          localStorage.setItem('last_store_order_id', String(data.store_order_id ?? data.order_id ?? ''))
+          localStorage.setItem('last_store_confirmation_code', String(data.confirmation_code ?? ''))
+        } catch {}
         setPayLink(data.payment_link); setConfirmationCode(data.confirmation_code ?? null)
         setDone(true); setCart([])
         window.location.href = data.payment_link
@@ -1073,6 +1129,39 @@ export default function TiendaPage() {
                 <div className="flex justify-between font-black text-gray-900 text-base">
                   <span>Total</span><span className="text-orange-500">{formatPrice(totalFinal)}</span>
                 </div>
+              </div>
+              {/* Mano de obra (opcional) */}
+              <div className="bg-gray-50 rounded-xl p-3">
+                <button
+                  type="button"
+                  onClick={() => setLaborEnabled(!laborEnabled)}
+                  className={`flex items-center gap-2 w-full text-sm font-bold transition ${laborEnabled ? 'text-orange-500' : 'text-gray-500'}`}
+                >
+                  <span className="text-base">🛠️</span>
+                  {laborEnabled ? '✅ Incluir mano de obra' : 'Agregar mano de obra (opcional)'}
+                </button>
+                {laborEnabled && (
+                  <div className="mt-2 space-y-2">
+                    <input
+                      type="number"
+                      value={laborAmount}
+                      onChange={e => setLaborAmount(e.target.value)}
+                      placeholder="Monto mano de obra (CLP)"
+                      className="w-full bg-white border border-gray-200 text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400"
+                      min={0}
+                    />
+                    <input
+                      type="text"
+                      value={laborDesc}
+                      onChange={e => setLaborDesc(e.target.value)}
+                      placeholder="Descripción (opcional)"
+                      className="w-full bg-white border border-gray-200 text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+                    <p className="text-[11px] text-gray-400">
+                      Esto crea un servicio pre-asignado al vendedor y quedará en tu historial como paquete.
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tus datos</p>

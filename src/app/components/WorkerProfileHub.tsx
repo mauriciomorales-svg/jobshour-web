@@ -2,24 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
+import { ICON_MAP } from '@/lib/iconMap'
 import { motion, AnimatePresence } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import ExperienceSelector from './ExperienceSelector'
-
-const iconMap: Record<string, string> = {
-  'wrench': '🔧', 'zap': '⚡', 'paintbrush': '🎨', 'sparkles': '✨',
-  'hammer': '🔨', 'leaf': '🌿', 'key': '🔑', 'building': '🏗️',
-  'scissors': '✂️', 'paw-print': '🐾', 'shopping-bag': '🛍️',
-  'truck': '🚚', 'package': '📦', 'broom': '🧹', 'motorcycle': '🏍️',
-  'bicycle': '🚲', 'car': '🚗', 'trees': '🌳', 'home': '🏠',
-  'hard-hat': '👷', 'key-round': '🔑', 'droplet': '💧', 'droplets': '💧',
-  'flame': '🔥', 'rabbit': '🐇', 'monitor': '💻', 'camera': '📷',
-  'disc': '🎧', 'wifi': '📶', 'chef-hat': '👨‍🍳', 'utensils': '🍽️',
-  'activity': '🏃', 'hand': '💆', 'music': '🎵', 'graduation-cap': '🎓',
-  'dog': '🐕', 'heart-handshake': '🤝', 'baby': '👶', 'shopping-cart': '🛒',
-  'shield': '🛡️', 'book': '📚', 'laptop': '💻', 'heart': '❤️',
-  'paw': '🐾', 'ruler': '📐', 'tree': '🌳',
-}
 
 function InlineFeedback({ msg, type }: { msg: string; type: 'ok' | 'err' | 'info' }) {
   const colors = { ok: 'bg-green-50 border-green-300 text-green-800', err: 'bg-red-50 border-red-300 text-red-800', info: 'bg-blue-50 border-blue-300 text-blue-800' }
@@ -690,7 +676,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                         color: '#374151'
                       }}
                     >
-                      <span className="text-xl">{iconMap[category.icon] || category.icon || '⚙️'}</span>
+                      <span className="text-xl">{ICON_MAP[category.icon] || '⚙️'}</span>
                       <span className="text-sm font-bold whitespace-nowrap">{category.display_name || category.name || '?'}</span>
                       {isSelected && (
                         <motion.div

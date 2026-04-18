@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { ICON_MAP as SHARED_ICON_MAP } from '@/lib/iconMap'
 
 interface Category {
   id: number
   name: string
+  display_name?: string
   icon?: string
   color?: string
 }
@@ -33,7 +35,7 @@ const ICON_MAP: Record<string, string> = {
 
 function getIcon(icon?: string): string {
   if (!icon) return '📋'
-  return ICON_MAP[icon] || '📋'
+  return SHARED_ICON_MAP[icon] || ICON_MAP[icon] || '📋'
 }
 
 export default function CategoryPicker({
@@ -103,7 +105,9 @@ export default function CategoryPicker({
             >
               {getIcon(selected.icon)}
             </span>
-            <span className="flex-1 text-sm font-semibold text-white truncate">{selected.name}</span>
+            <span className="flex-1 text-sm font-semibold text-white truncate">
+              {selected.display_name || selected.name}
+            </span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onSelect(0); }}
@@ -145,7 +149,7 @@ export default function CategoryPicker({
                   color: cat.color || '#9ca3af',
                 }}
               >
-                {getIcon(cat.icon)} {cat.name}
+                {getIcon(cat.icon)} {cat.display_name || cat.name}
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleSelect(id) }}
@@ -221,7 +225,7 @@ export default function CategoryPicker({
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className={`text-xs font-bold truncate leading-tight ${isSelected ? 'text-white' : 'text-slate-300'}`}>
-                          {cat.name}
+                          {cat.display_name || cat.name}
                         </p>
                         {isSelected && (
                           <p className="text-[10px] font-bold mt-0.5" style={{ color }}>✓ Seleccionada</p>
@@ -242,7 +246,7 @@ export default function CategoryPicker({
             </p>
             {selected && !multiple && (
               <p className="text-[10px] font-bold" style={{ color: selected.color || '#f59e0b' }}>
-                {getIcon(selected.icon)} {selected.name}
+                {getIcon(selected.icon)} {selected.display_name || selected.name}
               </p>
             )}
           </div>

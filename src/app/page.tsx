@@ -585,6 +585,19 @@ export default function Home() {
     alert('Sesión cerrada')
   }
 
+  // Resetear posición del mapa — borra todos los datos de LS y recarga
+  const handleResetMapLocation = () => {
+    const MAP_KEYS = [
+      'jobs_map_view_lat_v4', 'jobs_map_view_lng_v4',
+      'jobs_map_view_lat_v3', 'jobs_map_view_lng_v3',
+      'jobs_map_view_lat_v2', 'jobs_map_view_lng_v2',
+      'jobs_map_view_lat',    'jobs_map_view_lng',
+      'jobs_map_ls_ver',      'user_lat', 'user_lng',
+    ]
+    MAP_KEYS.forEach(k => localStorage.removeItem(k))
+    window.location.reload()
+  }
+
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
     if (!user || !token) return
@@ -2502,6 +2515,19 @@ export default function Home() {
                       </svg>
                     </div>
                     <span className="text-slate-400 text-sm font-semibold group-hover:text-slate-200 transition">Compartir App</span>
+                  </button>
+
+                  <button
+                    onClick={handleResetMapLocation}
+                    className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-blue-500/10 rounded-xl transition group"
+                  >
+                    <div className="w-9 h-9 bg-blue-500/15 rounded-lg flex items-center justify-center group-hover:bg-blue-500/25 transition">
+                      <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <span className="text-blue-400 text-sm font-semibold group-hover:text-blue-300 transition">Resetear ubicación del mapa</span>
                   </button>
 
                   <button 

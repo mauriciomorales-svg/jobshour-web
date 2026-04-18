@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ICON_MAP as SHARED_ICON_MAP } from '@/lib/iconMap'
 
 interface Props {
   isOpen: boolean
@@ -23,32 +24,15 @@ interface OnboardingData {
 interface ApiCategory {
   id: number
   name: string
+  display_name?: string
   icon: string
-}
-
-const ICON_MAP: Record<string, string> = {
-  wrench: '🔧', zap: '⚡', paintbrush: '🎨', sparkles: '✨', hammer: '🔨',
-  leaf: '🌿', key: '🔑', building: '🏗️', scissors: '✂️', 'paw-print': '🐾',
-  truck: '🚚', 'shopping-cart': '🛒', car: '🚗', baby: '👶',
-  'heart-handshake': '🤝', dog: '🐕', 'graduation-cap': '🎓', music: '🎵',
-  hand: '💆', activity: '🏃', utensils: '🍽️', 'chef-hat': '👨‍🍳',
-  disc: '🎧', camera: '📷', monitor: '💻', wifi: '📶',
-  flame: '🔥', rabbit: '🐇', droplet: '💧', droplets: '💧',
-  'key-round': '🔑', 'hard-hat': '👷', trees: '🌳', home: '🏠',
-  package: '📦', broom: '🧹', motorcycle: '🏍️', bicycle: '🚲',
-  tree: '🌳', ruler: '📐', heart: '❤️', paw: '🐾', book: '📚',
-  laptop: '💻', shield: '🛡️', bike: '🚲', coffee: '☕',
-  'paint-brush': '🎨', star: '⭐', briefcase: '💼', tool: '🛠️',
-  user: '👤', users: '👥', 'map-pin': '📍', clock: '🕐',
-  phone: '📞', mail: '📧', globe: '🌍', gift: '🎁', award: '🏆',
-  fire: '🔥', anchor: '⚓', compass: '🧭', mic: '🎤',
-  headphones: '🎧', tv: '📺', stethoscope: '🩺', graduation: '🎓',
-  'paint-roller': '🖌️', shovel: '⛏️', 'shopping-bag': '🛍️',
 }
 
 function getIcon(icon?: string): string {
   if (!icon) return '📌'
-  return ICON_MAP[icon] || icon
+  // Si no existe mapeo, evitamos imprimir el string del icono (ej: "shirt")
+  // y mostramos un fallback.
+  return SHARED_ICON_MAP[icon] || '📌'
 }
 
 const MOTIVATIONAL = [
@@ -319,7 +303,9 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
                       }`}
                     >
                       <span className="text-xl shrink-0">{getIcon(cat.icon)}</span>
-                      <span className="text-xs font-bold leading-tight flex-1 text-white">{cat.name}</span>
+                      <span className="text-xs font-bold leading-tight flex-1 text-white">
+                        {cat.display_name || cat.name}
+                      </span>
                       {isSelected && <span className="text-teal-400 text-xs font-black">✓</span>}
                     </button>
                   )

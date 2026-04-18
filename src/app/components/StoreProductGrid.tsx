@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Package, Search, Loader2 } from 'lucide-react'
 import { useStoreCart } from '@/lib/storeCartContext'
 
-const INVENTARIO_API = 'http://64.227.55.223:8003/api'
+const INVENTARIO_API = '/inventario'
 
 interface Producto {
   idproducto: number
@@ -34,7 +34,7 @@ export default function StoreProductGrid({ workerId, storeName }: Props) {
   const fetchProductos = useCallback(async () => {
     setLoading(true)
     try {
-      let url = `${INVENTARIO_API}/productos/buscar?limite=50`
+      let url = `${INVENTARIO_API}/productos/buscar?worker_id=${workerId}&limite=50`
       if (buscar) url += `&q=${encodeURIComponent(buscar)}`
       const res = await fetch(url)
       const data = await res.json()
@@ -45,7 +45,7 @@ export default function StoreProductGrid({ workerId, storeName }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [buscar])
+  }, [buscar, workerId])
 
   useEffect(() => {
     fetchProductos()
