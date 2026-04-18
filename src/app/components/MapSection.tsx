@@ -271,11 +271,13 @@ const MapSection = forwardRef<any, {
   onPointClick?: (p: MapPoint) => void | Promise<void>
   onMapClick?: () => void
   mapCenter?: { lat: number; lng: number; zoom: number } | null
-  /** Centro inicial (solo al montar). Evita hardcodear siempre Renaico cuando el usuario tiene otra ubicación guardada. */
+  /** Centro del MapContainer solo al crear el mapa (debe ser fijo: Angol). La vista guardada se aplica vía onLeafletReady. */
   initialCenter?: { lat: number; lng: number }
+  /** Una vez listo Leaflet: aplicar setView con la vista guardada sin remontar (evita volver a Renaico). */
+  onLeafletReady?: (map: L.Map) => void
   highlightedId?: number | null
   onMapMove?: (lat: number, lng: number) => void
-}>(({ points, onPointClick, onMapClick, mapCenter, initialCenter, highlightedId, onMapMove }, ref) => {
+}>(({ points, onPointClick, onMapClick, mapCenter, initialCenter, onLeafletReady, highlightedId, onMapMove }, ref) => {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   // Usar ref para acceder siempre al valor más reciente de mapInstance
   const mapInstanceRef = useRef<L.Map | null>(null)
@@ -293,12 +295,15 @@ const MapSection = forwardRef<any, {
   }, [mapInstance, mapCenter])
   
   // Callback para cuando el mapa esté listo
-  const handleMapReady = useCallback((map: L.Map) => {
-    console.log('🗺️ MapSection: Mapa recibido y guardado en estado')
-    setMapInstance(map)
-    mapInstanceRef.current = map
-    ;(window as any).__leafletMap = map
-  }, [])
+  const handleMapReady = useCallback(
+    (map: L.Map) => {
+      setMapInstance(map)
+      mapInstanceRef.current = map
+      ;(window as any).__leafletMap = map
+      onLeafletReady?.(map)
+    },
+    [onLeafletReady],
+  )
   
   // Función auxiliar para obtener el mapa (siempre busca el más reciente)
   const getMapInstance = useCallback((): L.Map | null => {

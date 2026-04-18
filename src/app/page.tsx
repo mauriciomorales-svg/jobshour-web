@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import type { Map as LeafletMap } from 'leaflet'
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 
@@ -246,17 +247,6 @@ export default function Home() {
 
   const [userLat, setUserLat] = useState<number>(DEFAULT_MAP_LAT)
   const [userLng, setUserLng] = useState<number>(DEFAULT_MAP_LNG)
-  /** Si había otra vista guardada, remontar MapSection para que el centro inicial sea correcto (sin flyTo). */
-  const [mapSectionKey, setMapSectionKey] = useState(0)
-
-  useLayoutEffect(() => {
-    const v = readInitialMapCoords()
-    setUserLat(v.lat)
-    setUserLng(v.lng)
-    const differs =
-      Math.abs(v.lat - DEFAULT_MAP_LAT) > 1e-4 || Math.abs(v.lng - DEFAULT_MAP_LNG) > 1e-4
-    if (differs) setMapSectionKey((k) => k + 1)
-  }, [])
   const [workerCount, setWorkerCount] = useState<{ count: number; label: string } | null>(null)
   const chatNotifySeenIdsRef = useRef<Set<number>>(new Set())
   const chatNotifySubscribedIdsRef = useRef<Set<number>>(new Set())
@@ -1013,12 +1003,22 @@ export default function Home() {
     [activeCategory, fetchNearby],
   )
 
-  // Primera carga nearby (el centro visible ya viene de readInitialMapCoords + MapSection; sin flyTo).
+  /** Leaflet crea el mapa con centro fijo (Angol); aquí aplicamos localStorage sin remontar → no vuelve a Renaico al navegar. */
+  const handleLeafletMapReady = useCallback((map: LeafletMap) => {
+    const v = readInitialMapCoords()
+    map.invalidateSize()
+    map.setView([v.lat, v.lng], 15, { animate: false })
+  }, [])
+
+  // Sincroniza estado + primera carga nearby con las mismas coords que guardamos en LS (no uses solo userLat del primer render).
   useEffect(() => {
     let cancelled = false
+    const v = readInitialMapCoords()
+    setUserLat(v.lat)
+    setUserLng(v.lng)
     fetchNearbyRef.current.lastCall = 0
     queueMicrotask(() => {
-      if (!cancelled) fetchNearby()
+      if (!cancelled) fetchNearby(null, v.lat, v.lng)
     })
 
     if (navigator.geolocation) {
@@ -1312,13 +1312,12 @@ export default function Home() {
       {/* ── MAPA FULLSCREEN (always visible in background) ── */}
       <div className="absolute inset-0 pt-[180px] pb-[68px]">
         <MapSection
-          key={mapSectionKey}
           ref={mapRef}
           points={filtered}
           onPointClick={handlePointClick}
           onMapClick={handleMapClick}
           highlightedId={highlightedRequestId}
-          initialCenter={{ lat: userLat, lng: userLng }}
+          onLeafletReady={handleLeafletMapReady}
           onMapMove={handleMapViewportMove}
         />
       </div>
