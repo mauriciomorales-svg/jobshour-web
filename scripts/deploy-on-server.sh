@@ -25,6 +25,10 @@ export NODE_OPTIONS="--max-old-space-size=1536"
 # npm ci con NODE_ENV=production NO instala devDependencies → falta tailwindcss en el build
 npm ci --prefer-offline
 export NODE_ENV=production
+# Evita embeber localhost del .env.local del VPS; getPublicApiBase() también lo corrige en runtime
+export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://jobshours.com/api}"
+export NEXT_PUBLIC_PUSHER_KEY="${NEXT_PUBLIC_PUSHER_KEY:-9a309a9f35c89457ea2c}"
+export NEXT_PUBLIC_PUSHER_CLUSTER="${NEXT_PUBLIC_PUSHER_CLUSTER:-us2}"
 npm run build
 
 pm2 reload jobshour-web --update-env

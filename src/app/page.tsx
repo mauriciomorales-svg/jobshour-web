@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 
 import Logo from './components/Logo'
 import { ICON_MAP } from '@/lib/iconMap'
+import { getPublicApiBase } from '@/lib/api'
 const MapSection = dynamic(() => import('./components/MapSection'), { ssr: false })
 const ServiceRequestModal = dynamic(() => import('@/app/components/ServiceRequestModal'), { ssr: false }) as any
 const ChatPanel = dynamic(() => import('./components/ChatPanel'), { ssr: false })
@@ -96,8 +97,6 @@ interface SearchMeta {
 function formatCLP(val: number) {
   return '$' + val.toLocaleString('es-CL')
 }
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshour.dondemorales.cl').replace(/\/api$/, '')
 
 /** Mapa y búsqueda por defecto: Angol (no Renaico). `user_lat`/`user_lng` guardan GPS del perfil — no deben pisar solos el mapa. */
 const DEFAULT_MAP_LAT = -37.798
@@ -440,7 +439,7 @@ export default function Home() {
   // Fetch user profile from API
   const fetchUserProfile = useCallback(async (token: string) => {
     try {
-      const r = await fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      const r = await fetch(`${getPublicApiBase()}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
       if (!r.ok) { 
         localStorage.removeItem('auth_token')
         setUser(null)
@@ -507,7 +506,7 @@ export default function Home() {
   // Fetch worker data including categories
   const fetchWorkerData = useCallback(async (token: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/worker/me`, {
+      const res = await fetch(`${getPublicApiBase()}/api/v1/worker/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -612,7 +611,7 @@ export default function Home() {
         const savedEmail = localStorage.getItem('saved_email')
         const savedPassword = localStorage.getItem('saved_password')
         if (savedEmail && savedPassword) {
-          fetch(`${API_BASE}/api/auth/login`, {
+          fetch(`${getPublicApiBase()}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: savedEmail, password: savedPassword })
@@ -657,7 +656,7 @@ export default function Home() {
     }
 
     const sync = () => {
-      fetch(`${API_BASE}/api/v1/requests/mine`, {
+      fetch(`${getPublicApiBase()}/api/v1/requests/mine`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -687,7 +686,7 @@ export default function Home() {
             
             if (!alreadyRated && sr.worker) {
               // Verificar si ya tiene reseña
-              fetch(`${API_BASE}/api/v1/workers/${sr.worker.id}/reviews`, {
+              fetch(`${getPublicApiBase()}/api/v1/workers/${sr.worker.id}/reviews`, {
                 headers: {
                   Authorization: `Bearer ${token}`,
                 },
@@ -877,7 +876,7 @@ export default function Home() {
   // Contador workers verdes cercanos — polling cada 45s + cacheado en backend
   const fetchWorkerCount = useCallback(async (lat: number, lng: number) => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/experts/count?lat=${lat}&lng=${lng}&radius=10`)
+      const res = await fetch(`${getPublicApiBase()}/api/v1/experts/count?lat=${lat}&lng=${lng}&radius=10`)
       if (!res.ok) return
       const data = await res.json()
       setWorkerCount({ count: data.count, label: data.label })
@@ -973,7 +972,7 @@ export default function Home() {
   // Nudge ticker: fetch random nudge every 12s
   useEffect(() => {
     const fetchNudge = () => {
-      fetch(`${API_BASE}/api/v1/nudges/random`)
+      fetch(`${getPublicApiBase()}/api/v1/nudges/random`)
         .then(r => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return r.json();
@@ -999,7 +998,7 @@ export default function Home() {
 
   // Fetch categorías desde API v1
   useEffect(() => {
-    fetch(`${API_BASE}/api/v1/categories`)
+    fetch(`${getPublicApiBase()}/api/v1/categories`)
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -1078,9 +1077,9 @@ export default function Home() {
     
     // Fetch workers y demandas en paralelo
     Promise.all([
-      fetch(`${API_BASE}/api/v1/experts/nearby?${params}`, { headers, signal: abortController.signal })
+      fetch(`${getPublicApiBase()}/api/v1/experts/nearby?${params}`, { headers, signal: abortController.signal })
         .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
-      fetch(`${API_BASE}/api/v1/demand/nearby?${params}`, { headers, signal: abortController.signal })
+      fetch(`${getPublicApiBase()}/api/v1/demand/nearby?${params}`, { headers, signal: abortController.signal })
         .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
         .catch(() => ({ data: [], meta: {} })) // Si falla, continuar sin demandas
     ])
@@ -1417,7 +1416,7 @@ export default function Home() {
     const apiStatus = next === 'intermediate' ? 'listening' : next
     setStatusLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/v1/worker/status`, {
+      const res = await fetch(`${getPublicApiBase()}/api/v1/worker/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ status: apiStatus, lat: userLat || DEFAULT_MAP_LAT, lng: userLng || DEFAULT_MAP_LNG, categories: next === 'active' ? workerCategories : undefined }),
@@ -1846,7 +1845,7 @@ export default function Home() {
                       if (!auth.canInteract) { setShowLoginModal(true); toast(auth.reason === 'login' ? 'Inicia sesión para continuar' : 'Completa tu perfil', 'info'); return }
                       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
                       try {
-                        const res = await fetch(`${API_BASE}/api/v1/demand/${selectedDetail.id}/take`, {
+                        const res = await fetch(`${getPublicApiBase()}/api/v1/demand/${selectedDetail.id}/take`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         })
@@ -2034,7 +2033,7 @@ export default function Home() {
                   if (token) {
                     headers['Authorization'] = `Bearer ${token}`
                   }
-                  fetch(`${API_BASE}/api/v1/experts/${request.worker_id}`, { headers })
+                  fetch(`${getPublicApiBase()}/api/v1/experts/${request.worker_id}`, { headers })
                     .then(r => {
                       if (!r.ok) {
                         throw new Error(`HTTP ${r.status}`)
@@ -2170,7 +2169,7 @@ export default function Home() {
                     if (token) {
                       headers['Authorization'] = `Bearer ${token}`
                     }
-                    const detailRes = await fetch(`${API_BASE}/api/v1/demand/${request.id}`, { headers })
+                    const detailRes = await fetch(`${getPublicApiBase()}/api/v1/demand/${request.id}`, { headers })
                     
                     if (detailRes.ok) {
                       const detailData = await detailRes.json()
@@ -2707,7 +2706,7 @@ export default function Home() {
             if (user) {
               const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
               if (token) {
-                fetch(`${API_BASE}/api/v1/requests/mine`, {
+                fetch(`${getPublicApiBase()}/api/v1/requests/mine`, {
                   headers: { Authorization: `Bearer ${token}` },
                 })
                   .then(r => r.json())
