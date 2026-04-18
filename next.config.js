@@ -1,7 +1,17 @@
+const path = require('path')
+
 /** @type {import('next').NextConfig} */
 const isExport = process.env.NEXT_EXPORT === 'true'
 
 const nextConfig = {
+  // Asegura @/ → src/ en webpack (evita fallos de resolución en Linux / CI)
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname, 'src'),
+    }
+    return config
+  },
   // Para Capacitor/Android se exporta como archivos estáticos
   ...(isExport ? { output: 'export', distDir: '.next-android' } : {}),
   images: {
