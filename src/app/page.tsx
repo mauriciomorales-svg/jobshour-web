@@ -184,6 +184,8 @@ export default function Home() {
   const chatNotifySeenIdsRef = useRef<Set<number>>(new Set())
   const chatNotifySubscribedIdsRef = useRef<Set<number>>(new Set())
   const mapRef = useRef<{ flyTo: (latlng: [number, number], zoom: number) => Promise<boolean> } | null>(null)
+  /** Si el usuario movió el mapa a mano, no forzar flyTo a GPS/Renaico guardado (evita saltar al acercar a Angol). */
+  const mapPannedByUserRef = useRef(false)
   
   // Exponer mapRef globalmente para debugging y acceso alternativo
   useEffect(() => {
@@ -915,7 +917,9 @@ export default function Home() {
       const lng = parseFloat(savedLng)
       setUserLat(lat)
       setUserLng(lng)
-      setTimeout(() => mapRef.current?.flyTo([lat, lng], 14), 2000)
+      setTimeout(() => {
+        if (!mapPannedByUserRef.current) mapRef.current?.flyTo([lat, lng], 14)
+      }, 2000)
     } else if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -925,7 +929,9 @@ export default function Home() {
           setUserLng(lng)
           localStorage.setItem('user_lat', String(lat))
           localStorage.setItem('user_lng', String(lng))
-          setTimeout(() => mapRef.current?.flyTo([lat, lng], 14), 2000)
+          setTimeout(() => {
+            if (!mapPannedByUserRef.current) mapRef.current?.flyTo([lat, lng], 14)
+          }, 2000)
         },
         () => {
           const timer = setTimeout(() => setShowLocationPrompt(true), 2000)
@@ -1214,7 +1220,10 @@ export default function Home() {
           onMapClick={handleMapClick}
           highlightedId={highlightedRequestId}
           initialCenter={{ lat: userLat, lng: userLng }}
-          onMapMove={(lat, lng) => fetchNearby(activeCategory, lat, lng)}
+          onMapMove={(lat, lng) => {
+            mapPannedByUserRef.current = true
+            fetchNearby(activeCategory, lat, lng)
+          }}
         />
       </div>
 

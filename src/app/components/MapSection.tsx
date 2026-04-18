@@ -390,12 +390,18 @@ const MapSection = forwardRef<any, {
     isReady: () => mapInstanceRef.current !== null || getMapInstance() !== null
   }), [getMapInstance])
   
-  const centerLat = typeof initialCenter?.lat === 'number' && !isNaN(initialCenter.lat) ? initialCenter.lat : DEFAULT_CENTER[0]
-  const centerLng = typeof initialCenter?.lng === 'number' && !isNaN(initialCenter.lng) ? initialCenter.lng : DEFAULT_CENTER[1]
+  // Solo el centro del primer render: si el padre actualiza userLat/userLng (localStorage/GPS),
+  // NO pasar nuevo `center` a MapContainer — React-Leaflet recentraría y te devuelve a Renaico.
+  const centerAtMount = useRef<[number, number] | null>(null)
+  if (centerAtMount.current === null) {
+    const clat = typeof initialCenter?.lat === 'number' && !isNaN(initialCenter.lat) ? initialCenter.lat : DEFAULT_CENTER[0]
+    const clng = typeof initialCenter?.lng === 'number' && !isNaN(initialCenter.lng) ? initialCenter.lng : DEFAULT_CENTER[1]
+    centerAtMount.current = [clat, clng]
+  }
 
   return (
     <MapContainer
-      center={[centerLat, centerLng]}
+      center={centerAtMount.current}
       zoom={15}
       minZoom={10}
       maxZoom={19}
