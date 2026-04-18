@@ -253,6 +253,8 @@ export default function Home() {
   const [categories, setCategories] = useState<ApiCategory[]>([])
   const [meta, setMeta] = useState<SearchMeta | null>(null)
   const [loading, setLoading] = useState(true)
+  /** true después de la primera carga exitosa: los refrescos siguientes no muestran el splash fullscreen. */
+  const hasLoadedOnceRef = useRef(false)
   const [activeCategory, setActiveCategory] = useState<number | null>(null)
   const [selectedDetail, setSelectedDetail] = useState<ExpertDetail | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
@@ -979,8 +981,8 @@ export default function Home() {
     const abortController = new AbortController()
     fetchNearbyRef.current.abortController = abortController
     
-    // No mostrar pantalla de loading al mover el mapa
-    if (!overrideLat) setLoading(true)
+    // Solo mostrar la pantalla de carga en la primera vez; refrescos siguientes son silenciosos
+    if (!overrideLat && !hasLoadedOnceRef.current) setLoading(true)
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     
     // Usar coordenadas override (mover mapa), luego GPS usuario (ref), luego fallback
@@ -1055,11 +1057,13 @@ export default function Home() {
         // Actualizar puntos directamente
         setPoints([...workers, ...demands])
         setMeta(expertsData.meta ?? null)
+        hasLoadedOnceRef.current = true
         setLoading(false)
       })
       .catch((err) => {
         if (err?.name === 'AbortError') return // fetch cancelado, ignorar
         console.error('Error fetching experts/demands:', err);
+        hasLoadedOnceRef.current = true
         setLoading(false)
       })
   // eslint-disable-next-line react-hooks/exhaustive-deps -- usa userLatRef/userLngRef para evitar recrear en cada moveend
