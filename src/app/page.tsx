@@ -122,6 +122,25 @@ const LEGACY_MATCH_EPS = 0.025
  */
 const RENAICO_DEAD_ZONE_KM = 22
 
+/**
+ * Si el LS no tiene la marca de versión actual → borra TODAS las claves viejas de mapa.
+ * Garantiza reset aunque el browser esté sirviendo JS viejo (SW caché).
+ */
+function nukeStaleMapLS() {
+  if (typeof window === 'undefined') return
+  try {
+    if (localStorage.getItem('jobs_map_ls_ver') === '5') return
+    ;[
+      'jobs_map_view_lat_v4', 'jobs_map_view_lng_v4',
+      'jobs_map_view_lat_v3', 'jobs_map_view_lng_v3',
+      'jobs_map_view_lat_v2', 'jobs_map_view_lng_v2',
+      'jobs_map_view_lat',    'jobs_map_view_lng',
+      'jobs_map_view_lat_v1', 'jobs_map_view_lng_v1',
+    ].forEach(k => localStorage.removeItem(k))
+    localStorage.setItem('jobs_map_ls_ver', '5')
+  } catch { /* ignore */ }
+}
+
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371
   const toRad = (d: number) => (d * Math.PI) / 180
@@ -202,6 +221,7 @@ function migrateMapViewV2ToV3() {
 function readInitialMapCoords(): { lat: number; lng: number } {
   const fallback = { lat: DEFAULT_MAP_LAT, lng: DEFAULT_MAP_LNG }
   if (typeof window === 'undefined') return fallback
+  nukeStaleMapLS()       // primero: si hay datos viejos de versiones anteriores, los borra
   migrateMapViewV2ToV3()
   migrateMapViewV3ToV4()
   try {
