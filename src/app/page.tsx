@@ -122,6 +122,53 @@ const LEGACY_MATCH_EPS = 0.025
  */
 const RENAICO_DEAD_ZONE_KM = 22
 
+/** Subir en cada migración agresiva; si no coincide → nukeStaleMapLS borra datos viejos. */
+const LS_MAP_LS_VER_KEY = 'jobs_map_ls_ver'
+const LS_MAP_LS_VER = '7'
+
+/** Toda clave que pueda fijar el mapa en Renaico o en coords viejas. */
+const MAP_LS_KEYS_ALL = [
+  LS_MAP_VIEW_LAT,
+  LS_MAP_VIEW_LNG,
+  LS_MAP_VIEW_LAT_V3,
+  LS_MAP_VIEW_LNG_V3,
+  LS_MAP_VIEW_LAT_V2,
+  LS_MAP_VIEW_LNG_V2,
+  LS_MAP_VIEW_LAT_LEGACY,
+  LS_MAP_VIEW_LNG_LEGACY,
+  'jobs_map_view_lat_v1',
+  'jobs_map_view_lng_v1',
+  LS_MAP_LS_VER_KEY,
+  'user_lat',
+  'user_lng',
+] as const
+
+function clearMapLocalStorageFull() {
+  if (typeof window === 'undefined') return
+  try {
+    MAP_LS_KEYS_ALL.forEach((k) => localStorage.removeItem(k))
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Abre la app con `?reset_map=1` para volver a Angol sin consola (antes de leer el mapa). */
+function applyResetMapQueryParamOnce() {
+  if (typeof window === 'undefined') return
+  try {
+    const u = new URL(window.location.href)
+    if (u.searchParams.get('reset_map') !== '1') return
+    clearMapLocalStorageFull()
+    u.searchParams.delete('reset_map')
+    const q = u.searchParams.toString()
+    window.history.replaceState({}, '', u.pathname + (q ? `?${q}` : '') + u.hash)
+  } catch {
+    /* ignore */
+  }
+}
+
+applyResetMapQueryParamOnce()
+
 /**
  * Si el LS no tiene la marca de versión actual → borra TODAS las claves viejas de mapa.
  * Garantiza reset aunque el browser esté sirviendo JS viejo (SW caché).
@@ -129,16 +176,23 @@ const RENAICO_DEAD_ZONE_KM = 22
 function nukeStaleMapLS() {
   if (typeof window === 'undefined') return
   try {
-    if (localStorage.getItem('jobs_map_ls_ver') === '6') return
+    if (localStorage.getItem(LS_MAP_LS_VER_KEY) === LS_MAP_LS_VER) return
     ;[
-      'jobs_map_view_lat_v4', 'jobs_map_view_lng_v4',
-      'jobs_map_view_lat_v3', 'jobs_map_view_lng_v3',
-      'jobs_map_view_lat_v2', 'jobs_map_view_lng_v2',
-      'jobs_map_view_lat',    'jobs_map_view_lng',
-      'jobs_map_view_lat_v1', 'jobs_map_view_lng_v1',
-    ].forEach(k => localStorage.removeItem(k))
-    localStorage.setItem('jobs_map_ls_ver', '6')
-  } catch { /* ignore */ }
+      'jobs_map_view_lat_v4',
+      'jobs_map_view_lng_v4',
+      'jobs_map_view_lat_v3',
+      'jobs_map_view_lng_v3',
+      'jobs_map_view_lat_v2',
+      'jobs_map_view_lng_v2',
+      'jobs_map_view_lat',
+      'jobs_map_view_lng',
+      'jobs_map_view_lat_v1',
+      'jobs_map_view_lng_v1',
+    ].forEach((k) => localStorage.removeItem(k))
+    localStorage.setItem(LS_MAP_LS_VER_KEY, LS_MAP_LS_VER)
+  } catch {
+    /* ignore */
+  }
 }
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -588,14 +642,7 @@ export default function Home() {
 
   // Resetear posición del mapa — borra todos los datos de LS y recarga
   const handleResetMapLocation = () => {
-    const MAP_KEYS = [
-      'jobs_map_view_lat_v4', 'jobs_map_view_lng_v4',
-      'jobs_map_view_lat_v3', 'jobs_map_view_lng_v3',
-      'jobs_map_view_lat_v2', 'jobs_map_view_lng_v2',
-      'jobs_map_view_lat',    'jobs_map_view_lng',
-      'jobs_map_ls_ver',      'user_lat', 'user_lng',
-    ]
-    MAP_KEYS.forEach(k => localStorage.removeItem(k))
+    clearMapLocalStorageFull()
     window.location.reload()
   }
 
@@ -1135,7 +1182,7 @@ export default function Home() {
   const handleLeafletMapReady = useCallback((map: LeafletMap) => {
     const v = readInitialMapCoords()
     const lsLat = typeof window !== 'undefined' ? localStorage.getItem('jobs_map_view_lat_v4') : null
-    const lsVer = typeof window !== 'undefined' ? localStorage.getItem('jobs_map_ls_ver') : null
+    const lsVer = typeof window !== 'undefined' ? localStorage.getItem(LS_MAP_LS_VER_KEY) : null
     logMapEvent(`setView(${v.lat.toFixed(4)},${v.lng.toFixed(4)}) LS_v4=${lsLat} ver=${lsVer}`)
     map.setView([v.lat, v.lng], 15, { animate: false })
     // Interceptar setView/flyTo para rastrear movimientos inesperados
