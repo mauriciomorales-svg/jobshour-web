@@ -1145,7 +1145,6 @@ export default function Home() {
     (lat: number, lng: number) => {
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) < 0.01) return
       mapPannedByUserRef.current = true
-      logMapEvent(`moveend→save(${lat.toFixed(4)},${lng.toFixed(4)})`)
       try {
         localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
         localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
@@ -1191,27 +1190,10 @@ export default function Home() {
     )
   }, [toast])
 
-  const logMapEvent = (msg: string) => {
-    console.log('[MAP-DEBUG]', msg)
-  }
-
   const handleLeafletMapReady = useCallback((map: LeafletMap) => {
     const v = readInitialMapCoords()
-    const lsLat = typeof window !== 'undefined' ? localStorage.getItem('jobs_map_view_lat_v4') : null
-    const lsVer = typeof window !== 'undefined' ? localStorage.getItem(LS_MAP_LS_VER_KEY) : null
-    logMapEvent(`setView(${v.lat.toFixed(4)},${v.lng.toFixed(4)}) LS_v4=${lsLat} ver=${lsVer}`)
+    console.log('[map] vista inicial', v.lat.toFixed(4), v.lng.toFixed(4))
     map.setView([v.lat, v.lng], 15, { animate: false })
-    // Interceptar setView/flyTo para rastrear movimientos inesperados
-    const origSetView = map.setView.bind(map)
-    const origFlyTo = map.flyTo.bind(map)
-    ;(map as any).setView = (latlng: any, zoom: any, opts: any) => {
-      logMapEvent(`setView(${JSON.stringify(latlng)},${zoom})`)
-      return origSetView(latlng, zoom, opts)
-    }
-    ;(map as any).flyTo = (latlng: any, zoom: any, opts: any) => {
-      logMapEvent(`flyTo(${JSON.stringify(latlng)},${zoom})`)
-      return origFlyTo(latlng, zoom, opts)
-    }
     requestAnimationFrame(() => map.invalidateSize())
   }, [])
 
