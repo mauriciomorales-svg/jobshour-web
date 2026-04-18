@@ -1085,8 +1085,8 @@ export default function Home() {
     (lat: number, lng: number) => {
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) < 0.01) return
       mapPannedByUserRef.current = true
+      logMapEvent(`moveend→save(${lat.toFixed(4)},${lng.toFixed(4)})`)
       try {
-        // Guardar posición real del usuario — nukeStaleMapLS ya manejó datos viejos de Renaico al inicio.
         localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
         localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
       } catch {
@@ -1106,10 +1106,35 @@ export default function Home() {
     [activeCategory, fetchNearby],
   )
 
-  /** Aplica solo coords ya filtradas (readInitial escapa corredor Renaico). */
+  const mapDebugRef = useRef<HTMLDivElement | null>(null)
+  const logMapEvent = (msg: string) => {
+    console.error('[MAP-DEBUG] ' + msg)
+    if (mapDebugRef.current) {
+      mapDebugRef.current.insertAdjacentHTML('afterbegin',
+        `<div style="font-size:10px;border-bottom:1px solid #333;padding:1px 0">${msg}</div>`)
+      // Mantener solo 8 líneas
+      const children = mapDebugRef.current.children
+      while (children.length > 8) mapDebugRef.current.removeChild(children[children.length - 1])
+    }
+  }
+
   const handleLeafletMapReady = useCallback((map: LeafletMap) => {
     const v = readInitialMapCoords()
+    const lsLat = typeof window !== 'undefined' ? localStorage.getItem('jobs_map_view_lat_v4') : null
+    const lsVer = typeof window !== 'undefined' ? localStorage.getItem('jobs_map_ls_ver') : null
+    logMapEvent(`setView(${v.lat.toFixed(4)},${v.lng.toFixed(4)}) LS_v4=${lsLat} ver=${lsVer}`)
     map.setView([v.lat, v.lng], 15, { animate: false })
+    // Interceptar setView/flyTo para rastrear movimientos inesperados
+    const origSetView = map.setView.bind(map)
+    const origFlyTo = map.flyTo.bind(map)
+    ;(map as any).setView = (latlng: any, zoom: any, opts: any) => {
+      logMapEvent(`setView(${JSON.stringify(latlng)},${zoom})`)
+      return origSetView(latlng, zoom, opts)
+    }
+    ;(map as any).flyTo = (latlng: any, zoom: any, opts: any) => {
+      logMapEvent(`flyTo(${JSON.stringify(latlng)},${zoom})`)
+      return origFlyTo(latlng, zoom, opts)
+    }
     requestAnimationFrame(() => map.invalidateSize())
   }, [])
 
@@ -2742,6 +2767,17 @@ export default function Home() {
           />
         </div>
       )}
+
+      {/* ── DEBUG MAP PANEL (quitar cuando se resuelva el bug) ── */}
+      <div
+        ref={mapDebugRef}
+        style={{
+          position:'fixed', top:0, right:0, zIndex:99999,
+          background:'rgba(0,0,0,0.85)', color:'#0f0', fontFamily:'monospace',
+          padding:'4px 6px', maxWidth:'280px', minWidth:'180px', maxHeight:'120px',
+          overflow:'hidden', fontSize:'9px', pointerEvents:'none',
+        }}
+      />
 
       {/* ── BOTTOM TAB NAVIGATION ── */}
       <BottomTabBar
