@@ -5,6 +5,12 @@ on:
     branches: [main, master, develop]
   pull_request:
     branches: [main, master]
+  # Botón "Run workflow" en GitHub → Actions → CI — JobsHour Web (sin push ni SSH manual)
+  workflow_dispatch:
+
+concurrency:
+  group: jobshour-web-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   lint-and-build:
@@ -36,7 +42,9 @@ jobs:
   deploy:
     needs: lint-and-build
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
+    if: |
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
 
     steps:
       - name: Checkout code
@@ -58,10 +66,7 @@ jobs:
             export NODE_OPTIONS="--max-old-space-size=1536"
             npm ci --prefer-offline
             npm run build
-            echo "=== BUILD OK, reiniciando procesos Next.js ==="
-            pm2 reload jobshour-web --update-env || true
-            pm2 reload jobshours-web --update-env || true
-            pm2 reload jobshours --update-env || true
-            pm2 reload nextjs --update-env || true
+            echo "=== BUILD OK, reiniciando jobshour-web ==="
+            pm2 reload jobshour-web --update-env
             echo "=== DEPLOY OK: $(date) ==="
-            pm2 list | grep -E "(online|stopped|errored)" || true
+            pm2 list
