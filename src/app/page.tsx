@@ -217,29 +217,39 @@ function migrateMapViewV2ToV3() {
   }
 }
 
-/** Centro inicial: LS v4 / migraciones; siempre escapa zona Renaico-vieja; otras ciudades se respetan. */
+/**
+ * Centro inicial del mapa.
+ * - nukeStaleMapLS borra datos de versiones anteriores (primera carga → Angol por defecto).
+ * - Si el usuario guardó v4 explícitamente (paneando), se respeta sin escape (puede ser Renaico).
+ * - Datos legacy (pre-nukeStaleMapLS) pasan por escapeRenaicoDeadZone como último recurso.
+ */
 function readInitialMapCoords(): { lat: number; lng: number } {
   const fallback = { lat: DEFAULT_MAP_LAT, lng: DEFAULT_MAP_LNG }
   if (typeof window === 'undefined') return fallback
-  nukeStaleMapLS()       // primero: si hay datos viejos de versiones anteriores, los borra
+  nukeStaleMapLS()       // borra datos viejos de versiones anteriores; primera carga abre en Angol
   migrateMapViewV2ToV3()
   migrateMapViewV3ToV4()
   try {
-    const readPair = (latKey: string, lngKey: string): { lat: number; lng: number } | null => {
+    const readRaw = (latKey: string, lngKey: string): { lat: number; lng: number } | null => {
       const ml = localStorage.getItem(latKey)
       const mg = localStorage.getItem(lngKey)
       if (!ml || !mg) return null
       const lat = parseFloat(ml)
       const lng = parseFloat(mg)
       if (Number.isNaN(lat) || Number.isNaN(lng)) return null
-      return normalizeStoredMapCoords(lat, lng)
+      if (Math.abs(lat) < 1 || Math.abs(lat) > 90) return null
+      return { lat, lng }
     }
 
-    let cand = readPair(LS_MAP_VIEW_LAT, LS_MAP_VIEW_LNG)
-    if (!cand) cand = readPair(LS_MAP_VIEW_LAT_LEGACY, LS_MAP_VIEW_LNG_LEGACY)
-    if (!cand) return fallback
+    // v4 = guardado por el usuario en esta versión: respetar sin escape (incluso Renaico)
+    const v4 = readRaw(LS_MAP_VIEW_LAT, LS_MAP_VIEW_LNG)
+    if (v4) return v4
 
-    const escaped = escapeRenaicoDeadZone(cand.lat, cand.lng)
+    // Legacy (pre-nukeStaleMapLS): aplicar escape por si acaso queda algún dato viejo de Renaico
+    const legacy = readRaw(LS_MAP_VIEW_LAT_LEGACY, LS_MAP_VIEW_LNG_LEGACY)
+    if (!legacy) return fallback
+    const norm = normalizeStoredMapCoords(legacy.lat, legacy.lng)
+    const escaped = escapeRenaicoDeadZone(norm.lat, norm.lng)
     persistMapViewStorage(escaped.lat, escaped.lng)
     return escaped
   } catch {
@@ -1075,10 +1085,10 @@ export default function Home() {
     (lat: number, lng: number) => {
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) < 0.01) return
       mapPannedByUserRef.current = true
-      const safeForStorage = escapeRenaicoDeadZone(lat, lng)
       try {
-        localStorage.setItem(LS_MAP_VIEW_LAT, String(safeForStorage.lat))
-        localStorage.setItem(LS_MAP_VIEW_LNG, String(safeForStorage.lng))
+        // Guardar posición real del usuario — nukeStaleMapLS ya manejó datos viejos de Renaico al inicio.
+        localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
+        localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
       } catch {
         /* ignore */
       }
