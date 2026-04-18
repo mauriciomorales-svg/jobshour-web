@@ -59,14 +59,5 @@ jobs:
           command_timeout: 15m
           script: |
             set -e
-            cd /var/www/jobshour-web
-            git fetch origin
-            git checkout master
-            git reset --hard origin/master
-            export NODE_OPTIONS="--max-old-space-size=1536"
-            npm ci --prefer-offline
-            npm run build
-            echo "=== BUILD OK, reiniciando jobshour-web ==="
-            pm2 reload jobshour-web --update-env
-            echo "=== DEPLOY OK: $(date) ==="
-            pm2 list
+            # Misma lógica que scripts/deploy-on-server.sh (evita build distinto CI vs manual)
+            bash /var/www/jobshour-web/scripts/deploy-on-server.sh
