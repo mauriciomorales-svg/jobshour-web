@@ -1166,6 +1166,31 @@ export default function Home() {
     [activeCategory, fetchNearby],
   )
 
+  /** Centrar el mapa en el GPS del dispositivo (la persona que usa la sesión). moveend → handleMapViewportMove. */
+  const handleCenterOnMyLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast('Tu navegador no permite ubicación', 'error')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        try {
+          localStorage.setItem('user_lat', String(lat))
+          localStorage.setItem('user_lng', String(lng))
+        } catch {
+          /* ignore */
+        }
+        void mapRef.current?.flyTo([lat, lng], 15)
+      },
+      () => {
+        toast('No se pudo obtener la ubicación. Activa el GPS y revisa permisos.', 'error')
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 60_000 },
+    )
+  }, [toast])
+
   const mapDebugRef = useRef<HTMLDivElement | null>(null)
   const logMapEvent = (msg: string) => {
     console.error('[MAP-DEBUG] ' + msg)
@@ -1510,6 +1535,20 @@ export default function Home() {
           onLeafletReady={handleLeafletMapReady}
           onMapMove={handleMapViewportMove}
         />
+        {activeTab === 'map' && (
+          <button
+            type="button"
+            onClick={handleCenterOnMyLocation}
+            className="absolute left-4 bottom-6 z-[155] w-12 h-12 rounded-2xl bg-white/95 shadow-lg border border-slate-200/90 flex items-center justify-center text-teal-600 hover:bg-teal-50 active:scale-95 transition pointer-events-auto"
+            title="Ir a mi ubicación (GPS)"
+            aria-label="Centrar mapa en mi ubicación"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* ── MENSAJE MAPA VACÍO ── */}
