@@ -48,11 +48,15 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 15m
           script: |
+            set -e
             cd /var/www/jobshour-web
             git fetch origin
             git checkout master
-            git pull origin master
-            npm ci
+            git reset --hard origin/master
+            export NODE_OPTIONS="--max-old-space-size=1536"
+            npm ci --prefer-offline
             npm run build
-            pm2 restart jobshour-web
+            pm2 reload jobshour-web --update-env
+            echo "=== DEPLOY OK: $(date) ==="
