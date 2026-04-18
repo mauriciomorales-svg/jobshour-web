@@ -1,0 +1,2 @@
+# Scripts bash: siempre LF (evita error $'\r' en Linux al desplegar desde Windows)
+*.sh text eol=lf
