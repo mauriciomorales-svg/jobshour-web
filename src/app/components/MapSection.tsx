@@ -248,18 +248,17 @@ function MapMoveHandler({ onMove }: { onMove: (lat: number, lng: number) => void
 }
 
 // Componente para exponer la instancia del mapa
+/** Solo depender de `map`: si `onMapReady` cambia de identidad, NO volver a llamar (evita setView repetido → te devuelve a Renaico). */
 function MapController({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
   const map = useMap()
-  
+  const onMapReadyRef = useRef(onMapReady)
+  onMapReadyRef.current = onMapReady
+
   useEffect(() => {
-    if (map) {
-      // No borrar marcadores aquí: MapMarkers usa <Marker /> y react-leaflet registra sus
-      // capas como L.Marker; eliminarlas en este efecto deja el mapa sin pines (p. ej. Angol).
-      console.log('🗺️ MapController: Mapa inicializado, notificando...')
-      onMapReady(map)
-    }
-  }, [map, onMapReady])
-  
+    if (!map) return
+    onMapReadyRef.current(map)
+  }, [map])
+
   return null
 }
 
@@ -294,16 +293,16 @@ const MapSection = forwardRef<any, {
     }
   }, [mapInstance, mapCenter])
   
-  // Callback para cuando el mapa esté listo
-  const handleMapReady = useCallback(
-    (map: L.Map) => {
-      setMapInstance(map)
-      mapInstanceRef.current = map
-      ;(window as any).__leafletMap = map
-      onLeafletReady?.(map)
-    },
-    [onLeafletReady],
-  )
+  const onLeafletReadyRef = useRef(onLeafletReady)
+  onLeafletReadyRef.current = onLeafletReady
+
+  // Identidad estable: MapController solo llama una vez por instancia de mapa.
+  const handleMapReady = useCallback((map: L.Map) => {
+    setMapInstance(map)
+    mapInstanceRef.current = map
+    ;(window as any).__leafletMap = map
+    onLeafletReadyRef.current?.(map)
+  }, [])
   
   // Función auxiliar para obtener el mapa (siempre busca el más reciente)
   const getMapInstance = useCallback((): L.Map | null => {

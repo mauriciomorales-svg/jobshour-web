@@ -102,15 +102,18 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshour.dondemora
 /** Mapa y búsqueda por defecto: Angol (no Renaico). `user_lat`/`user_lng` guardan GPS del perfil — no deben pisar solos el mapa. */
 const DEFAULT_MAP_LAT = -37.798
 const DEFAULT_MAP_LNG = -72.708
-/** v2: al subir una versión nueva al servidor, los navegadores dejan de usar centros viejos atascados en Renaico. */
-const LS_MAP_VIEW_LAT = 'jobs_map_view_lat_v2'
-const LS_MAP_VIEW_LNG = 'jobs_map_view_lng_v2'
+/** v3: migración desde v2 para limpiar vistas que seguían atadas a Renaico en localStorage. */
+const LS_MAP_VIEW_LAT = 'jobs_map_view_lat_v3'
+const LS_MAP_VIEW_LNG = 'jobs_map_view_lng_v3'
+const LS_MAP_VIEW_LAT_V2 = 'jobs_map_view_lat_v2'
+const LS_MAP_VIEW_LNG_V2 = 'jobs_map_view_lng_v2'
 const LS_MAP_VIEW_LAT_LEGACY = 'jobs_map_view_lat'
 const LS_MAP_VIEW_LNG_LEGACY = 'jobs_map_view_lng'
 /** Pixel-default histórico de la app (~Plaza Renaico). Solo eso migramos a Angol — no todo un radio en km (había gente real en Renaico). */
 const LEGACY_RENAICO_LAT = -37.6672
 const LEGACY_RENAICO_LNG = -72.573
-const LEGACY_MATCH_EPS = 0.003
+/** ~2–3 km: el antiguo default en LS no debe seguir anclando el mapa al centro de Renaico. */
+const LEGACY_MATCH_EPS = 0.025
 
 function normalizeStoredMapCoords(lat: number, lng: number): { lat: number; lng: number } {
   if (
@@ -126,6 +129,8 @@ function persistMapViewStorage(lat: number, lng: number) {
   try {
     localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
     localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
+    localStorage.removeItem(LS_MAP_VIEW_LAT_V2)
+    localStorage.removeItem(LS_MAP_VIEW_LNG_V2)
     localStorage.removeItem(LS_MAP_VIEW_LAT_LEGACY)
     localStorage.removeItem(LS_MAP_VIEW_LNG_LEGACY)
   } catch {
@@ -133,10 +138,27 @@ function persistMapViewStorage(lat: number, lng: number) {
   }
 }
 
-/** Centro inicial: vista v2, migración desde claves viejas, o Angol. */
+/** Copia v2 → v3 una vez si v3 está vacío (conserva la última vista del usuario). */
+function migrateMapViewV2ToV3() {
+  if (typeof window === 'undefined') return
+  try {
+    if (localStorage.getItem(LS_MAP_VIEW_LAT)) return
+    const lat = localStorage.getItem(LS_MAP_VIEW_LAT_V2)
+    const lng = localStorage.getItem(LS_MAP_VIEW_LNG_V2)
+    if (lat && lng) {
+      localStorage.setItem(LS_MAP_VIEW_LAT, lat)
+      localStorage.setItem(LS_MAP_VIEW_LNG, lng)
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Centro inicial: vista v3 (y migraciones), o Angol. */
 function readInitialMapCoords(): { lat: number; lng: number } {
   const fallback = { lat: DEFAULT_MAP_LAT, lng: DEFAULT_MAP_LNG }
   if (typeof window === 'undefined') return fallback
+  migrateMapViewV2ToV3()
   try {
     const readPair = (latKey: string, lngKey: string): { lat: number; lng: number } | null => {
       const ml = localStorage.getItem(latKey)
@@ -1003,11 +1025,11 @@ export default function Home() {
     [activeCategory, fetchNearby],
   )
 
-  /** Leaflet crea el mapa con centro fijo (Angol); aquí aplicamos localStorage sin remontar → no vuelve a Renaico al navegar. */
+  /** Leaflet crea el mapa con centro fijo (Angol); aplicamos LS (invalidateSize después del setView para no mover el centro). */
   const handleLeafletMapReady = useCallback((map: LeafletMap) => {
     const v = readInitialMapCoords()
-    map.invalidateSize()
     map.setView([v.lat, v.lng], 15, { animate: false })
+    requestAnimationFrame(() => map.invalidateSize())
   }, [])
 
   // Sincroniza estado + primera carga nearby con las mismas coords que guardamos en LS (no uses solo userLat del primer render).
