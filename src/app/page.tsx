@@ -129,7 +129,7 @@ const RENAICO_DEAD_ZONE_KM = 22
 function nukeStaleMapLS() {
   if (typeof window === 'undefined') return
   try {
-    if (localStorage.getItem('jobs_map_ls_ver') === '5') return
+    if (localStorage.getItem('jobs_map_ls_ver') === '6') return
     ;[
       'jobs_map_view_lat_v4', 'jobs_map_view_lng_v4',
       'jobs_map_view_lat_v3', 'jobs_map_view_lng_v3',
@@ -137,7 +137,7 @@ function nukeStaleMapLS() {
       'jobs_map_view_lat',    'jobs_map_view_lng',
       'jobs_map_view_lat_v1', 'jobs_map_view_lng_v1',
     ].forEach(k => localStorage.removeItem(k))
-    localStorage.setItem('jobs_map_ls_ver', '5')
+    localStorage.setItem('jobs_map_ls_ver', '6')
   } catch { /* ignore */ }
 }
 
@@ -241,9 +241,10 @@ function readInitialMapCoords(): { lat: number; lng: number } {
       return { lat, lng }
     }
 
-    // v4 = guardado por el usuario en esta versión: respetar sin escape (incluso Renaico)
+    // v4 = guardado por el usuario en esta versión: respetar sin escape (incluso Renaico),
+    // EXCEPTO si es exactamente el ancla hardcodeada (-37.6672,-72.573) que guardó código viejo.
     const v4 = readRaw(LS_MAP_VIEW_LAT, LS_MAP_VIEW_LNG)
-    if (v4) return v4
+    if (v4) return normalizeStoredMapCoords(v4.lat, v4.lng)
 
     // Legacy (pre-nukeStaleMapLS): aplicar escape por si acaso queda algún dato viejo de Renaico
     const legacy = readRaw(LS_MAP_VIEW_LAT_LEGACY, LS_MAP_VIEW_LNG_LEGACY)
