@@ -286,12 +286,6 @@ const MapSection = forwardRef<any, {
     mapInstanceRef.current = mapInstance
   }, [mapInstance])
   
-  useEffect(() => {
-    if (mapInstance && mapCenter) {
-      console.log('🗺️ Centrando mapa en:', mapCenter)
-      mapInstance.flyTo([mapCenter.lat, mapCenter.lng], mapCenter.zoom, { duration: 1.5 })
-    }
-  }, [mapInstance, mapCenter])
   
   const onLeafletReadyRef = useRef(onLeafletReady)
   onLeafletReadyRef.current = onLeafletReady

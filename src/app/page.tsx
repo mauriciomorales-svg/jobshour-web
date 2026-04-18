@@ -116,8 +116,11 @@ const LEGACY_RENAICO_LAT = -37.6672
 const LEGACY_RENAICO_LNG = -72.573
 /** Coincidencia numérica con el pixel viejo en LS. */
 const LEGACY_MATCH_EPS = 0.025
-/** km desde el ancla Renaico: por debajo = consideramos “atascado” y abrimos Angol (~15 km a Angol → no afecta ir a Angol). */
-const RENAICO_DEAD_ZONE_KM = 10
+/**
+ * Todo el corredor antiguo Renaico ↔ Angol (~19 km). Por debajo = guardamos/abrimos Angol centro.
+ * Con 10 km seguían quedando puntos “al medio” y al recargar parecía que volvías a Renaico.
+ */
+const RENAICO_DEAD_ZONE_KM = 22
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371
@@ -307,6 +310,8 @@ export default function Home() {
 
   const [userLat, setUserLat] = useState<number>(DEFAULT_MAP_LAT)
   const [userLng, setUserLng] = useState<number>(DEFAULT_MAP_LNG)
+  const userLatRef = useRef<number>(DEFAULT_MAP_LAT)
+  const userLngRef = useRef<number>(DEFAULT_MAP_LNG)
   const [workerCount, setWorkerCount] = useState<{ count: number; label: string } | null>(null)
   const chatNotifySeenIdsRef = useRef<Set<number>>(new Set())
   const chatNotifySubscribedIdsRef = useRef<Set<number>>(new Set())
@@ -763,7 +768,7 @@ export default function Home() {
             pos: e.lat && e.lng ? { lat: e.lat, lng: e.lng } : p.pos,
           }
         }))
-        fetchWorkerCount(userLat, userLng)
+        fetchWorkerCount(userLatRef.current, userLngRef.current)
       })
     })
 
@@ -773,7 +778,8 @@ export default function Home() {
         try { echo.leave('workers') } catch { /* ignore */ }
       }
     }
-  }, [userLat, userLng])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- no necesita reconectar cuando el usuario mueve el mapa
+  }, [])
 
   // Contador workers verdes cercanos — polling cada 45s + cacheado en backend
   const fetchWorkerCount = useCallback(async (lat: number, lng: number) => {
@@ -957,9 +963,9 @@ export default function Home() {
     if (!overrideLat) setLoading(true)
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     
-    // Usar coordenadas override (mover mapa), luego GPS usuario, luego fallback
-    const lat = overrideLat ?? userLat ?? DEFAULT_MAP_LAT
-    const lng = overrideLng ?? userLng ?? DEFAULT_MAP_LNG
+    // Usar coordenadas override (mover mapa), luego GPS usuario (ref), luego fallback
+    const lat = overrideLat ?? userLatRef.current ?? DEFAULT_MAP_LAT
+    const lng = overrideLng ?? userLngRef.current ?? DEFAULT_MAP_LNG
     
     
     const params = new URLSearchParams({
@@ -1036,7 +1042,8 @@ export default function Home() {
         console.error('Error fetching experts/demands:', err);
         setLoading(false)
       })
-  }, [userLat, userLng, user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- usa userLatRef/userLngRef para evitar recrear en cada moveend
+  }, [user])
 
   const mapViewportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -1044,13 +1051,15 @@ export default function Home() {
     (lat: number, lng: number) => {
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) < 0.01) return
       mapPannedByUserRef.current = true
-      // Guardar vista y estado al instante: si el mapa se remonta (React/Strict), el centro no vuelve a Renaico/Angol.
+      const safeForStorage = escapeRenaicoDeadZone(lat, lng)
       try {
-        localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
-        localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
+        localStorage.setItem(LS_MAP_VIEW_LAT, String(safeForStorage.lat))
+        localStorage.setItem(LS_MAP_VIEW_LNG, String(safeForStorage.lng))
       } catch {
         /* ignore */
       }
+      userLatRef.current = lat
+      userLngRef.current = lng
       setUserLat(lat)
       setUserLng(lng)
 
@@ -1063,7 +1072,7 @@ export default function Home() {
     [activeCategory, fetchNearby],
   )
 
-  /** Leaflet crea el mapa con centro fijo (Angol); aplicamos LS (invalidateSize después del setView para no mover el centro). */
+  /** Aplica solo coords ya filtradas (readInitial escapa corredor Renaico). */
   const handleLeafletMapReady = useCallback((map: LeafletMap) => {
     const v = readInitialMapCoords()
     map.setView([v.lat, v.lng], 15, { animate: false })
@@ -1074,6 +1083,8 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false
     const v = readInitialMapCoords()
+    userLatRef.current = v.lat
+    userLngRef.current = v.lng
     setUserLat(v.lat)
     setUserLng(v.lng)
     fetchNearbyRef.current.lastCall = 0
