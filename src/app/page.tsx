@@ -102,18 +102,42 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshour.dondemora
 /** Mapa y búsqueda por defecto: Angol (no Renaico). `user_lat`/`user_lng` guardan GPS del perfil — no deben pisar solos el mapa. */
 const DEFAULT_MAP_LAT = -37.798
 const DEFAULT_MAP_LNG = -72.708
-/** v3: migración desde v2 para limpiar vistas que seguían atadas a Renaico en localStorage. */
-const LS_MAP_VIEW_LAT = 'jobs_map_view_lat_v3'
-const LS_MAP_VIEW_LNG = 'jobs_map_view_lng_v3'
+/** v4: nueva capa de claves; migración desde v3. */
+const LS_MAP_VIEW_LAT = 'jobs_map_view_lat_v4'
+const LS_MAP_VIEW_LNG = 'jobs_map_view_lng_v4'
+const LS_MAP_VIEW_LAT_V3 = 'jobs_map_view_lat_v3'
+const LS_MAP_VIEW_LNG_V3 = 'jobs_map_view_lng_v3'
 const LS_MAP_VIEW_LAT_V2 = 'jobs_map_view_lat_v2'
 const LS_MAP_VIEW_LNG_V2 = 'jobs_map_view_lng_v2'
 const LS_MAP_VIEW_LAT_LEGACY = 'jobs_map_view_lat'
 const LS_MAP_VIEW_LNG_LEGACY = 'jobs_map_view_lng'
-/** Pixel-default histórico de la app (~Plaza Renaico). Solo eso migramos a Angol — no todo un radio en km (había gente real en Renaico). */
+/** Antiguo ancla de la app (plaza Renaico). Si la vista guardada sigue cerca, abrimos en Angol para poder ir a otra ciudad. */
 const LEGACY_RENAICO_LAT = -37.6672
 const LEGACY_RENAICO_LNG = -72.573
-/** ~2–3 km: el antiguo default en LS no debe seguir anclando el mapa al centro de Renaico. */
+/** Coincidencia numérica con el pixel viejo en LS. */
 const LEGACY_MATCH_EPS = 0.025
+/** km desde el ancla Renaico: por debajo = consideramos “atascado” y abrimos Angol (~15 km a Angol → no afecta ir a Angol). */
+const RENAICO_DEAD_ZONE_KM = 10
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
+}
+
+/** Vista guardada demasiado pegada al antiguo centro Renaico → Angol (resto de ciudades no toca). */
+function escapeRenaicoDeadZone(lat: number, lng: number): { lat: number; lng: number } {
+  const d = haversineKm(lat, lng, LEGACY_RENAICO_LAT, LEGACY_RENAICO_LNG)
+  if (d <= RENAICO_DEAD_ZONE_KM) {
+    return { lat: DEFAULT_MAP_LAT, lng: DEFAULT_MAP_LNG }
+  }
+  return { lat, lng }
+}
 
 function normalizeStoredMapCoords(lat: number, lng: number): { lat: number; lng: number } {
   if (
@@ -129,6 +153,8 @@ function persistMapViewStorage(lat: number, lng: number) {
   try {
     localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
     localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
+    localStorage.removeItem(LS_MAP_VIEW_LAT_V3)
+    localStorage.removeItem(LS_MAP_VIEW_LNG_V3)
     localStorage.removeItem(LS_MAP_VIEW_LAT_V2)
     localStorage.removeItem(LS_MAP_VIEW_LNG_V2)
     localStorage.removeItem(LS_MAP_VIEW_LAT_LEGACY)
@@ -138,13 +164,12 @@ function persistMapViewStorage(lat: number, lng: number) {
   }
 }
 
-/** Copia v2 → v3 una vez si v3 está vacío (conserva la última vista del usuario). */
-function migrateMapViewV2ToV3() {
+function migrateMapViewV3ToV4() {
   if (typeof window === 'undefined') return
   try {
     if (localStorage.getItem(LS_MAP_VIEW_LAT)) return
-    const lat = localStorage.getItem(LS_MAP_VIEW_LAT_V2)
-    const lng = localStorage.getItem(LS_MAP_VIEW_LNG_V2)
+    const lat = localStorage.getItem(LS_MAP_VIEW_LAT_V3)
+    const lng = localStorage.getItem(LS_MAP_VIEW_LNG_V3)
     if (lat && lng) {
       localStorage.setItem(LS_MAP_VIEW_LAT, lat)
       localStorage.setItem(LS_MAP_VIEW_LNG, lng)
@@ -154,11 +179,28 @@ function migrateMapViewV2ToV3() {
   }
 }
 
-/** Centro inicial: vista v3 (y migraciones), o Angol. */
+/** Copia v2 → v3 si aún existe (cadena antigua). */
+function migrateMapViewV2ToV3() {
+  if (typeof window === 'undefined') return
+  try {
+    if (localStorage.getItem(LS_MAP_VIEW_LAT_V3)) return
+    const lat = localStorage.getItem(LS_MAP_VIEW_LAT_V2)
+    const lng = localStorage.getItem(LS_MAP_VIEW_LNG_V2)
+    if (lat && lng) {
+      localStorage.setItem(LS_MAP_VIEW_LAT_V3, lat)
+      localStorage.setItem(LS_MAP_VIEW_LNG_V3, lng)
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Centro inicial: LS v4 / migraciones; siempre escapa zona Renaico-vieja; otras ciudades se respetan. */
 function readInitialMapCoords(): { lat: number; lng: number } {
   const fallback = { lat: DEFAULT_MAP_LAT, lng: DEFAULT_MAP_LNG }
   if (typeof window === 'undefined') return fallback
   migrateMapViewV2ToV3()
+  migrateMapViewV3ToV4()
   try {
     const readPair = (latKey: string, lngKey: string): { lat: number; lng: number } | null => {
       const ml = localStorage.getItem(latKey)
@@ -170,17 +212,13 @@ function readInitialMapCoords(): { lat: number; lng: number } {
       return normalizeStoredMapCoords(lat, lng)
     }
 
-    const fromV2 = readPair(LS_MAP_VIEW_LAT, LS_MAP_VIEW_LNG)
-    if (fromV2) {
-      persistMapViewStorage(fromV2.lat, fromV2.lng)
-      return fromV2
-    }
+    let cand = readPair(LS_MAP_VIEW_LAT, LS_MAP_VIEW_LNG)
+    if (!cand) cand = readPair(LS_MAP_VIEW_LAT_LEGACY, LS_MAP_VIEW_LNG_LEGACY)
+    if (!cand) return fallback
 
-    const fromLegacy = readPair(LS_MAP_VIEW_LAT_LEGACY, LS_MAP_VIEW_LNG_LEGACY)
-    if (fromLegacy) {
-      persistMapViewStorage(fromLegacy.lat, fromLegacy.lng)
-      return fromLegacy
-    }
+    const escaped = escapeRenaicoDeadZone(cand.lat, cand.lng)
+    persistMapViewStorage(escaped.lat, escaped.lng)
+    return escaped
   } catch {
     /* ignore */
   }
