@@ -1,11 +1,13 @@
 'use client'
 
+import Link from 'next/link'
+
 export default function TerminosPage() {
   return (
     <div className="min-h-screen bg-white">
       <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-8 px-6 border-b border-slate-700/50">
         <div className="max-w-3xl mx-auto">
-          <a href="/" className="text-amber-200/90 text-sm hover:text-amber-100 hover:underline">← Volver</a>
+          <Link href="/" className="text-amber-200/90 text-sm hover:text-amber-100 hover:underline">← Volver</Link>
           <h1 className="text-3xl font-bold mt-4">Términos de Servicio</h1>
           <p className="text-slate-300 mt-2">Última actualización: 19 de febrero de 2026</p>
         </div>

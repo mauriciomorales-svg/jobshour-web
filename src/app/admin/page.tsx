@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { apiFetch } from '@/lib/api'
 import { emptyStateCopy } from '@/lib/userFacingCopy'
 
@@ -215,7 +216,7 @@ export default function AdminPage() {
         <div className="bg-gray-900 p-8 rounded-2xl border border-gray-800 text-center">
           <h1 className="text-2xl font-bold text-white mb-4">🔒 Admin Panel</h1>
           <p className="text-gray-400 mb-4">Inicia sesión en JobsHours primero</p>
-          <a href="/" className="text-amber-400 underline hover:text-amber-300">Ir al inicio</a>
+          <Link href="/" className="text-amber-400 underline hover:text-amber-300">Ir al inicio</Link>
         </div>
       </div>
     )
@@ -251,7 +252,7 @@ export default function AdminPage() {
           <span className="text-2xl">⚡</span>
           <h1 className="text-xl font-bold">JobsHours Admin</h1>
         </div>
-        <a href="/" className="text-sm text-gray-400 hover:text-white">← Volver al mapa</a>
+        <Link href="/" className="text-sm text-gray-400 hover:text-white">← Volver al mapa</Link>
       </header>
 
       <div className="flex">

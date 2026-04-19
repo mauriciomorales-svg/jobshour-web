@@ -7,6 +7,8 @@ node_modules/
 /.next/
 /.next-android/
 /out/
+# build:android mueve app/api aquí durante next export (no commitear)
+.stash-export-app-api/
 
 # production
 /build
