@@ -1,14 +1,17 @@
 # Desde tu PC (PowerShell), sin GitHub Actions:
 #   cd c:\wamp64\www\jobshour-web
 #   .\scripts\deploy-from-windows.ps1 -Server "IP_O_DOMINIO"
+# Alias definido en ~/.ssh/config (Host jobshours-droplet + IdentityFile):
+#   .\scripts\deploy-from-windows.ps1 -SshConfigHost "jobshours-droplet"
 # Usuario distinto de root:
 #   .\scripts\deploy-from-windows.ps1 -Server "IP" -User "ubuntu"
 # Rama (debe existir en origin en el VPS):
 #   .\scripts\deploy-from-windows.ps1 -Server "IP" -Branch "main"
 param(
-  [Parameter(Mandatory = $true)][string]$Server,
+  [string]$Server = "",
   [string]$User = "root",
-  [string]$Branch = "master"
+  [string]$Branch = "master",
+  [string]$SshConfigHost = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,11 +24,24 @@ if (-not (Test-Path -LiteralPath $scriptPath)) {
 $body = [System.IO.File]::ReadAllText($scriptPath)
 $body = $body -replace "`r`n", "`n"
 $body = $body -replace "`r", "`n"
+$body = $body.TrimEnd() + "`n"
 
 $qBranch = $Branch -replace "'", "'\''"
-$body = "export DEPLOY_BRANCH='$qBranch'`n$body"
+$body = ("export DEPLOY_BRANCH='$qBranch'`n" + $body).TrimEnd() + "`n"
 
-$target = "${User}@${Server}"
+if ($SshConfigHost -ne "") {
+  $target = $SshConfigHost
+} elseif ($Server -ne "") {
+  $target = "${User}@${Server}"
+} else {
+  throw "Indica -Server 'host_o_ip' o -SshConfigHost 'alias' (ver ~/.ssh/config)."
+}
+
 Write-Host "Conectando a $target y ejecutando deploy (rama: $Branch)..."
-$body | ssh -o ConnectTimeout=20 $target "bash -s"
+$sshConfig = Join-Path $env:USERPROFILE '.ssh\config'
+if (Test-Path -LiteralPath $sshConfig) {
+  $body | ssh -F $sshConfig -o ConnectTimeout=60 $target "bash -s"
+} else {
+  $body | ssh -o ConnectTimeout=60 $target "bash -s"
+}
 Write-Host "Listo."
