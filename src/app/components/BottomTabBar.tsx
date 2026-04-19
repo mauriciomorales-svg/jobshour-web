@@ -1,11 +1,13 @@
 'use client'
 
+import type { ReactElement } from 'react'
+
 export type TabKey = 'map' | 'feed' | 'requests' | 'profile'
 
 interface Tab {
   key: TabKey
   label: string
-  icon: (active: boolean) => JSX.Element
+  icon: (active: boolean) => ReactElement
   badge?: number
 }
 

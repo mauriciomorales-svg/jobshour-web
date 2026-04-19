@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
 
@@ -17,7 +17,7 @@ interface Props {
   onRemove: (id: string) => void
 }
 
-const icons: Record<ToastType, JSX.Element> = {
+const icons: Record<ToastType, ReactElement> = {
   success: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
