@@ -897,7 +897,7 @@ export default function TiendaPage() {
               className="relative flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 rounded-xl transition"
             >
               <ShoppingCart className="w-4 h-4" />
-              <span className="hidden sm:inline">{isOwner ? 'Carrito cotización' : 'Carrito'}</span>
+              <span className="hidden sm:inline">{isOwner ? surfaceCopy.tiendaCartLoteListo : 'Carrito'}</span>
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs font-black rounded-full flex items-center justify-center">{cartCount}</span>
               )}
@@ -1013,15 +1013,14 @@ export default function TiendaPage() {
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${checkoutMode === 'quote' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
               >
-                Armar cotización
+                {surfaceCopy.tiendaModeLoteListo}
               </button>
             </div>
             {checkoutMode === 'quote' && (
               <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-left text-xs text-amber-950 leading-relaxed max-w-lg">
                 <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" aria-hidden />
                 <p>
-                  <span className="font-bold">Modo cotización:</span> armá el carrito como si fuera el pedido del comprador. No se cobra acá: se genera un{' '}
-                  <strong>link</strong> para que el comprador vea el detalle y pague con Mercado Pago cuando quiera.
+                  <span className="font-bold">{surfaceCopy.tiendaLoteListoHintTitle}:</span> {surfaceCopy.tiendaLoteListoHintBody}
                 </p>
               </div>
             )}
@@ -1287,7 +1286,7 @@ export default function TiendaPage() {
                 ) : (
                   <button onClick={() => { setShowCart(false); setShowCheckout(true) }}
                     className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition">
-                    {isOwner ? 'Continuar cotización →' : 'Ir al pago →'}
+                    {isOwner ? surfaceCopy.tiendaContinueLoteListo : 'Ir al pago →'}
                   </button>
                 )}
               </div>
@@ -1303,7 +1302,7 @@ export default function TiendaPage() {
           <div className="relative bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl">
             <div className="flex items-center gap-3 p-4 border-b">
               <button onClick={() => { setShowCheckout(false); setShowCart(true) }} className="text-gray-400 hover:text-gray-600"><ArrowLeft className="w-5 h-5" /></button>
-              <h2 className="font-black text-gray-900">{isOwner ? 'Crear cotización' : 'Confirmar pedido'}</h2>
+              <h2 className="font-black text-gray-900">{isOwner ? surfaceCopy.tiendaModalCreateLoteListo : 'Confirmar pedido'}</h2>
             </div>
             <div className="p-4 space-y-4">
               <div className="bg-gray-50 rounded-xl p-3 space-y-1">
@@ -1367,7 +1366,7 @@ export default function TiendaPage() {
               </div>
               {isOwner && (
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Validez cotización (horas)</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{surfaceCopy.tiendaLoteValidityHours}</label>
                   <input
                     type="number"
                     min={1}
@@ -1392,7 +1391,7 @@ export default function TiendaPage() {
               <button onClick={isOwner ? handleCreateQuote : handlePay} disabled={paying || !buyerName.trim() || !buyerEmail.trim() || (wantsDelivery && !address.trim())}
                 className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2">
                 {isOwner ? <FileText className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
-                {paying ? 'Procesando...' : (isOwner ? 'Crear y compartir cotización' : `Pagar ${formatPrice(totalFinal)}`)}
+                {paying ? 'Procesando...' : (isOwner ? surfaceCopy.tiendaCreateShareLoteListo : `Pagar ${formatPrice(totalFinal)}`)}
               </button>
             </div>
           </div>
@@ -1430,8 +1429,8 @@ export default function TiendaPage() {
           <div className="absolute inset-0 bg-black/60" />
           <div className="relative bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl">
             <CheckCircle className="w-14 h-14 text-teal-600 mx-auto mb-3" />
-            <h3 className="text-gray-900 font-black text-xl mb-1">Cotización creada</h3>
-            <p className="text-gray-500 text-sm mb-4">Comparte este link con el comprador para que la vea y pague.</p>
+            <h3 className="text-gray-900 font-black text-xl mb-1">{surfaceCopy.tiendaLoteListoCreatedTitle}</h3>
+            <p className="text-gray-500 text-sm mb-4">{surfaceCopy.tiendaLoteListoCreatedSubtitle}</p>
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-left mb-3">
               <p className="text-xs text-gray-500 mb-1">Link público</p>
               <p className="text-xs text-gray-700 break-all">{quotePublicUrl}</p>

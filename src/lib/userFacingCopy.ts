@@ -196,7 +196,7 @@ export const surfaceCopy = {
   modalTitleMyOrders: '🛒 Mis Pedidos',
 
   workerQuotesHeading: 'Mis Cotizaciones',
-  workerQuotesSubtitle: 'Links enviados a compradores desde tu tienda',
+  workerQuotesSubtitle: 'Links desde tu tienda (Lote listo y otras ofertas)',
 
   emittedQuotesSection: 'Cotizaciones emitidas',
 
@@ -206,8 +206,22 @@ export const surfaceCopy = {
 
   emptyIntegratedQuotesTitle: 'Aún no hay cotizaciones',
   quoteBuilderModeLead: 'En tu tienda, modo',
-  quoteBuilderModeLabel: 'Armar cotización',
+  /** Mismo flujo técnico que cotización integrada; nombre amable para packs / usados */
+  quoteBuilderModeLabel: 'Lote listo',
   quoteBuilderModeTail: 'y comparte el link.',
+
+  /** Tienda (propietario): modo pack con precio vía integrated quote */
+  tiendaModeLoteListo: 'Lote listo',
+  tiendaLoteListoHintTitle: 'Modo Lote listo',
+  tiendaLoteListoHintBody:
+    'Armá el carrito como el pedido del comprador (varios ítems: usados, nuevos o mezclados). Acá no se cobra: se genera un link para que vea el detalle y pague con Mercado Pago cuando quiera.',
+  tiendaCartLoteListo: 'Carrito lote',
+  tiendaContinueLoteListo: 'Continuar lote listo →',
+  tiendaModalCreateLoteListo: 'Crear lote listo',
+  tiendaLoteValidityHours: 'Validez del link (horas)',
+  tiendaCreateShareLoteListo: 'Crear y compartir link',
+  tiendaLoteListoCreatedTitle: 'Lote listo creado',
+  tiendaLoteListoCreatedSubtitle: 'Comparte este link para que vea el detalle y pague.',
 
   /** PDF cotización — misma marca en todo el ecosistema */
   downloadQuotePdf: 'Descargar PDF para compartir',
