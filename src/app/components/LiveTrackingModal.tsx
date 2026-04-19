@@ -314,12 +314,12 @@ export default function LiveTrackingModal({
 
           {/* Mensaje para clientes */}
           {!isWorker && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+            <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <div className="text-2xl">👀</div>
                 <div>
-                  <p className="font-bold text-emerald-950 text-sm mb-1">Siguiendo a {workerName}</p>
-                  <p className="text-xs text-emerald-800">
+                  <p className="font-bold text-cyan-950 text-sm mb-1">Siguiendo a {workerName}</p>
+                  <p className="text-xs text-cyan-800">
                     {isTrackingActive
                       ? 'La ubicación se actualiza automáticamente cada 5 segundos.'
                       : 'Esperando actualización de ubicación...'}

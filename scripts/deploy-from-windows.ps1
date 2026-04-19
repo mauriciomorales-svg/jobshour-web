@@ -20,14 +20,11 @@ if (-not (Test-Path -LiteralPath $scriptPath)) {
   throw "No se encuentra $scriptPath"
 }
 
-# CRLF rompe bash en Linux; normalizar a LF antes de enviar por SSH
-$body = [System.IO.File]::ReadAllText($scriptPath)
-$body = $body -replace "`r`n", "`n"
-$body = $body -replace "`r", "`n"
-$body = $body.TrimEnd() + "`n"
+# CRLF rompe bash en Linux ($'\r'); quitar todos los CR y usar solo LF
+$body = ([System.IO.File]::ReadAllText($scriptPath) -replace "`r", "").TrimEnd() + "`n"
 
 $qBranch = $Branch -replace "'", "'\''"
-$body = ("export DEPLOY_BRANCH='$qBranch'`n" + $body).TrimEnd() + "`n"
+$body = (("export DEPLOY_BRANCH='$qBranch'`n" + $body) -replace "`r", "").TrimEnd() + "`n"
 
 if ($SshConfigHost -ne "") {
   $target = $SshConfigHost
