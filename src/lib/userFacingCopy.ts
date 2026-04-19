@@ -94,12 +94,12 @@ export const buyerQuoteTimelineSteps = {
     pending: 'Cuando tengas el pedido, ingresá el código de 4 dígitos que te dio el vendedor.',
   },
   service: {
-    title: 'Servicio acordado',
-    done: 'El trabajo incluido en la cotización quedó completado.',
-    pending: 'El profesional coordinará y completará el servicio acordado.',
+    title: 'Acuerdo final',
+    done: 'Lo pactado en este lote quedó marcado como completado.',
+    pending: 'El vendedor coordinará y cerrará lo acordado (servicio, entrega u otro).',
   },
   closed: {
-    title: 'Cotización cerrada',
+    title: 'Lote cerrado',
     done: 'Todo el proceso finalizó.',
     pending: 'Se cerrará cuando se completen los pasos anteriores.',
   },
@@ -222,6 +222,15 @@ export const surfaceCopy = {
   tiendaCreateShareLoteListo: 'Crear y compartir link',
   tiendaLoteListoCreatedTitle: 'Lote listo creado',
   tiendaLoteListoCreatedSubtitle: 'Comparte este link para que vea el detalle y pague.',
+
+  /** Página pública del link (integrated quote = Lote listo para el usuario) */
+  publicLoteEyebrow: 'Lote listo',
+  publicLoteUnavailableTitle: 'Lote no disponible',
+  publicLoteLoadError: 'No se pudo cargar el lote',
+  publicLotePreparedBy: 'Preparado por',
+  publicLotePayCta: 'Aceptar y pagar lote',
+  publicLotePaymentProcessNote: 'Este lote ya inició o terminó su proceso de pago.',
+  publicLoteProcessCompleted: 'Proceso completado para este lote.',
 
   /** PDF cotización — misma marca en todo el ecosistema */
   downloadQuotePdf: 'Descargar PDF para compartir',

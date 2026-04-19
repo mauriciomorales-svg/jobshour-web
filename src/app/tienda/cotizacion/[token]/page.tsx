@@ -72,7 +72,7 @@ export default function PublicQuotePage() {
       })
       const json = await r.json()
       if (!r.ok) {
-        setError(json?.message || 'No se pudo cargar la cotización')
+        setError(json?.message || surfaceCopy.publicLoteLoadError)
         return
       }
 
@@ -198,7 +198,7 @@ export default function PublicQuotePage() {
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center">
           <p className="text-4xl mb-2">⚠️</p>
-          <h1 className="font-black text-xl mb-2">Cotización no disponible</h1>
+          <h1 className="font-black text-xl mb-2">{surfaceCopy.publicLoteUnavailableTitle}</h1>
           <p className="text-slate-400 text-sm">{error || 'No encontrada'}</p>
         </div>
       </div>
@@ -211,9 +211,11 @@ export default function PublicQuotePage() {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 font-bold">Cotización</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-500 font-bold">{surfaceCopy.publicLoteEyebrow}</p>
               <h1 className="text-xl font-black mt-1">{data.worker.store_name || 'Tienda'}</h1>
-              <p className="text-slate-400 text-sm">Preparada por {data.worker.name || 'trabajador'}</p>
+              <p className="text-slate-400 text-sm">
+                {surfaceCopy.publicLotePreparedBy} {data.worker.name || 'vendedor'}
+              </p>
             </div>
             <span className={`text-xs font-bold px-2 py-1 rounded-full border ${isClosed ? 'bg-teal-500/15 text-teal-300 border-teal-500/25' : 'bg-amber-500/15 text-amber-400 border-amber-500/25'}`}>
               {isClosed ? 'Cerrada' : labelIntegratedQuoteStatus(data.quote.status)}
@@ -237,7 +239,7 @@ export default function PublicQuotePage() {
           {data.quote.expires_at && (
             <p className="text-xs text-slate-500 mt-3 flex items-center gap-1">
               <Clock3 className="w-3.5 h-3.5" />
-              Válida hasta {new Date(data.quote.expires_at).toLocaleString('es-CL')}
+              Válido hasta {new Date(data.quote.expires_at).toLocaleString('es-CL')}
             </p>
           )}
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -308,12 +310,12 @@ export default function PublicQuotePage() {
             className="w-full bg-teal-500 hover:bg-teal-400 text-slate-900 font-black py-3 rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2 motion-safe:active:scale-[0.99]"
           >
             <CreditCard className="w-4 h-4" />
-            {processing ? 'Generando pago...' : 'Aceptar y pagar cotización'}
+            {processing ? 'Generando pago...' : surfaceCopy.publicLotePayCta}
           </button>
 
           {!canCheckout && (
             <p className="text-xs text-slate-500 text-center">
-              Esta cotización ya inició/terminó su proceso de pago.
+              {surfaceCopy.publicLotePaymentProcessNote}
             </p>
           )}
         </div>
@@ -321,7 +323,7 @@ export default function PublicQuotePage() {
         {isClosed && (
           <div className="bg-teal-500/10 border border-teal-500/30 rounded-2xl p-4 text-teal-200 text-sm flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
-            Proceso completado para esta cotización.
+            {surfaceCopy.publicLoteProcessCompleted}
           </div>
         )}
       </div>

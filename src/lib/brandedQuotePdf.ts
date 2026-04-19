@@ -3,7 +3,7 @@ import jsPDF from 'jspdf'
 /** Marca: mismo ecosistema en toda la app */
 const BRAND = 'JobsHours'
 const BRAND_URL = 'https://jobshours.com'
-const BRAND_TAGLINE = 'Servicios, tiendas y cotizaciones — todo en un solo ecosistema'
+const BRAND_TAGLINE = 'Servicios, tiendas y lotes listos — todo en un solo ecosistema'
 
 export type BrandedQuotePdfRow = {
   title: string
@@ -80,7 +80,7 @@ export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
   pdf.setTextColor(15, 23, 42)
   pdf.setFontSize(14)
   pdf.setFont('helvetica', 'bold')
-  pdf.text('Cotización', margin, y)
+  pdf.text('Lote listo', margin, y)
   y += 7
   pdf.setFontSize(10)
   pdf.setFont('helvetica', 'normal')
@@ -167,7 +167,7 @@ export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
     pdf.setTextColor(100, 116, 139)
-    pdf.text(`Válida hasta: ${new Date(expiresAt).toLocaleString('es-CL')}`, margin, y)
+    pdf.text(`Válido hasta: ${new Date(expiresAt).toLocaleString('es-CL')}`, margin, y)
     y += 6
   }
 
@@ -195,7 +195,7 @@ export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
   }
   pdf.setPage(pageCount)
 
-  const safeId = quoteId != null ? String(quoteId) : 'cotizacion'
-  const fname = `${BRAND}-cotizacion-${safeId}-${new Date().toISOString().slice(0, 10)}.pdf`
+  const safeId = quoteId != null ? String(quoteId) : 'lote'
+  const fname = `${BRAND}-lote-${safeId}-${new Date().toISOString().slice(0, 10)}.pdf`
   pdf.save(fname)
 }

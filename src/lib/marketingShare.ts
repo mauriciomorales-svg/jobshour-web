@@ -67,7 +67,7 @@ export function whatsAppQuoteShareText(opts: {
       ? `\nTotal: ${opts.totalFormatted}`
       : ''
   const url = withShareUtm(opts.quoteUrl, 'integrated_quote')
-  return `Te comparto mi cotización en ${store} (JobsHours).${totalLine}\nVer y pagar aquí:\n${url}`
+  return `Te comparto mi lote listo en ${store} (JobsHours).${totalLine}\nVer y pagar aquí:\n${url}`
 }
 
 export function profileNativeShareText(profileUrl: string): string {
