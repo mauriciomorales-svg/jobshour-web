@@ -6,6 +6,7 @@ import { trackEvent } from '@/lib/analytics'
 import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info, FileDown } from 'lucide-react'
 import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
+import { displayPublicUrl, publicTiendaUrl, withShareUtm } from '@/lib/marketingShare'
 
 // Misma lógica que page.tsx: base sin /api para llamadas a jobshours API
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
@@ -930,12 +931,20 @@ export default function TiendaPage() {
             {/* Botón compartir */}
             <button
               onClick={() => {
-                const url = `https://jobshours.com/tienda/${workerId}`
+                const url = withShareUtm(publicTiendaUrl(workerId), 'tienda_catalog')
                 const lista = productos.slice(0, 20).map(p =>
                   `• ${p.nombre} — ${formatPrice(p.precio_venta ?? p.precio)}`
                 ).join('\n')
                 const text = `🛍️ *${worker?.store_name ?? 'Tienda'}* en JobsHours\n\n${lista}\n\n👉 Ver catálogo completo:\n${url}\n\n_Powered by JobsHours · Tu mercado local online_`
-                if (navigator.share) {
+                const canNative =
+                  typeof navigator !== 'undefined' &&
+                  'share' in navigator &&
+                  typeof (navigator as Navigator & { share?: (data: ShareData) => Promise<void> }).share === 'function'
+                trackEvent('marketing_share_tienda', {
+                  worker_id: workerId,
+                  via: canNative ? 'native' : 'clipboard',
+                })
+                if (canNative && navigator.share) {
                   navigator.share({ title: worker?.store_name ?? 'Tienda', text, url }).catch(() => {})
                 } else {
                   navigator.clipboard.writeText(text)
@@ -1080,7 +1089,9 @@ export default function TiendaPage() {
                   <p className="text-3xl mb-2">🚀</p>
                   <p className="text-lg font-black">¡Tu tienda está lista para despegar!</p>
                   <p className="text-sm opacity-90 mt-1">Comparte tu link y haz tu primera venta hoy.</p>
-                  <p className="text-xs bg-white/20 rounded-lg px-3 py-1 mt-3 font-mono">jobshours.com/tienda/{workerId}</p>
+                  <p className="text-xs bg-white/20 rounded-lg px-3 py-1 mt-3 font-mono">
+                    {displayPublicUrl(publicTiendaUrl(workerId))}
+                  </p>
                 </div>
               )}
 
@@ -1128,8 +1139,8 @@ export default function TiendaPage() {
               <div className="bg-slate-800 rounded-2xl p-4 text-white">
                 <p className="text-sm font-bold mb-2">📲 Comparte tu tienda</p>
                 <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2">
-                  <p className="text-xs font-mono flex-1 truncate">jobshours.com/tienda/{workerId}</p>
-                  <button onClick={() => navigator.clipboard.writeText(`https://jobshours.com/tienda/${workerId}`)}
+                  <p className="text-xs font-mono flex-1 truncate">{displayPublicUrl(publicTiendaUrl(workerId))}</p>
+                  <button onClick={() => navigator.clipboard.writeText(publicTiendaUrl(workerId))}
                     className="text-xs bg-orange-500 hover:bg-orange-400 px-3 py-1 rounded-lg font-bold transition">Copiar</button>
                 </div>
               </div>

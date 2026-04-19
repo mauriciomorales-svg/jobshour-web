@@ -2,10 +2,11 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { CheckCircle2, Clock3, CreditCard, FileText, FileDown, Info, Loader2 } from 'lucide-react'
+import { CheckCircle2, Clock3, CreditCard, FileText, FileDown, Info, Loader2, MessageCircle } from 'lucide-react'
 import { trackEvent } from '@/lib/analytics'
 import { labelIntegratedQuoteStatus, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
+import { openWhatsAppWithText, whatsAppQuoteShareText } from '@/lib/marketingShare'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://jobshours.com/api'
 
@@ -105,6 +106,23 @@ export default function PublicQuotePage() {
     if (!data) return false
     return ['quote_sent', 'awaiting_payment'].includes(data.quote.status)
   }, [data])
+
+  const shareWhatsApp = () => {
+    if (!data) return
+    const url = typeof window !== 'undefined' ? window.location.href : 'https://jobshours.com'
+    trackEvent('marketing_share_whatsapp', {
+      context: 'public_quote',
+      quote_id: data.quote.id,
+      worker_id: data.worker.id,
+    })
+    openWhatsAppWithText(
+      whatsAppQuoteShareText({
+        quoteUrl: url,
+        storeName: data.worker.store_name,
+        totalFormatted: formatPrice(data.quote.total_amount),
+      })
+    )
+  }
 
   const downloadPdf = () => {
     if (!data) return
@@ -222,14 +240,24 @@ export default function PublicQuotePage() {
               Válida hasta {new Date(data.quote.expires_at).toLocaleString('es-CL')}
             </p>
           )}
-          <button
-            type="button"
-            onClick={downloadPdf}
-            className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 font-bold text-sm transition"
-          >
-            <FileDown className="w-4 h-4 shrink-0" aria-hidden />
-            {surfaceCopy.downloadQuotePdf}
-          </button>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={downloadPdf}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 font-bold text-sm transition"
+            >
+              <FileDown className="w-4 h-4 shrink-0" aria-hidden />
+              {surfaceCopy.downloadQuotePdf}
+            </button>
+            <button
+              type="button"
+              onClick={shareWhatsApp}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-green-500/40 bg-green-500/10 hover:bg-green-500/20 text-green-300 font-bold text-sm transition"
+            >
+              <MessageCircle className="w-4 h-4 shrink-0" aria-hidden />
+              {surfaceCopy.shareViaWhatsApp}
+            </button>
+          </div>
           <p className="text-[10px] text-slate-500 text-center">{surfaceCopy.quotePdfPoweredBy}</p>
         </div>
 

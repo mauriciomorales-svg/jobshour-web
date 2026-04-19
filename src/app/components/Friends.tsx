@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { API_BASE_URL } from '../lib/api'
+import { trackEvent } from '@/lib/analytics'
+import { openWhatsAppWithText, publicWorkerProfileUrl, whatsAppInviteProfileText } from '@/lib/marketingShare'
 import { feedbackCopy, formatContactsFoundJobsHours, surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
 import { QRCodeSVG } from 'qrcode.react'
@@ -490,9 +492,10 @@ export default function Friends({ user, onClose }: FriendsProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    const profileUrl = qrCode || `https://jobshour.dondemorales.cl/worker/${user.token.split('|')[0]}`
-                    const whatsappText = `¿Necesitas ayuda con algo? En JobsHours encontrarás personas con habilidades reales cerca de ti 📍\nMira este perfil: ${profileUrl}`
-                    window.open(`https://wa.me/?text=${encodeURIComponent(whatsappText)}`, '_blank')
+                    const uid = user.token.split('|')[0]
+                    const profileUrl = qrCode || publicWorkerProfileUrl(uid)
+                    trackEvent('marketing_share_whatsapp', { context: 'friends_qr' })
+                    openWhatsAppWithText(whatsAppInviteProfileText(profileUrl))
                   }}
                   className={`mt-4 w-full py-3 ${uiTone.ctaPayCart} flex items-center justify-center gap-2 text-sm font-bold`}
                 >

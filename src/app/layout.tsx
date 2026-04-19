@@ -4,7 +4,10 @@ import { StoreCartProvider } from '@/lib/storeCartContext'
 // Importar para ejecutar el script de filtrado inmediatamente
 import './console-error-suppressor'
 
+const SITE = 'https://jobshours.com'
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
   title: 'JobsHours | Encuentra expertos cerca de ti en segundos',
   description: 'Conecta con electricistas, gasfíteres, pintores, jardineros y más profesionales cerca de ti. Publica lo que necesitas y recibe ayuda al instante. Renaico, Araucanía, Chile.',
   keywords: ['servicios', 'trabajos', 'expertos', 'Renaico', 'Araucanía', 'Chile', 'electricista', 'gasfíter', 'pintor', 'jardinero', 'plomero', 'trabajos por hora'],
@@ -12,18 +15,38 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'JobsHours | Encuentra expertos cerca de ti',
     description: 'Publica lo que necesitas y conecta con socios verificados en minutos.',
-    url: 'https://jobshours.com',
+    url: SITE,
     siteName: 'JobsHours',
     locale: 'es_CL',
     type: 'website',
+    images: [{ url: '/logo-1024.svg', width: 1024, height: 1024, alt: 'JobsHours' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'JobsHours | Expertos cerca de ti',
     description: 'Conecta con profesionales verificados en tu zona.',
+    images: ['/logo-1024.svg'],
   },
   robots: { index: true, follow: true },
-  alternates: { canonical: 'https://jobshours.com' },
+  alternates: { canonical: SITE },
+}
+
+const jsonLdOrganization = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      name: 'JobsHours',
+      url: SITE,
+      logo: `${SITE}/logo-1024.svg`,
+      description: 'Conecta con profesionales verificados en tu zona.',
+    },
+    {
+      '@type': 'WebSite',
+      name: 'JobsHours',
+      url: SITE,
+    },
+  ],
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -121,6 +144,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 console.info = function(...args) { if (!shouldFilter(args)) originalInfo.apply(console, args); };
               })();
             `,
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(jsonLdOrganization),
           }}
         />
         <script

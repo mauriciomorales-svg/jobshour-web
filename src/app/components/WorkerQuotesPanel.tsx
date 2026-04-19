@@ -8,6 +8,7 @@ import { ModalShell } from '@/app/components/ui/ModalShell'
 import { StatusBadge } from '@/app/components/ui/StatusBadge'
 import { emptyStateCopy, feedbackCopy, labelIntegratedQuoteStatus, surfaceCopy } from '@/lib/userFacingCopy'
 import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
+import { openWhatsAppWithText, whatsAppQuoteShareText } from '@/lib/marketingShare'
 
 interface QuoteRow {
   id: number
@@ -199,25 +200,46 @@ export default function WorkerQuotesPanel({ onClose }: { onClose: () => void }) 
                     )}
 
                     {q.public_url && (
-                      <div className="flex gap-2">
-                        <a
-                          href={q.public_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 text-center text-xs font-bold bg-teal-500/15 text-teal-300 border border-teal-500/30 rounded-xl py-2 hover:bg-teal-500/25 transition"
-                        >
-                          Abrir link público
-                        </a>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <a
+                            href={q.public_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 text-center text-xs font-bold bg-teal-500/15 text-teal-300 border border-teal-500/30 rounded-xl py-2 hover:bg-teal-500/25 transition"
+                          >
+                            Abrir link público
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              copyLink(q.public_url!)
+                              alert(surfaceCopy.linkCopiedAlert)
+                            }}
+                            className="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200"
+                            title="Copiar"
+                          >
+                            <Link2 className="w-4 h-4" />
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
-                            copyLink(q.public_url!)
-                            alert(surfaceCopy.linkCopiedAlert)
+                            trackEvent('marketing_share_whatsapp', {
+                              context: 'worker_quotes_panel',
+                              quote_id: q.id,
+                            })
+                            openWhatsAppWithText(
+                              whatsAppQuoteShareText({
+                                quoteUrl: q.public_url!,
+                                storeName: 'Tu tienda JobsHours',
+                                totalFormatted: formatPrice(q.total_amount),
+                              })
+                            )
                           }}
-                          className="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200"
-                          title="Copiar"
+                          className="w-full text-center text-xs font-bold bg-green-500/15 text-green-300 border border-green-500/35 rounded-xl py-2 hover:bg-green-500/25 transition"
                         >
-                          <Link2 className="w-4 h-4" />
+                          {surfaceCopy.shareViaWhatsApp}
                         </button>
                       </div>
                     )}

@@ -213,6 +213,9 @@ export const surfaceCopy = {
   downloadQuotePdf: 'Descargar PDF para compartir',
   quotePdfPoweredBy: 'Incluye marca JobsHours para difundir el ecosistema',
 
+  /** Viral / WhatsApp — mismo tono que Friends y tienda */
+  shareViaWhatsApp: 'Compartir por WhatsApp',
+
   publishDemandCta: '✨ Publicar demanda',
   /** Feed vacío (variante “publicar una demanda”) */
   publishDemandFeed: '✨ Publicar una demanda',
