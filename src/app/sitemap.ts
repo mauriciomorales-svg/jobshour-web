@@ -1,7 +1,12 @@
 import type { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://jobshours.com'
-  const now = new Date()
-  return [{ url: base, lastModified: now, changeFrequency: 'daily', priority: 1 }]
+  return [
+    {
+      url: 'https://jobshours.com',
+      lastModified: '2026-04-19',
+      changeFrequency: 'daily',
+      priority: 1,
+    },
+  ]
 }
