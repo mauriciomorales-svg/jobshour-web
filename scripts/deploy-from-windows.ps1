@@ -36,9 +36,10 @@ if ($SshConfigHost -ne "") {
 
 Write-Host "Conectando a $target y ejecutando deploy (rama: $Branch)..."
 $sshConfig = Join-Path $env:USERPROFILE '.ssh\config'
+# `tr -d '\r'` evita bash: $'\r': command not found al piped desde PowerShell/Windows
 if (Test-Path -LiteralPath $sshConfig) {
-  $body | ssh -F $sshConfig -o ConnectTimeout=60 $target "bash -s"
+  $body | ssh -F $sshConfig -o ConnectTimeout=60 $target "tr -d '\r' | bash -s"
 } else {
-  $body | ssh -o ConnectTimeout=60 $target "bash -s"
+  $body | ssh -o ConnectTimeout=60 $target "tr -d '\r' | bash -s"
 }
 Write-Host "Listo."
