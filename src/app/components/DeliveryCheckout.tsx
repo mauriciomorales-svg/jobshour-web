@@ -1,4 +1,5 @@
 'use client'
+import { feedbackCopy } from '@/lib/userFacingCopy'
 
 import { useState, useRef } from 'react'
 import { API_BASE_URL } from '../lib/api'
@@ -101,11 +102,11 @@ export default function DeliveryCheckout({ requestId, token, onComplete, onClose
       if (response.ok) {
         onComplete()
       } else {
-        alert('Error al completar la entrega')
+        alert(feedbackCopy.deliveryCompleteError)
       }
     } catch (error) {
       console.error('Error completing delivery:', error)
-      alert('Error de conexión')
+      alert(feedbackCopy.networkError)
     } finally {
       setCompleting(false)
     }
@@ -115,7 +116,7 @@ export default function DeliveryCheckout({ requestId, token, onComplete, onClose
     <div className="fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-5 sticky top-0 z-10">
+        <div className="bg-gradient-to-r from-teal-500 to-teal-700 p-5 sticky top-0 z-10 shadow-md shadow-teal-500/20">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-black text-white">Confirmar Entrega</h2>
@@ -150,7 +151,7 @@ export default function DeliveryCheckout({ requestId, token, onComplete, onClose
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full bg-blue-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-600 transition flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white py-3 rounded-xl font-bold text-sm hover:from-amber-400 hover:to-orange-500 transition flex items-center justify-center gap-2 shadow-md shadow-amber-500/20"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -207,7 +208,7 @@ export default function DeliveryCheckout({ requestId, token, onComplete, onClose
           <button
             onClick={handleComplete}
             disabled={completing}
-            className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-4 rounded-xl font-black text-base hover:from-green-600 hover:to-emerald-600 transition disabled:opacity-50 shadow-lg"
+            className="w-full bg-gradient-to-r from-teal-500 to-teal-600 text-white py-4 rounded-xl font-black text-base hover:from-teal-400 hover:to-teal-500 transition disabled:opacity-50 shadow-lg shadow-teal-500/25"
           >
             {completing ? (
               <span className="flex items-center justify-center gap-2">

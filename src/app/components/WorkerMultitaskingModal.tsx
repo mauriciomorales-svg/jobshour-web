@@ -1,4 +1,5 @@
 'use client'
+import { feedbackCopy } from '@/lib/userFacingCopy'
 
 import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
@@ -147,7 +148,7 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
         setError(data.message || 'Error al activar modo Worker')
       }
     } catch {
-      setError('Error de conexión')
+      setError(feedbackCopy.networkError)
     }
     setLoading(false)
   }
@@ -191,12 +192,12 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
             </div>
 
             {/* Toggle Multitarea */}
-            <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-2xl p-4 mb-6 border border-emerald-200/50">
+            <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-4 mb-6 border border-teal-200/50">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg font-black text-gray-900">Modo Multitarea:</span>
-                    <span className={`text-lg font-black ${multitaskMode ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    <span className={`text-lg font-black ${multitaskMode ? 'text-teal-600' : 'text-gray-400'}`}>
                       {multitaskMode ? 'ON' : 'OFF'}
                     </span>
                   </div>
@@ -210,7 +211,7 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
                 <button
                   onClick={() => setMultitaskMode(!multitaskMode)}
                   className={`relative w-14 h-8 rounded-full transition-colors duration-300 ${
-                    multitaskMode ? 'bg-emerald-500' : 'bg-gray-300'
+                    multitaskMode ? 'bg-teal-500' : 'bg-gray-300'
                   }`}
                 >
                   <motion.div
@@ -230,7 +231,7 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
                 value={catSearch}
                 onChange={(e) => setCatSearch(e.target.value)}
                 placeholder="🔍 Buscar categoría..."
-                className="w-full px-3 py-2 border rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                className="w-full px-3 py-2 border rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-teal-400"
               />
               <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
                 {categories.filter(c => c.name.toLowerCase().includes(catSearch.toLowerCase())).map((cat) => {
@@ -244,15 +245,15 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
                       className={`
                         relative p-4 rounded-xl border-2 transition-all
                         ${isSelected 
-                          ? 'border-emerald-500 bg-emerald-50 shadow-sm' 
+                          ? 'border-teal-500 bg-teal-50 shadow-sm' 
                           : 'border-gray-200 bg-white'
                         }
-                        ${multitaskMode ? 'cursor-default' : 'cursor-pointer hover:border-emerald-300'}
+                        ${multitaskMode ? 'cursor-default' : 'cursor-pointer hover:border-teal-300'}
                       `}
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-2xl">{getIcon(cat.icon)}</span>
-                        <span className={`text-sm font-bold ${isSelected ? 'text-emerald-700' : 'text-gray-700'}`}>
+                        <span className={`text-sm font-bold ${isSelected ? 'text-teal-800' : 'text-gray-700'}`}>
                           {cat.name}
                         </span>
                       </div>
@@ -260,7 +261,7 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute top-2 right-2 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center"
+                          className="absolute top-2 right-2 w-5 h-5 bg-teal-600 rounded-full flex items-center justify-center"
                         >
                           <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -274,21 +275,21 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
             </div>
 
             {/* Geolocalización */}
-            <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200/50">
+            <div className="bg-slate-50 rounded-xl p-4 mb-6 border border-slate-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   <div>
-                    <p className="text-xs font-semibold text-blue-900">Ubicación actual:</p>
-                    <p className="text-sm font-bold text-blue-700">{location}</p>
+                    <p className="text-xs font-semibold text-slate-800">Ubicación actual:</p>
+                    <p className="text-sm font-bold text-slate-700">{location}</p>
                   </div>
                 </div>
                 <button
                   onClick={detectLocation}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 underline"
+                  className="text-xs font-semibold text-teal-600 hover:text-teal-700 underline"
                 >
                   Actualizar
                 </button>
@@ -316,7 +317,7 @@ export default function WorkerMultitaskingModal({ isOpen, onClose, onSuccess }: 
                 transition-all shadow-lg
                 ${loading || selectedCategories.length === 0
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 animate-pulse'
+                  : 'bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 animate-pulse shadow-lg shadow-teal-500/25'
                 }
               `}
             >

@@ -42,9 +42,9 @@ interface Props {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   pending:     { label: 'Esperando confirmación', color: 'text-yellow-300', bg: 'bg-yellow-500/20', icon: '⏳' },
-  accepted:    { label: 'Aceptada',               color: 'text-blue-300',   bg: 'bg-blue-500/20',   icon: '✅' },
-  in_progress: { label: 'En progreso',            color: 'text-indigo-300', bg: 'bg-indigo-500/20', icon: '🔧' },
-  completed:   { label: 'Completada',             color: 'text-green-300',  bg: 'bg-green-500/20',  icon: '🎉' },
+  accepted:    { label: 'Aceptada',               color: 'text-teal-300',   bg: 'bg-teal-500/20',   icon: '✅' },
+  in_progress: { label: 'En progreso',            color: 'text-teal-300', bg: 'bg-teal-500/20', icon: '🔧' },
+  completed:   { label: 'Completada',             color: 'text-teal-300',  bg: 'bg-teal-500/20',  icon: '🎉' },
   cancelled:   { label: 'Cancelada',              color: 'text-gray-400',   bg: 'bg-gray-500/20',   icon: '❌' },
   disputed:    { label: 'En disputa',             color: 'text-red-300',    bg: 'bg-red-500/20',    icon: '⚠️' },
 }
@@ -126,6 +126,35 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
       setError('No se pudieron cargar tus solicitudes')
     } finally {
       setLoading(false)
+    }
+  }, [])
+
+  const startBoostCheckout = useCallback(async (requestId: number) => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (!token) return
+    setActionLoading(requestId)
+    setError(null)
+    try {
+      const res = await apiFetch('/api/v1/payments/mp/demand-boost', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ service_request_id: requestId }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { link?: string; message?: string; amount_clp?: number }
+      if (!res.ok) {
+        throw new Error(data.message || `Error ${res.status}`)
+      }
+      if (data.link) {
+        window.location.href = data.link
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo iniciar el pago de destacado')
+    } finally {
+      setActionLoading(null)
     }
   }, [])
 
@@ -327,29 +356,29 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                             {s.pickup_address && s.delivery_address ? (
                               <div className="space-y-1">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="w-2 h-2 rounded-full bg-green-400 shrink-0"></span>
-                                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.pickup_address)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs truncate text-blue-400 hover:text-blue-300 underline">{s.pickup_address}</a>
+                                  <span className="w-2 h-2 rounded-full bg-teal-400 shrink-0"></span>
+                                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.pickup_address)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs truncate text-amber-400 hover:text-amber-300 underline">{s.pickup_address}</a>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                   <span className="w-2 h-2 rounded-full bg-red-400 shrink-0"></span>
-                                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.delivery_address)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs truncate text-blue-400 hover:text-blue-300 underline">{s.delivery_address}</a>
+                                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.delivery_address)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs truncate text-amber-400 hover:text-amber-300 underline">{s.delivery_address}</a>
                                 </div>
                               </div>
                             ) : s.pickup_address ? (
-                              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.pickup_address)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition">
+                              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.pickup_address)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 transition">
                                 <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                 <span className="text-xs truncate underline">{s.pickup_address}</span>
                               </a>
                             ) : null}
                             {/* Payload chips */}
                             <div className="flex items-center gap-2 flex-wrap">
-                              {s.payload?.seats && <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-bold">👥 {s.payload.seats} asiento{s.payload.seats > 1 ? 's' : ''}</span>}
+                              {s.payload?.seats && <span className="text-[10px] bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded-full font-bold">👥 {s.payload.seats} asiento{s.payload.seats > 1 ? 's' : ''}</span>}
                               {s.payload?.store_name && <span className="text-[10px] bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded-full font-bold">🏪 {s.payload.store_name}</span>}
-                              {s.payload?.departure_time && <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-bold">🕐 {new Date(s.payload.departure_time).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</span>}
+                              {s.payload?.departure_time && <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">🕐 {new Date(s.payload.departure_time).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</span>}
                               {s.payload?.requires_vehicle && <span className="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full font-bold">🚗 Requiere vehículo</span>}
-                              {s.scheduled_at && <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-bold">📅 {new Date(s.scheduled_at).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })} {new Date(s.scheduled_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</span>}
+                              {s.scheduled_at && <span className="text-[10px] bg-slate-600/40 text-slate-200 px-2 py-0.5 rounded-full font-bold">📅 {new Date(s.scheduled_at).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })} {new Date(s.scheduled_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</span>}
                               {s.workers_needed && s.workers_needed > 1 && <span className="text-[10px] bg-pink-500/20 text-pink-300 px-2 py-0.5 rounded-full font-bold">👥 {s.workers_accepted ?? 0}/{s.workers_needed} personas</span>}
-                              {s.recurrence && s.recurrence !== 'once' && <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full font-bold">🔄 {s.recurrence === 'daily' ? 'Diario' : s.recurrence === 'weekly' ? 'Semanal' : 'Personalizado'}</span>}
+                              {s.recurrence && s.recurrence !== 'once' && <span className="text-[10px] bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded-full font-bold">🔄 {s.recurrence === 'daily' ? 'Diario' : s.recurrence === 'weekly' ? 'Semanal' : 'Personalizado'}</span>}
                             </div>
                             {/* Cómo llegar */}
                             {s.fuzzed_latitude && s.fuzzed_longitude && (
@@ -358,7 +387,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 rounded-lg text-[10px] font-bold transition"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 rounded-lg text-[10px] font-bold transition"
                               >
                                 🗺️ Cómo llegar
                               </a>
@@ -394,12 +423,25 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                               return (
                                 <button
                                   onClick={() => onOpenChat?.(s.id, otherPerson2?.name ?? '', otherPerson2?.avatar ?? null, myRole2, isSelf2)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-green-500/15 hover:bg-green-500/25 text-green-400 rounded-xl text-xs font-bold transition active:scale-95"
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-teal-500/15 hover:bg-teal-500/25 text-teal-400 rounded-xl text-xs font-bold transition active:scale-95 border border-teal-500/25"
                                 >
                                   💬 Chat
                                 </button>
                               )
                             })()}
+                            {!imWorker && isPending && (
+                              <button
+                                type="button"
+                                disabled={actionLoading === s.id}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  startBoostCheckout(s.id)
+                                }}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl text-xs font-bold transition active:scale-95 border border-amber-500/35 disabled:opacity-50"
+                              >
+                                {actionLoading === s.id ? '…' : '⚡ Destacar en mapa'}
+                              </button>
+                            )}
                             {/* Worker: botón Completar */}
                             {imWorker && ['accepted', 'in_progress'].includes(s.status) && (
                               <button
@@ -418,7 +460,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                                   } catch {}
                                   setActionLoading(null)
                                 }}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold transition active:scale-95 disabled:opacity-50"
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-teal-500/20 hover:bg-teal-500/30 text-teal-400 rounded-xl text-xs font-bold transition active:scale-95 disabled:opacity-50 border border-teal-500/25"
                               >
                                 {actionLoading === s.id ? '...' : '✓ Completar'}
                               </button>
@@ -429,16 +471,16 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                                 {(!s.payment_status || s.payment_status === 'pending') ? (
                                   <button
                                     onClick={() => setPaymentRequestId(s.id)}
-                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl text-xs font-bold transition active:scale-95 border border-blue-500/30"
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-xs font-bold transition active:scale-95 border border-amber-500/30"
                                   >
                                     💳 Pagar
                                   </button>
                                 ) : (
-                                  <span className="flex-1 text-center py-2 text-emerald-400 text-xs font-bold">✅ Pagado</span>
+                                  <span className="flex-1 text-center py-2 text-amber-400 text-xs font-bold">✅ Pagado</span>
                                 )}
                                 <button
                                   onClick={() => setRatingRequestId(s.id)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-xl text-xs font-bold transition active:scale-95 border border-yellow-500/30"
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-xs font-bold transition active:scale-95 border border-amber-500/30"
                                 >
                                   ⭐ Calificar
                                 </button>

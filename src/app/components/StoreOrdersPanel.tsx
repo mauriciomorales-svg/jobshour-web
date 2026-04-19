@@ -1,8 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Package, CheckCircle, XCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { Package, CheckCircle, XCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
+import { trackEvent } from '@/lib/analytics'
+import {
+  emptyStateCopy,
+  feedbackCopy,
+  mpPaymentLabel,
+  surfaceCopy,
+  workerQuoteTimelineSteps,
+} from '@/lib/userFacingCopy'
+import { ModalShell } from '@/app/components/ui/ModalShell'
+import { StatusBadge } from '@/app/components/ui/StatusBadge'
 
 interface OrderItem {
   idproducto: number
@@ -43,12 +53,21 @@ interface StoreOrder {
   } | null
 }
 
-const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  pending:   { label: 'Pendiente',  color: 'bg-amber-100 text-amber-700' },
-  confirmed: { label: 'Confirmado', color: 'bg-blue-100 text-blue-700' },
-  paid:      { label: 'Pagado',     color: 'bg-green-100 text-green-700' },
-  rejected:  { label: 'Rechazado',  color: 'bg-red-100 text-red-700' },
-  expired:   { label: 'Expirado',   color: 'bg-gray-100 text-gray-500' },
+interface WorkerQuote {
+  id: number
+  status: string
+  total_amount: number
+  buyer_name: string | null
+  buyer_email: string | null
+  expires_at: string | null
+  expired: boolean
+  public_url: string | null
+  payment_link: string | null
+  store_order: {
+    id: number
+    status: string
+    mp_status: string | null
+  } | null
 }
 
 function formatPrice(n: number) {
@@ -89,6 +108,7 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
   const [showCodeInput, setShowCodeInput] = useState<number | null>(null)
   const [confirmCode, setConfirmCode] = useState('')
   const [codeError, setCodeError] = useState('')
+  const [quotes, setQuotes] = useState<WorkerQuote[]>([])
 
   const load = async () => {
     setLoading(true)
@@ -99,14 +119,27 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
       })
       const data = await res.json()
       setOrders(data.data ?? [])
+
+      const quotesRes = await apiFetch('/api/v1/integrated-quotes/worker', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const quotesData = await quotesRes.json()
+      setQuotes(quotesData.data ?? [])
     } catch {
       setOrders([])
+      setQuotes([])
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
+
+  useEffect(() => {
+    trackEvent('store_orders_panel_open', {})
+  }, [])
 
   const confirm = async (id: number) => {
     setCodeError('')
@@ -138,7 +171,7 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
       await apiFetch(`/api/v1/store/orders/${id}/reject`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: rejectReason || 'Sin stock disponible' })
+        body: JSON.stringify({ reason: rejectReason || feedbackCopy.defaultRejectReason })
       })
       setShowRejectInput(null)
       setRejectReason('')
@@ -152,23 +185,66 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
   const others  = orders.filter(o => o.status !== 'pending')
 
   return (
-    <div className="fixed inset-0 z-[400] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-slate-900 rounded-t-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-800 shrink-0">
-          <div>
-            <h2 className="text-lg font-black text-white">🛒 Mis Pedidos</h2>
-            {pending.length > 0 && (
-              <p className="text-xs text-amber-400 font-bold">{pending.length} pedido(s) esperando confirmación</p>
-            )}
-          </div>
-          <button onClick={onClose} className="w-8 h-8 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center transition">
-            <X className="w-4 h-4 text-slate-400" />
-          </button>
-        </div>
+    <ModalShell
+      onClose={onClose}
+      titleId="store-orders-panel-title"
+      title={surfaceCopy.modalTitleMyOrders}
+      subtitle={
+        pending.length > 0 ? (
+          <span className="text-amber-400 font-bold">
+            {pending.length} pedido(s) esperando confirmación
+          </span>
+        ) : undefined
+      }
+      variant="bottomSheet"
+      bodyClassName="px-4 py-4 space-y-3"
+    >
+          {quotes.length > 0 && (
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-3">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{surfaceCopy.emittedQuotesSection}</p>
+              <div className="space-y-2">
+                {quotes.slice(0, 5).map((q) => (
+                  <div key={q.id} className="bg-slate-900 border border-slate-700 rounded-xl p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-bold text-white">{q.buyer_name || 'Comprador'}</p>
+                        <p className="text-[11px] text-slate-400">{q.buyer_email || emptyStateCopy.emailFallback}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-teal-400">{formatPrice(q.total_amount)}</p>
+                        <div className="flex items-center justify-end gap-1 flex-wrap mt-0.5">
+                          {q.expired ? (
+                            <span className="text-[10px] font-bold text-red-400">Vencida</span>
+                          ) : (
+                            <StatusBadge kind="integrated_quote" status={q.status || 'quote_sent'} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      {q.public_url && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(q.public_url || '')
+                            alert(surfaceCopy.quoteLinkCopiedAlert)
+                          }}
+                          className="text-[11px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-bold transition"
+                        >
+                          {surfaceCopy.copyLink}
+                        </button>
+                      )}
+                      {q.store_order && (
+                        <span className="text-[11px] text-teal-400 font-bold">
+                          Pedido #{q.store_order.id} ({q.store_order.status})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-        <div className="overflow-y-auto flex-1 px-4 py-4 space-y-3">
           {loading ? (
             <div className="flex justify-center py-12">
               <div className="w-8 h-8 border-4 border-slate-700 border-t-orange-500 rounded-full animate-spin" />
@@ -176,8 +252,8 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
           ) : orders.length === 0 ? (
             <div className="text-center py-12">
               <Package className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400 font-bold">Sin pedidos aún</p>
-              <p className="text-slate-600 text-xs mt-1">Cuando alguien compre en tu tienda, aparecerá aquí</p>
+              <p className="text-slate-400 font-bold">{surfaceCopy.emptyStoreOrdersTitle}</p>
+              <p className="text-slate-600 text-xs mt-1">{surfaceCopy.emptyStoreOrdersHint}</p>
             </div>
           ) : (
             <>
@@ -211,19 +287,21 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                     </div>
 
                     {order.delivery && (
-                      <p className="text-xs text-blue-400 mb-3">🚚 Delivery: {order.delivery_address}</p>
+                      <p className="text-xs text-teal-400 mb-3">🚚 Delivery: {order.delivery_address}</p>
                     )}
 
                     {/* Estado de pago */}
-                    {(order as any).mp_status !== 'approved' ? (
+                    {(order as { mp_status?: string }).mp_status !== 'approved' ? (
                       <div className="bg-slate-700/50 border border-slate-600 rounded-xl px-3 py-2 mb-3 flex items-center gap-2">
-                        <span className="text-lg">⏳</span>
-                        <p className="text-xs text-slate-400">Esperando que el comprador complete el pago</p>
+                        <span className="text-lg" aria-hidden>⏳</span>
+                        <p className="text-xs text-slate-300">
+                          {mpPaymentLabel((order as { mp_status?: string }).mp_status)} — esperando acreditación para seguir.
+                        </p>
                       </div>
                     ) : (
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-xl px-3 py-2 mb-3 flex items-center gap-2">
-                        <span className="text-lg">✅</span>
-                        <p className="text-xs text-green-400 font-bold">Pago confirmado — ingresa el código del comprador</p>
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 mb-3 flex items-center gap-2">
+                        <span className="text-lg" aria-hidden>✅</span>
+                        <p className="text-xs text-amber-400 font-bold">Pago listo. Pedí al comprador el código de 4 dígitos al entregar.</p>
                       </div>
                     )}
 
@@ -233,20 +311,24 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                           const s = quoteStepState(order)
                           return (
                             <>
-                              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Timeline integrado</p>
-                              <div className="text-xs text-slate-300 flex items-center gap-2">
-                                <span>{s.paymentDone ? '✅' : '⏳'}</span><span>Pago MP</span>
+                              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Seguimiento del pedido</p>
+                              <div className="text-xs text-slate-300 flex items-start gap-2">
+                                <span aria-hidden>{s.paymentDone ? '✅' : '⏳'}</span>
+                                <span><span className="font-bold text-slate-200">{workerQuoteTimelineSteps.payment.short}</span> — {workerQuoteTimelineSteps.payment.detail(s.paymentDone)}</span>
                               </div>
-                              <div className="text-xs text-slate-300 flex items-center gap-2">
-                                <span>{s.materialsDone ? '✅' : '⏳'}</span><span>PIN materiales</span>
+                              <div className="text-xs text-slate-300 flex items-start gap-2">
+                                <span aria-hidden>{s.materialsDone ? '✅' : '⏳'}</span>
+                                <span><span className="font-bold text-slate-200">{workerQuoteTimelineSteps.materials.short}</span> — {workerQuoteTimelineSteps.materials.detail(s.materialsDone)}</span>
                               </div>
                               {s.withService && (
-                                <div className="text-xs text-slate-300 flex items-center gap-2">
-                                  <span>{s.serviceDone ? '✅' : '⏳'}</span><span>Servicio</span>
+                                <div className="text-xs text-slate-300 flex items-start gap-2">
+                                  <span aria-hidden>{s.serviceDone ? '✅' : '⏳'}</span>
+                                  <span><span className="font-bold text-slate-200">{workerQuoteTimelineSteps.service.short}</span> — {workerQuoteTimelineSteps.service.detail(s.serviceDone)}</span>
                                 </div>
                               )}
-                              <div className="text-xs text-slate-300 flex items-center gap-2">
-                                <span>{s.closed ? '✅' : '⏳'}</span><span>Cierre</span>
+                              <div className="text-xs text-slate-300 flex items-start gap-2">
+                                <span aria-hidden>{s.closed ? '✅' : '⏳'}</span>
+                                <span><span className="font-bold text-slate-200">{workerQuoteTimelineSteps.closed.short}</span> — {workerQuoteTimelineSteps.closed.detail(s.closed)}</span>
                               </div>
                             </>
                           )
@@ -265,7 +347,7 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                             value={confirmCode}
                             onChange={e => { setConfirmCode(e.target.value.replace(/\D/g,'')); setCodeError('') }}
                             placeholder="0000"
-                            className="flex-1 bg-slate-800 border border-slate-600 text-white text-center text-xl font-black rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 tracking-widest"
+                            className="flex-1 bg-slate-800 border border-slate-600 text-white text-center text-xl font-black rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 tracking-widest"
                           />
                         </div>
                         {codeError && <p className="text-red-400 text-xs">{codeError}</p>}
@@ -275,7 +357,7 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                             Cancelar
                           </button>
                           <button onClick={() => confirm(order.id)} disabled={acting === order.id || confirmCode.length !== 4}
-                            className="py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition disabled:opacity-50">
+                            className="py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 shadow-md shadow-amber-500/20">
                             {acting === order.id ? '...' : '✅ Confirmar'}
                           </button>
                         </div>
@@ -307,7 +389,7 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                           <XCircle className="w-4 h-4" /> Rechazar
                         </button>
                         <button onClick={() => { setShowCodeInput(order.id); setConfirmCode(''); setCodeError('') }}
-                          className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition">
+                          className="flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-amber-500/20">
                           <CheckCircle className="w-4 h-4" /> Ingresar código
                         </button>
                       </div>
@@ -327,9 +409,7 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                         className="w-full flex items-center justify-between p-4"
                       >
                         <div className="flex items-center gap-3">
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${STATUS_LABEL[order.status]?.color}`}>
-                            {STATUS_LABEL[order.status]?.label}
-                          </span>
+                          <StatusBadge kind="store_order" status={order.status} />
                           <span className="text-slate-300 text-sm font-bold">{order.buyer_name}</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -354,20 +434,24 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
                                 const s = quoteStepState(order)
                                 return (
                                   <>
-                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Timeline integrado</p>
-                                    <div className="text-xs text-slate-300 flex items-center gap-2">
-                                      <span>{s.paymentDone ? '✅' : '⏳'}</span><span>Pago MP</span>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Seguimiento del pedido</p>
+                                    <div className="text-xs text-slate-300 flex items-start gap-2">
+                                      <span aria-hidden>{s.paymentDone ? '✅' : '⏳'}</span>
+                                      <span><span className="font-bold text-slate-200">{workerQuoteTimelineSteps.payment.short}</span> — {workerQuoteTimelineSteps.payment.detail(s.paymentDone)}</span>
                                     </div>
-                                    <div className="text-xs text-slate-300 flex items-center gap-2">
-                                      <span>{s.materialsDone ? '✅' : '⏳'}</span><span>PIN materiales</span>
+                                    <div className="text-xs text-slate-300 flex items-start gap-2">
+                                      <span aria-hidden>{s.materialsDone ? '✅' : '⏳'}</span>
+                                      <span><span className="font-bold text-slate-200">{workerQuoteTimelineSteps.materials.short}</span> — {workerQuoteTimelineSteps.materials.detail(s.materialsDone)}</span>
                                     </div>
                                     {s.withService && (
-                                      <div className="text-xs text-slate-300 flex items-center gap-2">
-                                        <span>{s.serviceDone ? '✅' : '⏳'}</span><span>Servicio</span>
+                                      <div className="text-xs text-slate-300 flex items-start gap-2">
+                                        <span aria-hidden>{s.serviceDone ? '✅' : '⏳'}</span>
+                                        <span><span className="font-bold text-slate-200">{workerQuoteTimelineSteps.service.short}</span> — {workerQuoteTimelineSteps.service.detail(s.serviceDone)}</span>
                                       </div>
                                     )}
-                                    <div className="text-xs text-slate-300 flex items-center gap-2">
-                                      <span>{s.closed ? '✅' : '⏳'}</span><span>Cierre</span>
+                                    <div className="text-xs text-slate-300 flex items-start gap-2">
+                                      <span aria-hidden>{s.closed ? '✅' : '⏳'}</span>
+                                      <span><span className="font-bold text-slate-200">{workerQuoteTimelineSteps.closed.short}</span> — {workerQuoteTimelineSteps.closed.detail(s.closed)}</span>
                                     </div>
                                   </>
                                 )
@@ -382,8 +466,6 @@ export default function StoreOrdersPanel({ onClose }: { onClose: () => void }) {
               )}
             </>
           )}
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

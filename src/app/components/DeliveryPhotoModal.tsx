@@ -1,4 +1,6 @@
 'use client'
+import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState, useRef } from 'react'
 import { apiFetch } from '@/lib/api'
@@ -27,7 +29,7 @@ export default function DeliveryPhotoModal({
     const file = e.target.files?.[0]
     if (file && file.type.startsWith('image/')) {
       if (file.size > 5 * 1024 * 1024) {
-        setError('La imagen debe ser menor a 5MB')
+        setError(feedbackCopy.imageMax5mb)
         return
       }
       setPhoto(file)
@@ -57,7 +59,7 @@ export default function DeliveryPhotoModal({
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
       if (!token) {
-        setError('Debes iniciar sesión')
+        setError(feedbackCopy.mustLoginFirst)
         setUploading(false)
         return
       }
@@ -85,7 +87,7 @@ export default function DeliveryPhotoModal({
         setError(data.message || 'Error al subir la foto')
       }
     } catch (err) {
-      setError('Error de conexión. Por favor intenta nuevamente.')
+      setError(feedbackCopy.networkErrorPleaseRetry)
     } finally {
       setUploading(false)
     }
@@ -97,9 +99,11 @@ export default function DeliveryPhotoModal({
     <div className="fixed inset-0 z-[800] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6">
-          <h3 className="text-white font-bold text-lg">Foto de Entrega</h3>
-          <p className="text-white/90 text-sm mt-1">Toma o selecciona una foto del servicio completado</p>
+        <div className={uiTone.travelModeHeader}>
+          <div className="relative z-10">
+            <h3 className="text-white font-bold text-lg">Foto de entrega</h3>
+            <p className="text-white/90 text-sm mt-1">Toma o selecciona una foto del servicio completado</p>
+          </div>
         </div>
 
         {/* Content */}
@@ -109,9 +113,10 @@ export default function DeliveryPhotoModal({
               <img
                 src={preview}
                 alt="Preview"
-                className="w-full h-64 object-cover rounded-xl border-2 border-green-500"
+                className="w-full h-64 object-cover rounded-xl border-2 border-teal-500"
               />
               <button
+                type="button"
                 onClick={() => {
                   setPhoto(null)
                   setPreview(null)
@@ -126,11 +131,11 @@ export default function DeliveryPhotoModal({
               </button>
             </div>
           ) : (
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center">
+            <div className="border-2 border-dashed border-teal-200 rounded-xl p-12 text-center bg-teal-50/30">
               <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <p className="text-gray-500 font-semibold mb-2">Sin foto seleccionada</p>
+              <p className="text-gray-500 font-semibold mb-2">{emptyStateCopy.noPhotoSelected}</p>
               <p className="text-gray-400 text-sm">Toma una foto o selecciona una desde tu galería</p>
             </div>
           )}
@@ -159,13 +164,15 @@ export default function DeliveryPhotoModal({
               className="hidden"
             />
             <button
+              type="button"
               onClick={handleCapture}
-              className="flex-1 px-4 py-3 bg-blue-100 text-blue-700 rounded-xl font-bold hover:bg-blue-200 transition flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3 bg-amber-100 text-amber-950 rounded-xl font-bold hover:bg-amber-200 transition flex items-center justify-center gap-2"
             >
               <span>📷</span>
-              <span>Tomar Foto</span>
+              <span>Tomar foto</span>
             </button>
             <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition flex items-center justify-center gap-2"
             >
@@ -178,26 +185,28 @@ export default function DeliveryPhotoModal({
         {/* Footer */}
         <div className="p-6 border-t border-gray-200 flex gap-3">
           <button
+            type="button"
             onClick={onClose}
             disabled={uploading}
-            className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition disabled:opacity-50"
+            className={uiTone.modalCancelLight}
           >
-            Cancelar
+            {surfaceCopy.cancel}
           </button>
           <button
+            type="button"
             onClick={handleUpload}
             disabled={uploading || !photo}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className={uiTone.ctaRating}
           >
             {uploading ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Subiendo...</span>
+                <span>{surfaceCopy.sending}</span>
               </>
             ) : (
               <>
                 <span>📤</span>
-                <span>Subir Foto</span>
+                <span>Subir foto</span>
               </>
             )}
           </button>

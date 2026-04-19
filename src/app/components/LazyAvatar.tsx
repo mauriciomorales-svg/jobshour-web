@@ -58,7 +58,7 @@ export default function LazyAvatar({ src, alt, size = 'md', className = '', fall
 
       {/* Fallback / Error state */}
       {(error || !src) && (
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-400 to-orange-400 flex items-center justify-center">
           <span className="text-white font-bold">{initials}</span>
         </div>
       )}

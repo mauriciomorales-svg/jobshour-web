@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff } from 'lucide-react'
+import { trackEvent } from '@/lib/analytics'
+import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info } from 'lucide-react'
 
 // Misma lógica que page.tsx: base sin /api para llamadas a jobshours API
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
@@ -45,7 +47,7 @@ function useSpeech(onResult: (text: string) => void) {
 
   const start = useCallback(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) { alert('Tu navegador no soporta reconocimiento de voz'); return }
+    if (!SR) { alert(feedbackCopy.browserNoSpeech); return }
     const rec = new SR()
     rec.lang = 'es-CL'
     rec.interimResults = false
@@ -290,7 +292,7 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
                 </div>
                 <div className="flex justify-between text-gray-700 border-t border-orange-200 pt-1 mt-1">
                   <span className="font-semibold">Ganancia por unidad</span>
-                  <span className="font-black text-green-600">{formatPrice(precioVentaFinal - precioNum)}
+                  <span className="font-black text-amber-700">{formatPrice(precioVentaFinal - precioNum)}
                     <span className="text-xs font-normal text-gray-400 ml-1">
                       ({precioNum > 0 ? Math.round(((precioVentaFinal - precioNum) / precioNum) * 100) : 0}%)
                     </span>
@@ -306,7 +308,7 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
         <div className="px-5 py-4 border-t bg-white">
           <button onClick={handleSubmit} disabled={saving}
             className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2">
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</> : '+ Publicar producto'}
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> {surfaceCopy.saving}</> : surfaceCopy.publishProduct}
           </button>
         </div>
 
@@ -443,7 +445,7 @@ function EditProductModal({ producto, workerId, onClose, onSuccess }: {
                 <Calculator className="w-4 h-4" /> Calculadora de precio
               </div>
               <div className="flex justify-between text-gray-600">
-                <span>Tu ganancia (100%)</span><span className="font-bold text-green-600">{formatPrice(precioNum)}</span>
+                <span>Tu ganancia (100%)</span><span className="font-bold text-amber-700">{formatPrice(precioNum)}</span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Precio cliente (+10%)</span><span className="font-bold text-orange-600">{formatPrice(precioCliente)}</span>
@@ -455,7 +457,7 @@ function EditProductModal({ producto, workerId, onClose, onSuccess }: {
 
           <button onClick={handleSave} disabled={saving}
             className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition disabled:opacity-50">
-            {saving ? 'Guardando...' : 'Guardar cambios'}
+            {saving ? surfaceCopy.saving : surfaceCopy.saveChanges}
           </button>
         </div>
       </div>
@@ -498,6 +500,10 @@ export default function TiendaPage() {
   const [tab, setTab] = useState<'catalogo' | 'stats'>('catalogo')
   const [stats, setStats] = useState<any>(null)
   const [loadingStats, setLoadingStats] = useState(false)
+  const [checkoutMode, setCheckoutMode] = useState<'purchase' | 'quote'>('purchase')
+  const [quoteExpiryHours, setQuoteExpiryHours] = useState('72')
+  const [quotePublicUrl, setQuotePublicUrl] = useState<string | null>(null)
+  const [quoteExpiresAt, setQuoteExpiresAt] = useState<string | null>(null)
 
   // Comprobar sesión — URL absoluta con origin actual (igual que servidor antiguo)
   const checkAuth = useCallback(() => {
@@ -586,6 +592,11 @@ export default function TiendaPage() {
       .catch(() => setNotFound(true))
   }, [workerId])
 
+  useEffect(() => {
+    if (!worker) return
+    trackEvent('tienda_view', { worker_id: worker.id })
+  }, [worker])
+
   // Categorías
   useEffect(() => {
     if (!workerId) return
@@ -630,18 +641,19 @@ export default function TiendaPage() {
         method: 'DELETE', headers: { Authorization: `Bearer ${token ?? ''}` }
       })
       if (r.ok) fetchProductos()
-      else alert('No se pudo eliminar')
-    } catch { alert('Error de conexión') }
+      else alert(feedbackCopy.deleteFailed)
+    } catch { alert(feedbackCopy.networkError) }
   }
 
   const cartTotal = cart.reduce((s, i) => s + (i.precio_venta ?? i.precio) * i.cantidad, 0)
   const cartCount = cart.reduce((s, i) => s + i.cantidad, 0)
+  const canUseCart = !isOwner || checkoutMode === 'quote'
   const commission = Math.round(cartTotal * 0.08)
   const laborAmountNum = Math.max(0, parseInt(laborAmount || '0', 10) || 0)
   const totalFinal = cartTotal + commission + (laborEnabled ? laborAmountNum : 0)
 
   const handlePay = async () => {
-    if (!buyerName.trim() || !buyerEmail.trim()) { alert('Ingresa tu nombre y email'); return }
+    if (!buyerName.trim() || !buyerEmail.trim()) { alert(feedbackCopy.enterNameEmail); return }
     setPaying(true)
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -667,6 +679,13 @@ export default function TiendaPage() {
       })
       const data = await r.json()
       if (r.ok && data.payment_link) {
+        trackEvent('tienda_integrated_checkout_success', {
+          worker_id: workerId,
+          store_order_id: data.store_order_id,
+          quote_id: data.quote_id,
+        })
+        setQuotePublicUrl(null)
+        setQuoteExpiresAt(null)
         try {
           localStorage.setItem('last_store_order_id', String(data.store_order_id ?? data.order_id ?? ''))
           localStorage.setItem('last_store_confirmation_code', String(data.confirmation_code ?? ''))
@@ -674,9 +693,64 @@ export default function TiendaPage() {
         setPayLink(data.payment_link); setConfirmationCode(data.confirmation_code ?? null)
         setDone(true); setCart([])
         window.location.href = data.payment_link
-      } else { alert(data.message || 'Error al procesar el pedido') }
-    } catch { alert('Error de conexión') }
+      } else {
+        trackEvent('tienda_integrated_checkout_error', { worker_id: workerId, message: String(data?.message || '').slice(0, 120) })
+        alert(data.message || feedbackCopy.orderProcessError)
+      }
+    } catch { alert(feedbackCopy.networkError) }
     finally { setPaying(false) }
+  }
+
+  const handleCreateQuote = async () => {
+    if (!buyerName.trim() || !buyerEmail.trim()) { alert(feedbackCopy.enterBuyerNameEmail); return }
+    setPaying(true)
+    try {
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      if (!token) {
+        alert(feedbackCopy.mustLoginWorkerQuote)
+        return
+      }
+      const apiUrl = `${window.location.origin}/api`
+      const r = await fetch(`${apiUrl}/v1/integrated-quotes/worker/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          items: cart.map(i => ({ idproducto: i.idproducto, nombre: i.nombre, cantidad: i.cantidad, precio: i.precio_venta ?? i.precio })),
+          buyer_name: buyerName.trim(),
+          buyer_email: buyerEmail.trim(),
+          buyer_phone: buyerPhone.trim() || null,
+          wants_delivery: wantsDelivery,
+          delivery_address: wantsDelivery ? address : null,
+          service: laborEnabled ? {
+            type: wantsDelivery ? 'express_errand' : 'fixed_job',
+            description: laborDesc.trim() || null,
+            offered_price: laborAmountNum,
+          } : null,
+          expires_in_hours: Math.max(1, parseInt(quoteExpiryHours || '72', 10) || 72),
+        }),
+      })
+      const data = await r.json()
+      if (r.ok && data.public_url) {
+        trackEvent('tienda_worker_quote_created', {
+          worker_id: workerId,
+          quote_id: data.quote_id,
+          expires_at: data.expires_at,
+        })
+        setPayLink(null)
+        setConfirmationCode(null)
+        setQuotePublicUrl(data.public_url)
+        setQuoteExpiresAt(data.expires_at ?? null)
+        setDone(true)
+        setCart([])
+      } else {
+        trackEvent('tienda_worker_quote_error', { worker_id: workerId, message: String(data?.message || '').slice(0, 120) })
+        alert(data.message || feedbackCopy.quoteCreateFailed)
+      }
+    } catch {
+      alert(feedbackCopy.networkError)
+    } finally {
+      setPaying(false)
+    }
   }
 
   if (!loading && notFound) {
@@ -745,16 +819,18 @@ export default function TiendaPage() {
               <p className="text-xs text-gray-500">por {worker?.name ?? '...'}</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowCart(true)}
-            className="relative flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 rounded-xl transition"
-          >
-            <ShoppingCart className="w-4 h-4" />
-            <span className="hidden sm:inline">Carrito</span>
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs font-black rounded-full flex items-center justify-center">{cartCount}</span>
-            )}
-          </button>
+          {canUseCart && (
+            <button
+              onClick={() => setShowCart(true)}
+              className="relative flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 rounded-xl transition"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span className="hidden sm:inline">{isOwner ? 'Carrito cotización' : 'Carrito'}</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs font-black rounded-full flex items-center justify-center">{cartCount}</span>
+              )}
+            </button>
+          )}
         </div>
       </nav>
 
@@ -775,7 +851,7 @@ export default function TiendaPage() {
                   <Star className="w-4 h-4 fill-yellow-400" /> {worker.fresh_score?.toFixed(1) ?? '0.0'}
                   <span className="text-slate-400 font-normal">({worker.rating_count} reseñas)</span>
                 </span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${worker.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-slate-600 text-slate-400'}`}>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${worker.status === 'active' ? 'bg-teal-500/20 text-teal-300' : 'bg-slate-600 text-slate-400'}`}>
                   {worker.status === 'active' ? '● Disponible' : '● Inactivo'}
                 </span>
               </div>
@@ -792,7 +868,7 @@ export default function TiendaPage() {
                   navigator.share({ title: worker?.store_name ?? 'Tienda', text, url }).catch(() => {})
                 } else {
                   navigator.clipboard.writeText(text)
-                  alert('¡Lista copiada! Pégala en WhatsApp o donde quieras.')
+                  alert(feedbackCopy.listCopiedWhatsApp)
                 }
               }}
               className="mt-4 inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 rounded-xl transition text-sm"
@@ -836,6 +912,41 @@ export default function TiendaPage() {
             </button>
           </div>
         )}
+        {isOwner && (
+          <div className="space-y-2">
+            <div className="flex gap-2 bg-white border border-gray-200 rounded-xl p-1 w-fit">
+              <button
+                type="button"
+                onClick={() => {
+                  setCheckoutMode('purchase')
+                  trackEvent('tienda_owner_mode', { mode: 'purchase', worker_id: workerId })
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${checkoutMode === 'purchase' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                Catálogo normal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCheckoutMode('quote')
+                  trackEvent('tienda_owner_mode', { mode: 'quote', worker_id: workerId })
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${checkoutMode === 'quote' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                Armar cotización
+              </button>
+            </div>
+            {checkoutMode === 'quote' && (
+              <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-left text-xs text-amber-950 leading-relaxed max-w-lg">
+                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" aria-hidden />
+                <p>
+                  <span className="font-bold">Modo cotización:</span> armá el carrito como si fuera el pedido del comprador. No se cobra acá: se genera un{' '}
+                  <strong>link</strong> para que el comprador vea el detalle y pague con Mercado Pago cuando quiera.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tabs solo owner */}
         {isOwner && (
@@ -865,12 +976,12 @@ export default function TiendaPage() {
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                   <p className="text-xs text-gray-400 font-semibold mb-1">Ventas hoy</p>
                   <p className="text-2xl font-black text-gray-900">{stats.ventas_hoy}</p>
-                  <p className="text-sm font-bold text-green-600">{formatPrice(stats.ingresos_hoy)}</p>
+                  <p className="text-sm font-bold text-amber-700">{formatPrice(stats.ingresos_hoy)}</p>
                 </div>
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                   <p className="text-xs text-gray-400 font-semibold mb-1">Este mes</p>
                   <p className="text-2xl font-black text-gray-900">{stats.ventas_mes}</p>
-                  <p className="text-sm font-bold text-green-600">{formatPrice(stats.ingresos_mes)}</p>
+                  <p className="text-sm font-bold text-amber-700">{formatPrice(stats.ingresos_mes)}</p>
                 </div>
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                   <p className="text-xs text-gray-400 font-semibold mb-1">Total histórico</p>
@@ -886,7 +997,7 @@ export default function TiendaPage() {
 
               {/* Motivación ganancia */}
               {stats.ganancia_estimada > 0 && (
-                <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-5 text-white">
+                <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl p-5 text-white shadow-lg shadow-amber-500/25">
                   <p className="text-sm font-bold opacity-80 mb-1">🎉 Tu ganancia estimada total</p>
                   <p className="text-4xl font-black">{formatPrice(stats.ganancia_estimada)}</p>
                   <p className="text-sm opacity-80 mt-1">¡Excelente trabajo! Cada venta suma a tu bolsillo.</p>
@@ -916,7 +1027,7 @@ export default function TiendaPage() {
                           <p className="text-sm font-bold text-gray-800 truncate">{p.nombre}</p>
                           <p className="text-xs text-gray-400">{p.unidades} unidades vendidas</p>
                         </div>
-                        <p className="text-sm font-black text-green-600">{formatPrice(p.total_ventas)}</p>
+                        <p className="text-sm font-black text-amber-700">{formatPrice(p.total_ventas)}</p>
                       </div>
                     ))}
                   </div>
@@ -969,7 +1080,7 @@ export default function TiendaPage() {
         ) : productos.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <Package className="w-16 h-16 mx-auto mb-3 opacity-30" />
-            <p className="text-lg font-semibold">Sin productos disponibles</p>
+            <p className="text-lg font-semibold">{emptyStateCopy.noProducts}</p>
             {isOwner && <button onClick={() => setShowAddModal(true)} className="mt-4 bg-orange-500 text-white font-bold px-5 py-2 rounded-xl hover:bg-orange-400 transition">+ Agregar primer producto</button>}
           </div>
         ) : (
@@ -1010,7 +1121,7 @@ export default function TiendaPage() {
                     <p className="text-orange-500 font-black text-base mt-1">{formatPrice(precio)}</p>
                     <p className="text-gray-400 text-xs mb-3">{p.stock_actual} disponibles</p>
 
-                    {!isOwner && (
+                    {canUseCart && (
                       enCarrito ? (
                         <div className="flex items-center justify-between bg-orange-50 rounded-lg px-2 py-1">
                           <button onClick={() => updateQty(p.idproducto, enCarrito.cantidad - 1)} className="w-6 h-6 bg-orange-500 text-white rounded-md flex items-center justify-center"><Minus className="w-3 h-3" /></button>
@@ -1087,14 +1198,14 @@ export default function TiendaPage() {
                   <div className="space-y-2">
                     <p className="text-xs text-center text-gray-500">Debes iniciar sesión para comprar</p>
                     <a href={`https://jobshours.com?redirect=/tienda/${workerId}`}
-                      className="block w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl transition text-center">
+                      className="block w-full bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-white font-black py-3 rounded-xl transition text-center shadow-md">
                       Iniciar sesión en JobsHours →
                     </a>
                   </div>
                 ) : (
                   <button onClick={() => { setShowCart(false); setShowCheckout(true) }}
                     className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition">
-                    Ir al pago →
+                    {isOwner ? 'Continuar cotización →' : 'Ir al pago →'}
                   </button>
                 )}
               </div>
@@ -1110,7 +1221,7 @@ export default function TiendaPage() {
           <div className="relative bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl">
             <div className="flex items-center gap-3 p-4 border-b">
               <button onClick={() => { setShowCheckout(false); setShowCart(true) }} className="text-gray-400 hover:text-gray-600"><ArrowLeft className="w-5 h-5" /></button>
-              <h2 className="font-black text-gray-900">Confirmar pedido</h2>
+              <h2 className="font-black text-gray-900">{isOwner ? 'Crear cotización' : 'Confirmar pedido'}</h2>
             </div>
             <div className="p-4 space-y-4">
               <div className="bg-gray-50 rounded-xl p-3 space-y-1">
@@ -1164,14 +1275,27 @@ export default function TiendaPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tus datos</p>
-                <input type="text" value={buyerName} onChange={e => setBuyerName(e.target.value)} placeholder="Tu nombre *"
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{isOwner ? 'Datos del comprador' : 'Tus datos'}</p>
+                <input type="text" value={buyerName} onChange={e => setBuyerName(e.target.value)} placeholder={isOwner ? 'Nombre del comprador *' : 'Tu nombre *'}
                   className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400" />
-                <input type="email" value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)} placeholder="Tu email *"
+                <input type="email" value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)} placeholder={isOwner ? 'Email del comprador *' : 'Tu email *'}
                   className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400" />
-                <input type="tel" value={buyerPhone} onChange={e => setBuyerPhone(e.target.value)} placeholder="Teléfono (opcional)"
+                <input type="tel" value={buyerPhone} onChange={e => setBuyerPhone(e.target.value)} placeholder={isOwner ? 'Teléfono comprador (opcional)' : 'Teléfono (opcional)'}
                   className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400" />
               </div>
+              {isOwner && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Validez cotización (horas)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={168}
+                    value={quoteExpiryHours}
+                    onChange={e => setQuoteExpiryHours(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+              )}
               <div className="bg-gray-50 rounded-xl p-3">
                 <button onClick={() => setWantsDelivery(!wantsDelivery)}
                   className={`flex items-center gap-2 w-full text-sm font-bold transition ${wantsDelivery ? 'text-orange-500' : 'text-gray-500'}`}>
@@ -1183,10 +1307,10 @@ export default function TiendaPage() {
                     className="mt-2 w-full bg-white border border-gray-200 text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400" />
                 )}
               </div>
-              <button onClick={handlePay} disabled={paying || !buyerName.trim() || !buyerEmail.trim() || (wantsDelivery && !address.trim())}
+              <button onClick={isOwner ? handleCreateQuote : handlePay} disabled={paying || !buyerName.trim() || !buyerEmail.trim() || (wantsDelivery && !address.trim())}
                 className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2">
-                <CreditCard className="w-4 h-4" />
-                {paying ? 'Procesando...' : `Pagar ${formatPrice(totalFinal)}`}
+                {isOwner ? <FileText className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+                {paying ? 'Procesando...' : (isOwner ? 'Crear y compartir cotización' : `Pagar ${formatPrice(totalFinal)}`)}
               </button>
             </div>
           </div>
@@ -1198,7 +1322,7 @@ export default function TiendaPage() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" />
           <div className="relative bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl">
-            <CheckCircle className="w-14 h-14 text-green-500 mx-auto mb-3" />
+            <CheckCircle className="w-14 h-14 text-teal-600 mx-auto mb-3" />
             <h3 className="text-gray-900 font-black text-xl mb-1">¡Pedido creado!</h3>
             <p className="text-gray-500 text-sm mb-4">Paga y guarda tu código. Lo necesitarás al recibir el producto.</p>
             {confirmationCode && (
@@ -1214,6 +1338,46 @@ export default function TiendaPage() {
             </a>
             <button onClick={() => { setDone(false); setShowCheckout(false) }} className="text-gray-400 hover:text-gray-600 text-sm transition">
               Volver a la tienda
+            </button>
+          </div>
+        </div>
+      )}
+
+      {done && quotePublicUrl && !payLink && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="relative bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl">
+            <CheckCircle className="w-14 h-14 text-teal-600 mx-auto mb-3" />
+            <h3 className="text-gray-900 font-black text-xl mb-1">Cotización creada</h3>
+            <p className="text-gray-500 text-sm mb-4">Comparte este link con el comprador para que la vea y pague.</p>
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-left mb-3">
+              <p className="text-xs text-gray-500 mb-1">Link público</p>
+              <p className="text-xs text-gray-700 break-all">{quotePublicUrl}</p>
+            </div>
+            {quoteExpiresAt && (
+              <p className="text-xs text-gray-500 mb-4">
+                Expira: {new Date(quoteExpiresAt).toLocaleString('es-CL')}
+              </p>
+            )}
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(quotePublicUrl)
+                alert(surfaceCopy.linkCopiedToClipboard)
+              }}
+              className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition mb-2 flex items-center justify-center gap-2"
+            >
+              <Link2 className="w-4 h-4" /> {surfaceCopy.copyLink}
+            </button>
+            <button
+              onClick={() => {
+                setDone(false)
+                setShowCheckout(false)
+                setQuotePublicUrl(null)
+                setQuoteExpiresAt(null)
+              }}
+              className="text-gray-400 hover:text-gray-600 text-sm transition"
+            >
+              {surfaceCopy.close}
             </button>
           </div>
         </div>

@@ -1,4 +1,6 @@
 'use client'
+import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
@@ -74,7 +76,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
       if (!res.ok) setError(data.message || 'Error al procesar')
       else fetchRequests()
     } catch (err) {
-      setError('Error de conexión')
+      setError(feedbackCopy.networkError)
     }
     setActionLoading(null)
   }
@@ -92,7 +94,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
       if (!res.ok) setError(data.message || 'Error al completar')
       else fetchRequests()
     } catch (err) {
-      setError('Error de conexión')
+      setError(feedbackCopy.networkError)
     }
     setActionLoading(null)
   }
@@ -110,7 +112,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
       if (!res.ok) setError(data.message || 'Error al cancelar')
       else fetchRequests()
     } catch (err) {
-      setError('Error de conexión')
+      setError(feedbackCopy.networkError)
     }
     setActionLoading(null)
   }
@@ -143,10 +145,12 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
     <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
       <div className="bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl w-[90%] max-w-2xl mx-4 overflow-hidden animate-scale-in max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-br from-green-500 via-emerald-600 to-teal-700 p-6 relative overflow-hidden shrink-0">
+        <div className={`${uiTone.travelModeHeader} shrink-0`}>
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
           <button
+            type="button"
             onClick={onClose}
+            aria-label={surfaceCopy.close}
             className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition z-10"
           >
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,30 +174,33 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
           )}
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => setFilter('pending')}
               className={`flex-1 px-4 py-2 rounded-xl text-sm font-bold transition ${
                 filter === 'pending'
-                  ? 'bg-amber-500 text-white shadow-lg'
+                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
               }`}
             >
               ⏳ Pendientes {pendingCount > 0 && `(${pendingCount})`}
             </button>
             <button
+              type="button"
               onClick={() => setFilter('accepted')}
               className={`flex-1 px-4 py-2 rounded-xl text-sm font-bold transition ${
                 filter === 'accepted'
-                  ? 'bg-emerald-600 text-white shadow-lg'
+                  ? 'bg-teal-600 text-white shadow-lg shadow-teal-500/20'
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
               }`}
             >
               ✅ Activas {acceptedCount > 0 && `(${acceptedCount})`}
             </button>
             <button
+              type="button"
               onClick={() => setFilter('all')}
               className={`flex-1 px-4 py-2 rounded-xl text-sm font-bold transition ${
                 filter === 'all'
-                  ? 'bg-blue-600 text-white shadow-lg'
+                  ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/20'
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
               }`}
             >
@@ -206,7 +213,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-12">
@@ -227,7 +234,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                     request.status === 'pending'
                       ? 'bg-amber-500/10 border-amber-500/40'
                       : request.status === 'accepted' || request.status === 'in_progress'
-                      ? 'bg-emerald-500/10 border-emerald-500/40'
+                      ? 'bg-teal-500/10 border-teal-500/40'
                       : 'bg-slate-800 border-slate-700'
                   }`}
                 >
@@ -250,7 +257,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                     {request.offered_price && (
                       <div className="text-right">
                         <p className="text-xs text-slate-400">Oferta</p>
-                        <p className="text-lg font-black text-emerald-400">
+                        <p className="text-lg font-black text-amber-400">
                           ${request.offered_price.toLocaleString()}
                         </p>
                       </div>
@@ -260,7 +267,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                   {/* Description */}
                   <div className="bg-slate-800/60 rounded-xl p-3 mb-3 border border-slate-700">
                     <p className="text-sm text-slate-300 leading-relaxed">
-                      {request.description || 'Sin descripción'}
+                      {request.description || emptyStateCopy.descriptionFallback}
                     </p>
                   </div>
 
@@ -280,9 +287,10 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                   {request.status === 'pending' && (
                     <div className="flex gap-2">
                       <button
+                        type="button"
                         onClick={() => handleRespond(request.id, 'accept')}
                         disabled={actionLoading === request.id}
-                        className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-3 rounded-xl text-sm font-bold hover:from-emerald-600 hover:to-teal-700 transition shadow-lg disabled:opacity-50"
+                        className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white py-3 rounded-xl text-sm font-bold hover:from-teal-400 hover:to-teal-500 transition shadow-lg shadow-teal-500/25 disabled:opacity-50"
                       >
                         {actionLoading === request.id ? (
                           <div className="flex items-center justify-center gap-2">
@@ -291,6 +299,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                         ) : '✅ Aceptar'}
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleRespond(request.id, 'reject')}
                         disabled={actionLoading === request.id}
                         className="flex-1 bg-red-500/20 text-red-400 py-3 rounded-xl text-sm font-bold hover:bg-red-500/30 transition border border-red-500/30 disabled:opacity-50"
@@ -304,23 +313,26 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                     <div className="space-y-2">
                       <div className="flex gap-2">
                         <button
+                          type="button"
                           onClick={() => setTrackingRequestId(request.id)}
                           className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
                         >
                           <span>📍</span><span>Tracking</span>
                         </button>
                         <button
+                          type="button"
                           onClick={() => onOpenChat?.(request.id, request.client.name, request.client.avatar)}
-                          className="flex-1 bg-blue-500/20 text-blue-400 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-500/30 transition border border-blue-500/30"
+                          className={`flex-1 py-2.5 ${uiTone.chipActionTeal}`}
                         >
                           💬 Chat
                         </button>
                       </div>
                       <div className="flex gap-2">
                         <button
+                          type="button"
                           onClick={() => handleComplete(request.id)}
                           disabled={actionLoading === request.id}
-                          className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-3 rounded-xl text-sm font-black hover:from-emerald-600 hover:to-teal-700 transition shadow-lg disabled:opacity-50"
+                          className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white py-3 rounded-xl text-sm font-black hover:from-teal-400 hover:to-teal-500 transition shadow-lg shadow-teal-500/25 disabled:opacity-50"
                         >
                           {actionLoading === request.id ? (
                             <div className="flex items-center justify-center gap-2">
@@ -329,11 +341,12 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                           ) : '✓ Marcar Completado'}
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleCancel(request.id)}
                           disabled={actionLoading === request.id}
                           className="px-4 py-3 bg-red-500/20 text-red-400 rounded-xl text-sm font-bold hover:bg-red-500/30 transition border border-red-500/30 disabled:opacity-50"
                         >
-                          Cancelar
+                          {surfaceCopy.cancel}
                         </button>
                       </div>
                     </div>
@@ -348,8 +361,8 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                   )}
 
                   {request.status === 'completed' && (
-                    <div className="bg-emerald-500/10 rounded-xl p-3 text-center border border-emerald-500/30">
-                      <p className="text-sm text-emerald-400 font-semibold">🎉 Completado</p>
+                    <div className="bg-teal-500/10 rounded-xl p-3 text-center border border-teal-500/30">
+                      <p className="text-sm text-teal-400 font-semibold">🎉 Completado</p>
                     </div>
                   )}
                 </div>
@@ -367,11 +380,11 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                 <p className="text-xs text-slate-400 font-semibold">Pendientes</p>
               </div>
               <div>
-                <p className="text-2xl font-black text-emerald-400">{acceptedCount}</p>
+                <p className="text-2xl font-black text-teal-400">{acceptedCount}</p>
                 <p className="text-xs text-slate-400 font-semibold">Activas</p>
               </div>
               <div>
-                <p className="text-2xl font-black text-blue-400">{requests.length}</p>
+                <p className="text-2xl font-black text-orange-400">{requests.length}</p>
                 <p className="text-xs text-slate-400 font-semibold">Total</p>
               </div>
             </div>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
+import { surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 import dynamic from 'next/dynamic'
 import { useLocationTracking } from '@/hooks/useLocationTracking'
 import TrackingStatusCard from './TrackingStatusCard'
@@ -239,7 +241,7 @@ export default function LiveTrackingModal({
     <div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-[95%] max-w-4xl mx-4 overflow-hidden max-h-[95vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 shrink-0">
+        <div className={`${uiTone.travelModeHeader} shrink-0`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -249,16 +251,18 @@ export default function LiveTrackingModal({
                   className="w-12 h-12 rounded-full object-cover border-2 border-white"
                 />
                 {isTrackingActive && (
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-teal-400 rounded-full border-2 border-white animate-pulse"></div>
                 )}
               </div>
               <div>
-                <h3 className="text-white font-bold text-lg">Tracking en Tiempo Real</h3>
+                <h3 className="text-white font-bold text-lg">Tracking en tiempo real</h3>
                 <p className="text-white/90 text-sm">{workerName}</p>
               </div>
             </div>
             <button
+              type="button"
               onClick={onClose}
+              aria-label={surfaceCopy.close}
               className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,7 +275,7 @@ export default function LiveTrackingModal({
         {/* Contenido */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Mapa */}
-          <div className="h-96 rounded-xl overflow-hidden border-2 border-green-500">
+          <div className="h-96 rounded-xl overflow-hidden border-2 border-teal-500">
             <LiveTrackingMap
               workerLocation={workerLocation}
               destinationLocation={destinationLat && destinationLng ? { lat: destinationLat, lng: destinationLng } : null}
@@ -291,12 +295,12 @@ export default function LiveTrackingModal({
 
           {/* Mensaje para workers */}
           {isWorker && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <div className="text-2xl">📍</div>
                 <div>
-                  <p className="font-bold text-blue-900 text-sm mb-1">Compartiendo tu ubicación</p>
-                  <p className="text-xs text-blue-700">
+                  <p className="font-bold text-teal-950 text-sm mb-1">Compartiendo tu ubicación</p>
+                  <p className="text-xs text-teal-800">
                     {isTracking
                       ? 'Tu ubicación se está compartiendo automáticamente con el cliente.'
                       : trackingError
@@ -310,12 +314,12 @@ export default function LiveTrackingModal({
 
           {/* Mensaje para clientes */}
           {!isWorker && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <div className="text-2xl">👀</div>
                 <div>
-                  <p className="font-bold text-green-900 text-sm mb-1">Siguiendo a {workerName}</p>
-                  <p className="text-xs text-green-700">
+                  <p className="font-bold text-emerald-950 text-sm mb-1">Siguiendo a {workerName}</p>
+                  <p className="text-xs text-emerald-800">
                     {isTrackingActive
                       ? 'La ubicación se actualiza automáticamente cada 5 segundos.'
                       : 'Esperando actualización de ubicación...'}
@@ -329,10 +333,11 @@ export default function LiveTrackingModal({
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 shrink-0">
           <button
+            type="button"
             onClick={onClose}
-            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-lg"
+            className={uiTone.modalFooterClose}
           >
-            Cerrar Tracking
+            {surfaceCopy.closeTracking}
           </button>
         </div>
       </div>

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { API_BASE_URL } from '../lib/api'
+import { feedbackCopy, formatContactsFoundJobsHours, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 import { QRCodeSVG } from 'qrcode.react'
 
 interface FriendsProps {
@@ -146,10 +148,10 @@ export default function Friends({ user, onClose }: FriendsProps) {
       })
       
       if (response.ok) {
-        alert('Solicitud enviada!')
+        alert(feedbackCopy.friendRequestSent)
         setSearchResults(searchResults.filter(w => w.user_id !== userId))
       } else {
-        alert('Error al enviar solicitud')
+        alert(feedbackCopy.friendRequestError)
       }
     } catch (error) {
       console.error('Error sending request:', error)
@@ -167,10 +169,10 @@ export default function Friends({ user, onClose }: FriendsProps) {
       
       const data = await response.json()
       if (response.ok) {
-        alert('Solicitud enviada!')
+        alert(feedbackCopy.friendRequestSent)
         setScanCode('')
       } else {
-        alert(data.message || 'QR no válido')
+        alert(data.message || feedbackCopy.invalidQr)
       }
     } catch (error) {
       console.error('Error scanning QR:', error)
@@ -224,7 +226,7 @@ export default function Friends({ user, onClose }: FriendsProps) {
       
       if (response.ok) {
         const data = await response.json()
-        alert(`${data.matches_found} contactos encontrados en JobsHours!`)
+        alert(formatContactsFoundJobsHours(data.matches_found))
         loadData()
       }
     } catch (error) {
@@ -238,9 +240,14 @@ export default function Friends({ user, onClose }: FriendsProps) {
     <div className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-4 flex justify-between items-center">
-          <h2 className="text-xl font-black italic text-white">👥 Mis Amigos</h2>
-          <button onClick={onClose} className="text-white/80 hover:text-white">
+        <div className={`${uiTone.paymentHeaderStrip} p-4 flex justify-between items-center shrink-0`}>
+          <h2 className="text-xl font-black italic text-white">👥 Mis amigos</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={surfaceCopy.close}
+            className="text-white/80 hover:text-white rounded-lg p-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -253,9 +260,10 @@ export default function Friends({ user, onClose }: FriendsProps) {
             { id: 'qr', label: 'QR', icon: '📱' },
           ].map(tab => (
             <button
+              type="button"
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 py-3 text-sm font-bold ${activeTab === tab.id ? 'text-orange-500 border-b-2 border-orange-500 bg-orange-50' : 'text-gray-500'}`}
+              className={`flex-1 py-3 text-sm font-bold transition ${activeTab === tab.id ? 'text-amber-700 border-b-2 border-amber-600 bg-amber-50' : 'text-gray-500 hover:text-gray-700'}`}
             >
               {tab.icon} {tab.label}
             </button>
@@ -268,14 +276,14 @@ export default function Friends({ user, onClose }: FriendsProps) {
             <div className="space-y-4">
               {/* Solicitudes pendientes */}
               {pendingRequests.length > 0 && (
-                <div className="bg-yellow-50 rounded-xl p-3">
-                  <h3 className="text-sm font-bold text-yellow-800 mb-2">Solicitudes pendientes ({pendingRequests.length})</h3>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <h3 className="text-sm font-bold text-amber-900 mb-2">Solicitudes pendientes ({pendingRequests.length})</h3>
                   {pendingRequests.map(req => (
-                    <div key={req.id} className="flex items-center justify-between bg-white rounded-lg p-2 mb-2">
+                    <div key={req.id} className="flex items-center justify-between bg-white rounded-lg p-2 mb-2 border border-amber-100">
                       <span className="text-sm font-medium">{req.requester.name}</span>
                       <div className="flex gap-1">
-                        <button onClick={() => acceptRequest(req.id)} className="px-3 py-1 bg-green-500 text-white text-xs rounded-lg">Aceptar</button>
-                        <button onClick={() => rejectRequest(req.id)} className="px-3 py-1 bg-gray-200 text-gray-600 text-xs rounded-lg">Rechazar</button>
+                        <button type="button" onClick={() => acceptRequest(req.id)} className="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white text-xs rounded-lg font-bold transition">Aceptar</button>
+                        <button type="button" onClick={() => rejectRequest(req.id)} className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded-lg font-semibold transition">Rechazar</button>
                       </div>
                     </div>
                   ))}
@@ -284,9 +292,10 @@ export default function Friends({ user, onClose }: FriendsProps) {
 
               {/* Sync Contacts Button */}
               <button 
+                type="button"
                 onClick={syncContacts}
                 disabled={syncing}
-                className="w-full py-3 bg-gradient-to-r from-blue-400 to-blue-500 text-white font-bold rounded-xl shadow hover:shadow-lg transition disabled:opacity-50"
+                className={`${uiTone.ctaFormSaveWide} shadow-lg`}
               >
                 {syncing ? 'Sincronizando...' : '📞 Sincronizar Agenda de Contactos'}
               </button>
@@ -300,12 +309,12 @@ export default function Friends({ user, onClose }: FriendsProps) {
                   <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 text-center space-y-4"
+                    className={`${uiTone.travelModePanelSoft} p-6 text-center space-y-4`}
                   >
                     <div className="text-5xl mb-2">👥</div>
                     <h3 className="text-lg font-black text-gray-800">¡Aún no tienes compañeros en JobsHours!</h3>
                     <p className="text-sm text-gray-700 leading-relaxed">
-                      Conecta con otros trabajadores de <span className="font-bold text-orange-600">Renaico y alrededores</span>: jóvenes que empiezan, personas con experiencia que buscan nuevas oportunidades, o compañeros para cubrir jobs grandes juntos.
+                      Conecta con otros trabajadores de <span className="font-bold text-amber-700">Renaico y alrededores</span>: jóvenes que empiezan, personas con experiencia que buscan nuevas oportunidades, o compañeros para cubrir jobs grandes juntos.
                     </p>
                     <div className="bg-white/60 rounded-xl p-4 text-left space-y-2">
                       <p className="text-xs font-bold text-gray-600">Ejemplos de colaboración:</p>
@@ -316,8 +325,9 @@ export default function Friends({ user, onClose }: FriendsProps) {
                       </ul>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setActiveTab('find')}
-                      className="w-full py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black rounded-xl shadow-lg hover:shadow-xl transition text-base"
+                      className={uiTone.travelModeCta}
                     >
                       🔍 Buscar compañeros ahora
                     </button>
@@ -328,33 +338,33 @@ export default function Friends({ user, onClose }: FriendsProps) {
                       key={friend.friendship_id} 
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-3 p-3 bg-gradient-to-r from-white to-gray-50 rounded-xl border-2 border-gray-100 hover:border-orange-300 transition relative"
+                      className="flex items-center gap-3 p-3 bg-gradient-to-r from-white to-slate-50 rounded-xl border-2 border-gray-100 hover:border-amber-200 transition relative"
                     >
                       {friend.is_active && (
-                        <div className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <div className="absolute top-2 right-2 w-3 h-3 bg-teal-500 rounded-full animate-pulse"></div>
                       )}
-                      <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg relative">
+                      <div className={`w-12 h-12 ${uiTone.avatarPlaceholderRing} rounded-full flex items-center justify-center text-white font-bold text-lg relative`}>
                         {friend.avatar_url ? (
                           <img src={friend.avatar_url} alt={friend.name} className="w-full h-full rounded-full object-cover" />
                         ) : (
                           friend.name.charAt(0).toUpperCase()
                         )}
                         {friend.is_active && (
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-teal-500 rounded-full border-2 border-white"></div>
                         )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-gray-800">{friend.name}</p>
                           {friend.distance_km !== undefined && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
+                            <span className="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-bold">
                               {friend.distance_km < 1 ? '<1km' : `${friend.distance_km.toFixed(1)}km`}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-gray-500">@{friend.nickname}</p>
                         {friend.skills?.length > 0 && (
-                          <p className="text-xs text-orange-500 mt-1">{friend.skills.slice(0, 3).join(', ')}</p>
+                          <p className="text-xs text-teal-700 mt-1">{friend.skills.slice(0, 3).join(', ')}</p>
                         )}
                       </div>
                     </motion.div>
@@ -366,7 +376,7 @@ export default function Friends({ user, onClose }: FriendsProps) {
 
           {activeTab === 'find' && (
             <div className="space-y-4">
-              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-4 text-center">
+              <div className={`${uiTone.travelModePanelSoft} p-4 text-center`}>
                 <p className="text-sm font-bold text-gray-700">🔍 Encuentra compañeros cercanos</p>
                 <p className="text-xs text-gray-600 mt-1">Busca por nombre, habilidad o ciudad</p>
               </div>
@@ -374,11 +384,12 @@ export default function Friends({ user, onClose }: FriendsProps) {
               {/* Filtro rápido */}
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setFilterActive(!filterActive)}
                   className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
                     filterActive 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-gray-100 text-gray-600'
+                      ? 'bg-teal-600 text-white shadow-md shadow-teal-500/20' 
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   {filterActive ? '🟢 Activos ahora' : '⚪ Todos'}
@@ -393,11 +404,12 @@ export default function Friends({ user, onClose }: FriendsProps) {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   placeholder="Buscar por nombre, habilidad o ciudad..."
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 outline-none"
+                  className={`flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl ${uiTone.inputFocusBrand}`}
                 />
                 <button 
+                  type="button"
                   onClick={handleSearch}
-                  className="px-4 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold rounded-xl hover:shadow-lg transition"
+                  className="px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-xl shadow-md shadow-amber-500/20 hover:shadow-lg hover:from-amber-400 hover:to-orange-500 transition"
                 >
                   🔍
                 </button>
@@ -413,11 +425,11 @@ export default function Friends({ user, onClose }: FriendsProps) {
                     key={worker.id} 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center justify-between p-4 bg-white rounded-xl border-2 border-gray-100 hover:border-orange-300 transition shadow-sm"
+                    className="flex items-center justify-between p-4 bg-white rounded-xl border-2 border-gray-100 hover:border-amber-200 transition shadow-sm"
                   >
                     <div className="flex items-center gap-3 flex-1">
                       <div className="relative">
-                        <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
+                        <div className={`w-12 h-12 ${uiTone.avatarPlaceholderRing} rounded-full flex items-center justify-center text-white font-bold overflow-hidden`}>
                           {worker.avatar_url ? (
                             <img src={worker.avatar_url} alt={worker.nickname} className="w-full h-full object-cover" />
                           ) : (
@@ -425,27 +437,28 @@ export default function Friends({ user, onClose }: FriendsProps) {
                           )}
                         </div>
                         {worker.is_active && (
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-teal-500 rounded-full border-2 border-white"></div>
                         )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-gray-800">{worker.name || `@${worker.nickname}`}</p>
                           {worker.distance_km !== undefined && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
+                            <span className="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-bold">
                               {worker.distance_km < 1 ? '<1km' : `${worker.distance_km.toFixed(1)}km`}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-gray-500">@{worker.nickname}</p>
                         {worker.skills && worker.skills.length > 0 && (
-                          <p className="text-xs text-orange-500 mt-1">{worker.skills.slice(0, 2).join(', ')}</p>
+                          <p className="text-xs text-teal-700 mt-1">{worker.skills.slice(0, 2).join(', ')}</p>
                         )}
                       </div>
                     </div>
                     <button 
+                      type="button"
                       onClick={() => sendRequest(worker.user_id)}
-                      className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm font-bold rounded-lg hover:shadow-lg transition flex items-center gap-1"
+                      className="px-4 py-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white text-sm font-bold rounded-lg shadow-md shadow-teal-500/20 hover:shadow-lg transition flex items-center gap-1"
                     >
                       <span>+</span>
                       <span className="hidden sm:inline">Agregar</span>
@@ -462,11 +475,11 @@ export default function Friends({ user, onClose }: FriendsProps) {
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 rounded-2xl p-6 border-2 border-orange-200"
+                className="bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 rounded-2xl p-6 border-2 border-amber-200"
               >
                 <h3 className="text-lg font-black text-gray-800 mb-2">📱 Tu código QR</h3>
                 <p className="text-sm text-gray-700 mb-4 leading-relaxed">
-                  Comparte este QR con <span className="font-bold text-orange-600">clientes habituales</span> o grupos de WhatsApp.<br/>
+                  Comparte este QR con <span className="font-bold text-amber-700">clientes habituales</span> o grupos de WhatsApp.<br/>
                   <span className="text-xs text-gray-600">¡Así te encuentran rápido para trabajos futuros!</span>
                 </p>
                 {qrCode && (
@@ -475,12 +488,13 @@ export default function Friends({ user, onClose }: FriendsProps) {
                   </div>
                 )}
                 <button
+                  type="button"
                   onClick={() => {
                     const profileUrl = qrCode || `https://jobshour.dondemorales.cl/worker/${user.token.split('|')[0]}`
                     const whatsappText = `¿Necesitas ayuda con algo? En JobsHours encontrarás personas con habilidades reales cerca de ti 📍\nMira este perfil: ${profileUrl}`
                     window.open(`https://wa.me/?text=${encodeURIComponent(whatsappText)}`, '_blank')
                   }}
-                  className="mt-4 w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2"
+                  className={`mt-4 w-full py-3 ${uiTone.ctaPayCart} flex items-center justify-center gap-2 text-sm font-bold`}
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
@@ -499,11 +513,12 @@ export default function Friends({ user, onClose }: FriendsProps) {
                     value={scanCode}
                     onChange={(e) => setScanCode(e.target.value.toUpperCase())}
                     placeholder="JHXXXXXXXX"
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 outline-none text-center font-mono text-lg tracking-wider"
+                    className={`flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-center font-mono text-lg tracking-wider ${uiTone.inputFocusBrand}`}
                   />
                   <button 
+                    type="button"
                     onClick={handleScanQR}
-                    className="px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold rounded-xl"
+                    className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold rounded-xl shadow-md shadow-amber-500/20 transition"
                   >
                     📷
                   </button>

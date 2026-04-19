@@ -1,4 +1,5 @@
 'use client'
+import { feedbackCopy } from '@/lib/userFacingCopy'
 
 import { useState } from 'react'
 import { apiFetch } from '@/lib/api'
@@ -53,7 +54,7 @@ export default function TakeRequestModal({ request, onClose, onAccepted }: Props
         setError(data.error || data.message || 'Error al aceptar solicitud')
       }
     } catch (err) {
-      setError('Error de conexión')
+      setError(feedbackCopy.networkError)
     } finally {
       setAccepting(false)
     }
@@ -87,7 +88,7 @@ export default function TakeRequestModal({ request, onClose, onAccepted }: Props
             {request.client?.avatar ? (
               <img src={request.client.avatar} className="w-12 h-12 rounded-xl object-cover ring-2 ring-slate-700" alt={request.client.name} />
             ) : (
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-orange-600 flex items-center justify-center shadow-md shadow-teal-500/20">
                 <span className="text-white font-black text-lg">{(request.client?.name || 'C').charAt(0)}</span>
               </div>
             )}
@@ -136,7 +137,7 @@ export default function TakeRequestModal({ request, onClose, onAccepted }: Props
               Cancelar
             </button>
             <button onClick={handleAccept} disabled={accepting}
-              className="py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white rounded-2xl font-black text-sm transition active:scale-95 disabled:opacity-50 shadow-lg shadow-emerald-500/25">
+              className="py-3.5 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white rounded-2xl font-black text-sm transition active:scale-95 disabled:opacity-50 shadow-lg shadow-teal-500/25">
               {accepting ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Search, Package, Store, Loader2 } from 'lucide-react'
+import { emptyStateCopy } from '@/lib/userFacingCopy'
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
 const INVENTARIO_API = '/inventario'
@@ -90,7 +91,7 @@ export default function StoreBrowserInline({ userLat, userLng }: { userLat: numb
           {loadingProductos ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 text-orange-400 animate-spin" /></div>
           ) : productos.length === 0 ? (
-            <p className="text-slate-500 text-xs text-center py-3">Sin resultados para "{buscar}"</p>
+            <p className="text-slate-500 text-xs text-center py-3">{`${emptyStateCopy.searchNoResultsPrefix} "${buscar}"`}</p>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {productos.map(p => (

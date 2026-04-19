@@ -84,7 +84,7 @@ export default function TrackingStatusCard({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-xl p-4 border-2 border-green-500">
+    <div className="bg-white rounded-xl shadow-xl p-4 border-2 border-teal-500">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
@@ -92,10 +92,10 @@ export default function TrackingStatusCard({
             <img
               src={workerAvatar || `https://i.pravatar.cc/60?u=${workerName}`}
               alt={workerName}
-              className="w-12 h-12 rounded-full object-cover border-2 border-green-500"
+              className="w-12 h-12 rounded-full object-cover border-2 border-teal-500"
             />
             {isTracking && (
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-teal-500 rounded-full border-2 border-white animate-pulse"></div>
             )}
           </div>
           <div>
@@ -138,7 +138,7 @@ export default function TrackingStatusCard({
               {eta !== null && (
                 <div className="flex items-center gap-2">
                   <span className="text-lg">⏱️</span>
-                  <span className="text-sm font-bold text-green-600">
+                  <span className="text-sm font-bold text-teal-700">
                     {eta} min
                   </span>
                 </div>
@@ -150,7 +150,7 @@ export default function TrackingStatusCard({
           {distance !== null && distance > 0 && (
             <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-1000"
+                className="h-full bg-gradient-to-r from-teal-500 to-teal-600 transition-all duration-1000"
                 style={{
                   width: `${Math.min(100, Math.max(0, (1 - distance / 10) * 100))}%`,
                 }}
@@ -162,7 +162,7 @@ export default function TrackingStatusCard({
 
       {!workerLocation && (
         <div className="text-center py-4">
-          <div className="inline-block animate-spin text-green-500 text-2xl mb-2">📍</div>
+          <div className="inline-block animate-spin text-teal-500 text-2xl mb-2">📍</div>
           <p className="text-xs text-gray-500">Esperando actualización de ubicación...</p>
         </div>
       )}

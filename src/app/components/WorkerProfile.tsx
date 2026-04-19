@@ -1,4 +1,5 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 
 import { useState, useCallback, useEffect } from 'react'
 import { API_BASE_URL } from '../lib/api'
@@ -89,7 +90,7 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
     if (file && file.type === 'application/pdf' && file.size <= 5 * 1024 * 1024) {
       handleFileUpload(file)
     } else {
-      alert('Solo archivos PDF de máximo 5MB')
+      alert(feedbackCopy.pdfMax5mb)
     }
   }, [user.token])
 
@@ -98,7 +99,7 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
     if (file && file.type === 'application/pdf' && file.size <= 5 * 1024 * 1024) {
       handleFileUpload(file)
     } else {
-      alert('Solo archivos PDF de máximo 5MB')
+      alert(feedbackCopy.pdfMax5mb)
     }
   }
 
@@ -122,12 +123,12 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
         setCvUrl(data.cv_url)
         setCvFilename(data.cv_filename)
       } else {
-        alert('Error al subir el CV')
+        alert(feedbackCopy.cvUploadError)
         setCvFile(null)
       }
     } catch (error) {
       console.error('Error uploading CV:', error)
-      alert('Error de conexión')
+      alert(feedbackCopy.networkError)
       setCvFile(null)
     }
   }
@@ -164,13 +165,13 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
       })
 
       if (response.ok) {
-        alert('Cambios guardados exitosamente')
+        alert(feedbackCopy.saveSuccess)
       } else {
-        alert('Error al guardar los cambios')
+        alert(feedbackCopy.saveChangesError)
       }
     } catch (error) {
       console.error('Error saving:', error)
-      alert('Error de conexión')
+      alert(feedbackCopy.networkError)
     } finally {
       setSaving(false)
     }
@@ -182,10 +183,10 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
       if (file.size <= 30 * 1024 * 1024) {
         handleVideoUpload(file)
       } else {
-        alert('El video no debe superar los 30MB')
+        alert(feedbackCopy.videoMax30mb)
       }
     } else {
-      alert('Solo archivos MP4, MOV o AVI')
+      alert(feedbackCopy.videoFormats)
     }
   }
 
@@ -211,12 +212,12 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
         setShowcaseVideo(data.video.url)
         setVideoId(data.video.id)
       } else {
-        alert('Error al subir el video')
+        alert(feedbackCopy.videoUploadError)
         setVideoFile(null)
       }
     } catch (error) {
       console.error('Error uploading video:', error)
-      alert('Error de conexión')
+      alert(feedbackCopy.networkError)
       setVideoFile(null)
     } finally {
       setVideoUploading(false)
@@ -244,8 +245,8 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
   }
 
   const statusColors = {
-    active: 'bg-green-500',
-    intermediate: 'bg-yellow-500',
+    active: 'bg-teal-500',
+    intermediate: 'bg-amber-500',
     inactive: 'bg-gray-500' // PLOMO/Gris, no rojo
   }
 
@@ -301,9 +302,9 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
         <div className="p-5 space-y-5">
           {/* Ranking Card Expandido */}
           {ranking && ranking.position && (
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200/50">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200/70">
               <div className="flex items-center gap-3">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-2xl shadow-lg">
+                <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-2xl shadow-lg">
                   {ranking.position === 1 ? '🥇' : ranking.position === 2 ? '🥈' : ranking.position === 3 ? '🥉' : '🏆'}
                 </div>
                 <div className="flex-1">
@@ -315,8 +316,8 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
                 </div>
               </div>
               {ranking.position <= 3 && (
-                <div className="mt-3 pt-3 border-t border-purple-200">
-                  <p className="text-xs text-purple-700 font-semibold">
+                <div className="mt-3 pt-3 border-t border-amber-200">
+                  <p className="text-xs text-amber-900 font-semibold">
                     ⭐ Estás en el top 3 de tu categoría
                   </p>
                 </div>
@@ -326,9 +327,9 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
 
           {/* Validated Friends Badge */}
           {validatedFriends > 0 && (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200/50">
+            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-200/60">
               <div className="flex items-center gap-3">
-                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center text-2xl shadow-lg">
+                <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl flex items-center justify-center text-2xl shadow-lg">
                   🤝
                 </div>
                 <div className="flex-1">
@@ -366,13 +367,13 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
                 </label>
               </div>
             ) : (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+              <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold text-gray-800 truncate">{cvFilename || cvFile?.name}</p>
-                  <p className="text-xs text-green-600 font-medium">✓ Subido correctamente</p>
+                  <p className="text-xs text-teal-700 font-medium">✓ Subido correctamente</p>
                 </div>
                 <button 
                   onClick={handleDeleteCv}
@@ -462,7 +463,7 @@ export default function WorkerProfile({ user, onClose }: WorkerProfileProps) {
             disabled={saving}
             className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black italic py-3 rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? 'Guardando...' : 'Guardar Cambios'}
+            {saving ? surfaceCopy.saving : surfaceCopy.saveChanges}
           </button>
         </div>
       </div>

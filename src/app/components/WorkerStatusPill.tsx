@@ -30,14 +30,14 @@ const STATUS_CONFIG: Record<WorkerStatus, { dot: string; pill: string; label: st
     sublabel: 'Toca para cambiar estado',
   },
   intermediate: {
-    dot: 'bg-sky-300 animate-pulse',
-    pill: 'bg-sky-500/90 text-white border border-sky-300/60 backdrop-blur-sm shadow-[0_0_16px_rgba(56,189,248,0.4)]',
+    dot: 'bg-amber-400 animate-pulse',
+    pill: 'bg-amber-600/90 text-white border border-amber-300/60 backdrop-blur-sm shadow-[0_0_16px_rgba(245,158,11,0.45)]',
     label: 'Disponibilidad Flexible',
     sublabel: 'Visible a 5 km · con aviso previo',
   },
   active: {
-    dot: 'bg-green-400 animate-pulse',
-    pill: 'bg-green-600/90 text-white border border-green-400/60 backdrop-blur-sm shadow-[0_0_16px_rgba(34,197,94,0.4)]',
+    dot: 'bg-teal-400 animate-pulse',
+    pill: 'bg-teal-600/90 text-white border border-teal-300/60 backdrop-blur-sm shadow-[0_0_16px_rgba(45,212,191,0.45)]',
     label: 'Disponibilidad Inmediata',
     sublabel: 'Visible en todo el mapa',
   },

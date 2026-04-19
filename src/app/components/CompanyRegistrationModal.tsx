@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { uiTone } from '@/lib/uiTone'
 
 interface Props {
   isOpen: boolean
@@ -125,7 +126,7 @@ export default function CompanyRegistrationModal({ isOpen, onClose, onSuccess }:
                   onChange={(e) => setIsCompany(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-14 h-8 bg-slate-300 rounded-full peer-checked:bg-gradient-to-r peer-checked:from-blue-500 peer-checked:to-indigo-600 transition-all duration-300 shadow-inner" />
+                <div className={`w-14 h-8 bg-slate-300 rounded-full transition-all duration-300 shadow-inner ${uiTone.toggleTrackOn}`} />
                 <div className="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 peer-checked:translate-x-6" />
               </div>
               <div className="flex-1">
@@ -152,12 +153,12 @@ export default function CompanyRegistrationModal({ isOpen, onClose, onSuccess }:
                     className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all ${
                       errors.rut
                         ? 'border-red-300 bg-red-50 focus:border-red-500'
-                        : 'border-slate-200 focus:border-blue-500 focus:bg-blue-50/30'
+                        : `border-slate-200 ${uiTone.inputFocusBrand}`
                     }`}
                   />
                   {rut && validateRUT(rut) && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
                     </div>
@@ -189,7 +190,7 @@ export default function CompanyRegistrationModal({ isOpen, onClose, onSuccess }:
                   className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all ${
                     errors.razonSocial
                       ? 'border-red-300 bg-red-50 focus:border-red-500'
-                      : 'border-slate-200 focus:border-blue-500 focus:bg-blue-50/30'
+                      : `border-slate-200 ${uiTone.inputFocusBrand}`
                   }`}
                 />
                 {errors.razonSocial && (
@@ -216,7 +217,7 @@ export default function CompanyRegistrationModal({ isOpen, onClose, onSuccess }:
                   className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all ${
                     errors.giro
                       ? 'border-red-300 bg-red-50 focus:border-red-500'
-                      : 'border-slate-200 focus:border-blue-500 focus:bg-blue-50/30'
+                      : `border-slate-200 ${uiTone.inputFocusBrand}`
                   }`}
                 >
                   <option value="">Selecciona un giro</option>
@@ -242,14 +243,14 @@ export default function CompanyRegistrationModal({ isOpen, onClose, onSuccess }:
               </div>
 
               {/* Info box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className={uiTone.surfaceInfoAmber}>
                 <div className="flex gap-3">
-                  <svg className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                   </svg>
                   <div>
-                    <p className="text-blue-900 font-bold text-xs mb-1">Beneficios Empresa</p>
-                    <ul className="text-blue-700 text-xs space-y-1">
+                    <p className="text-amber-950 font-bold text-xs mb-1">Beneficios empresa</p>
+                    <ul className="text-amber-900/90 text-xs space-y-1">
                       <li>• Facturación automática</li>
                       <li>• Gestión de múltiples trabajadores</li>
                       <li>• Reportes y estadísticas</li>
@@ -279,12 +280,14 @@ export default function CompanyRegistrationModal({ isOpen, onClose, onSuccess }:
           {/* Buttons */}
           <div className="flex gap-3 mt-6">
             <button
+              type="button"
               onClick={onClose}
               className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition"
             >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
               className="flex-1 bg-gradient-to-r from-slate-700 to-slate-900 text-white py-3 rounded-xl font-bold text-sm hover:from-slate-800 hover:to-black transition shadow-lg hover:shadow-xl"
             >

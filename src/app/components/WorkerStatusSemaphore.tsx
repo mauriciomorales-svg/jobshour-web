@@ -36,16 +36,16 @@ const LAMPS = [
     label: 'Disponibilidad Flexible',
     sublabel: 'Visible a 5 km · con aviso previo',
     color: {
-      border: 'border-sky-500/30',
-      bg: 'bg-sky-950/40',
+      border: 'border-amber-500/35',
+      bg: 'bg-amber-950/35',
       glow: '',
-      dot: 'bg-sky-700',
-      text: 'text-sky-600',
+      dot: 'bg-amber-600',
+      text: 'text-amber-600',
       active: {
-        border: 'border-sky-400',
-        bg: 'bg-sky-900/60',
-        glow: 'shadow-[0_0_32px_rgba(56,189,248,0.45)]',
-        text: 'text-sky-200',
+        border: 'border-amber-400',
+        bg: 'bg-amber-950/55',
+        glow: 'shadow-[0_0_32px_rgba(245,158,11,0.4)]',
+        text: 'text-amber-100',
       },
     },
   },
@@ -54,16 +54,16 @@ const LAMPS = [
     label: 'Disponibilidad Inmediata',
     sublabel: 'Visible en todo el mapa',
     color: {
-      border: 'border-emerald-500/30',
-      bg: 'bg-emerald-950/40',
+      border: 'border-teal-500/35',
+      bg: 'bg-teal-950/40',
       glow: '',
-      dot: 'bg-emerald-700',
-      text: 'text-emerald-600',
+      dot: 'bg-teal-600',
+      text: 'text-teal-500',
       active: {
-        border: 'border-emerald-400',
-        bg: 'bg-emerald-900/60',
-        glow: 'shadow-[0_0_36px_rgba(52,211,153,0.5)]',
-        text: 'text-emerald-200',
+        border: 'border-teal-400',
+        bg: 'bg-teal-900/60',
+        glow: 'shadow-[0_0_36px_rgba(45,212,191,0.45)]',
+        text: 'text-teal-100',
       },
     },
   },
@@ -105,7 +105,7 @@ export default function WorkerStatusSemaphore({ current, loading, isSeller, onSe
                   {isActive && (
                     <div className={`absolute inset-0 scale-125 rounded-full blur-2xl opacity-60 ${
                       lamp.status === 'inactive' ? 'bg-slate-500/20' :
-                      lamp.status === 'intermediate' ? 'bg-sky-500/20' : 'bg-emerald-500/20'
+                      lamp.status === 'intermediate' ? 'bg-amber-500/20' : 'bg-teal-500/20'
                     } ${isActive ? 'animate-pulse' : ''}`} />
                   )}
 
@@ -114,7 +114,7 @@ export default function WorkerStatusSemaphore({ current, loading, isSeller, onSe
                     {/* Reflejo interior */}
                     <div className={`absolute inset-0 bg-gradient-to-b ${
                       lamp.status === 'inactive' ? 'from-slate-400/15' :
-                      lamp.status === 'intermediate' ? 'from-sky-400/25' : 'from-emerald-400/30'
+                      lamp.status === 'intermediate' ? 'from-amber-400/25' : 'from-teal-400/30'
                     } to-transparent`} />
                     {/* Brillo especular */}
                     <div className="absolute top-2 left-3 h-4 w-7 rounded-full bg-white/10 blur-[2px] -rotate-12" />
@@ -123,7 +123,7 @@ export default function WorkerStatusSemaphore({ current, loading, isSeller, onSe
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className={`h-8 w-8 rounded-full blur-xl ${
                           lamp.status === 'inactive' ? 'bg-slate-300/30' :
-                          lamp.status === 'intermediate' ? 'bg-sky-300/40' : 'bg-emerald-300/50'
+                          lamp.status === 'intermediate' ? 'bg-amber-300/40' : 'bg-teal-300/50'
                         } animate-pulse`} />
                       </div>
                     )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
+import { emptyStateCopy } from '@/lib/userFacingCopy'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface ChatThread {
@@ -31,10 +32,10 @@ function timeAgo(dateStr?: string) {
 }
 
 const STATUS_DOT: Record<string, string> = {
-  pending: 'bg-yellow-400',
-  accepted: 'bg-blue-400',
-  in_progress: 'bg-indigo-400',
-  completed: 'bg-green-400',
+  pending: 'bg-amber-400',
+  accepted: 'bg-teal-400',
+  in_progress: 'bg-orange-400',
+  completed: 'bg-teal-500',
   cancelled: 'bg-gray-500',
 }
 
@@ -93,7 +94,7 @@ export default function ChatHistory({ onClose, onOpenChat }: Props) {
         {!loading && threads.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center py-20 px-6">
             <div className="text-5xl mb-4">💬</div>
-            <p className="text-white font-black text-lg mb-2">Sin conversaciones aún</p>
+            <p className="text-white font-black text-lg mb-2">{emptyStateCopy.noConversations}</p>
             <p className="text-slate-400 text-sm leading-relaxed">
               Cuando tomes o publiques una solicitud, el chat aparecerá aquí
             </p>
@@ -121,7 +122,7 @@ export default function ChatHistory({ onClose, onOpenChat }: Props) {
                     {t.other_person?.avatar ? (
                       <img src={t.other_person.avatar} className="w-12 h-12 rounded-full object-cover" alt={t.other_person.name} />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-orange-600 flex items-center justify-center">
                         <span className="text-white font-black text-lg">{t.other_person?.name?.charAt(0) ?? '?'}</span>
                       </div>
                     )}
@@ -134,7 +135,7 @@ export default function ChatHistory({ onClose, onOpenChat }: Props) {
                       <p className="text-white font-bold text-sm truncate">{t.other_person?.name ?? 'Usuario'}</p>
                       <span className="text-slate-500 text-xs shrink-0 ml-2">{timeAgo(t.last_message_at)}</span>
                     </div>
-                    <p className="text-slate-400 text-xs truncate">{t.last_message ?? t.description ?? 'Sin mensajes aún'}</p>
+                    <p className="text-slate-400 text-xs truncate">{t.last_message ?? t.description ?? emptyStateCopy.noMessagesYet}</p>
                   </div>
 
                   {/* Unread badge */}

@@ -3,11 +3,11 @@
 export default function TerminosPage() {
   return (
     <div className="min-h-screen bg-white">
-      <header className="bg-emerald-600 text-white py-8 px-6">
+      <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-8 px-6 border-b border-slate-700/50">
         <div className="max-w-3xl mx-auto">
-          <a href="/" className="text-emerald-200 text-sm hover:underline">← Volver</a>
+          <a href="/" className="text-amber-200/90 text-sm hover:text-amber-100 hover:underline">← Volver</a>
           <h1 className="text-3xl font-bold mt-4">Términos de Servicio</h1>
-          <p className="text-emerald-100 mt-2">Última actualización: 19 de febrero de 2026</p>
+          <p className="text-slate-300 mt-2">Última actualización: 19 de febrero de 2026</p>
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-6 py-12 text-gray-700 leading-relaxed space-y-8">
@@ -70,7 +70,7 @@ export default function TerminosPage() {
 
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-3">10. Contacto</h2>
-          <p>Para consultas sobre estos términos: <a href="mailto:contacto@jobshour.cl" className="text-emerald-600 underline">contacto@jobshour.cl</a></p>
+          <p>Para consultas sobre estos términos: <a href="mailto:contacto@jobshour.cl" className="text-teal-700 underline hover:text-teal-800">contacto@jobshour.cl</a></p>
         </section>
       </main>
     </div>

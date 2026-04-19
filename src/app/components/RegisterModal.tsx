@@ -1,6 +1,8 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import CategoryPicker from './CategoryPicker'
 
 interface Props {
@@ -28,15 +30,16 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [categories, setCategories] = useState<any[]>([])
+  const categoriesFetchStarted = useRef(false)
 
-  useState(() => {
-    if (isOpen && categories.length === 0) {
-      fetch('/api/v1/categories')
-        .then(r => r.json())
-        .then(data => setCategories(data.data || []))
-        .catch(() => {})
-    }
-  })
+  useEffect(() => {
+    if (!isOpen || categoriesFetchStarted.current) return
+    categoriesFetchStarted.current = true
+    fetch('/api/v1/categories')
+      .then((r) => r.json())
+      .then((data) => setCategories(data.data || []))
+      .catch(() => {})
+  }, [isOpen])
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -81,7 +84,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
       setVerificationStep(true)
       setLoading(false)
     } catch (err) {
-      setError('Error de conexión. Intenta nuevamente.')
+      setError(feedbackCopy.networkErrorRetry)
       setLoading(false)
     }
   }
@@ -117,7 +120,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
       onSuccess(data.user, data.token)
       onClose()
     } catch (err) {
-      setError('Error de conexión. Intenta nuevamente.')
+      setError(feedbackCopy.networkErrorRetry)
       setLoading(false)
     }
   }
@@ -157,10 +160,12 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
     <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white rounded-3xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-br from-green-500 via-emerald-600 to-teal-700 p-6 relative overflow-hidden">
+        <div className={uiTone.authHeader}>
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
           <button
+            type="button"
             onClick={onClose}
+            aria-label={surfaceCopy.close}
             className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition z-10"
           >
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +178,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
               </svg>
             </div>
-            <h3 className="text-white text-2xl font-black text-center">Crear Cuenta</h3>
+            <h3 className="text-white text-2xl font-black text-center">{surfaceCopy.registerTitle}</h3>
             <p className="text-white/80 text-sm text-center mt-1">Paso {step} de 3</p>
           </div>
           
@@ -205,12 +210,12 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
           {verificationStep && (
             <div className="space-y-4 animate-slide-up">
               <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h4 className="text-lg font-bold text-slate-800">Verifica tu email</h4>
+                <h4 className="text-lg font-bold text-slate-800">{surfaceCopy.verifyEmailHeading}</h4>
                 <p className="text-sm text-slate-500 mt-1">
                   Te enviamos un código de 6 dígitos a <strong>{formData.email}</strong>
                 </p>
@@ -218,7 +223,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
 
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Código de verificación
+                  {surfaceCopy.verificationCodeLabel}
                 </label>
                 <input
                   type="text"
@@ -226,28 +231,29 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                   onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="000000"
                   maxLength={6}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-green-500 focus:bg-green-50/30 text-center text-2xl tracking-widest"
+                  className={`w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-center text-2xl tracking-widest ${uiTone.inputFocusBrand}`}
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-blue-700 text-xs text-center">
+              <div className={uiTone.surfaceInfoAmber}>
+                <p className="text-amber-900 text-xs text-center">
                   El código expira en 30 minutos. Revisa tu bandeja de entrada o spam.
                 </p>
               </div>
 
               <button
+                type="button"
                 onClick={handleVerify}
                 disabled={loading || verificationCode.length !== 6}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:from-green-600 hover:to-emerald-700 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className={uiTone.ctaFormSaveWide}
               >
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Verificando...</span>
+                    <span>{surfaceCopy.verifying}</span>
                   </div>
                 ) : (
-                  'Verificar y Continuar'
+                  surfaceCopy.verifyContinue
                 )}
               </button>
             </div>
@@ -267,7 +273,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Juan Pérez"
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-green-500 focus:bg-green-50/30"
+                  className={`w-full px-4 py-3 border-2 border-slate-200 rounded-xl ${uiTone.inputFocusBrand}`}
                 />
               </div>
 
@@ -280,13 +286,13 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="tu@email.com"
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-green-500 focus:bg-green-50/30"
+                  className={`w-full px-4 py-3 border-2 border-slate-200 rounded-xl ${uiTone.inputFocusBrand}`}
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-blue-900 text-xs font-semibold mb-1">💡 Tip</p>
-                <p className="text-blue-700 text-xs">
+              <div className={uiTone.surfaceInfoAmber}>
+                <p className="text-amber-900 text-xs font-semibold mb-1">💡 Tip</p>
+                <p className="text-amber-800 text-xs">
                   Usa un email válido. Te enviaremos un código de verificación.
                 </p>
               </div>
@@ -305,7 +311,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="+56912345678"
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-green-500 focus:bg-green-50/30"
+                  className={`w-full px-4 py-3 border-2 border-slate-200 rounded-xl ${uiTone.inputFocusBrand}`}
                 />
               </div>
 
@@ -320,7 +326,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="Mínimo 8 caracteres"
                     minLength={8}
-                    className="w-full px-4 py-3 pr-11 border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-green-500 focus:bg-green-50/30"
+                    className={`w-full px-4 py-3 pr-11 border-2 border-slate-200 rounded-xl ${uiTone.inputFocusBrand}`}
                   />
                   <button
                     type="button"
@@ -350,7 +356,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   placeholder="Repite tu contraseña"
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-green-500 focus:bg-green-50/30"
+                  className={`w-full px-4 py-3 border-2 border-slate-200 rounded-xl ${uiTone.inputFocusBrand}`}
                 />
               </div>
             </div>
@@ -369,16 +375,16 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                     onClick={() => setFormData({ ...formData, type: 'employer' })}
                     className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
                       formData.type === 'employer'
-                        ? 'border-green-500 bg-green-50'
+                        ? 'border-amber-500 bg-amber-50'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        formData.type === 'employer' ? 'border-green-500' : 'border-slate-300'
+                        formData.type === 'employer' ? 'border-amber-500' : 'border-slate-300'
                       }`}>
                         {formData.type === 'employer' && (
-                          <div className="w-3 h-3 rounded-full bg-green-500" />
+                          <div className="w-3 h-3 rounded-full bg-amber-500" />
                         )}
                       </div>
                       <div className="flex-1">
@@ -394,16 +400,16 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                     onClick={() => setFormData({ ...formData, type: 'worker' })}
                     className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
                       formData.type === 'worker'
-                        ? 'border-green-500 bg-green-50'
+                        ? 'border-teal-500 bg-teal-50'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        formData.type === 'worker' ? 'border-green-500' : 'border-slate-300'
+                        formData.type === 'worker' ? 'border-teal-500' : 'border-slate-300'
                       }`}>
                         {formData.type === 'worker' && (
-                          <div className="w-3 h-3 rounded-full bg-green-500" />
+                          <div className="w-3 h-3 rounded-full bg-teal-500" />
                         )}
                       </div>
                       <div className="flex-1">
@@ -433,9 +439,9 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                 </div>
               )}
 
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                <p className="text-green-900 text-xs font-semibold mb-1">✅ Casi listo</p>
-                <p className="text-green-700 text-xs">
+              <div className={uiTone.surfaceInfoMuted}>
+                <p className="text-slate-900 text-xs font-semibold mb-1">✅ Casi listo</p>
+                <p className="text-slate-600 text-xs">
                   {formData.type === 'worker' 
                     ? 'Después podrás completar tu perfil, agregar foto y configurar tu ubicación.'
                     : 'Podrás empezar a buscar trabajadores inmediatamente.'}
@@ -450,32 +456,35 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
           <div className="flex gap-3 mt-6">
             {step > 1 && (
               <button
+                type="button"
                 onClick={() => setStep(step - 1)}
-                className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition"
+                className={uiTone.ctaWizardBack}
               >
-                Atrás
+                {surfaceCopy.wizardBack}
               </button>
             )}
             {step < 3 ? (
               <button
+                type="button"
                 onClick={nextStep}
-                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:from-green-600 hover:to-emerald-700 transition shadow-lg hover:shadow-xl"
+                className={uiTone.ctaWizardPrimary}
               >
-                Siguiente
+                {surfaceCopy.wizardNext}
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:from-green-600 hover:to-emerald-700 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className={uiTone.ctaWizardPrimary}
               >
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Creando cuenta...</span>
+                    <span>{surfaceCopy.creatingAccount}</span>
                   </div>
                 ) : (
-                  'Crear Cuenta'
+                  surfaceCopy.createAccountSubmit
                 )}
               </button>
             )}
@@ -484,12 +493,13 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
           {/* Login Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-600">
-              ¿Ya tienes cuenta?{' '}
+              {surfaceCopy.registerLoginPrompt}{' '}
               <button
+                type="button"
                 onClick={onSwitchToLogin}
-                className="text-green-600 hover:text-green-700 font-bold"
+                className="text-amber-600 hover:text-amber-700 font-bold"
               >
-                Inicia sesión
+                {surfaceCopy.loginExisting}
               </button>
             </p>
           </div>

@@ -1,4 +1,5 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 
 import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
@@ -115,7 +116,7 @@ export default function CategoryManagement({ onClose }: { onClose: () => void })
         setError(data.message || 'Error al guardar categoría')
       }
     } catch (err: any) {
-      setError(err.message || 'Error de conexión')
+      setError(err.message || feedbackCopy.networkError)
     } finally {
       setSaving(false)
     }
@@ -150,10 +151,10 @@ export default function CategoryManagement({ onClose }: { onClose: () => void })
       if (res.ok && data.status === 'success') {
         await loadCategories()
       } else {
-        alert(data.message || 'Error al eliminar categoría')
+        alert(data.message || feedbackCopy.categoryDeleteError)
       }
     } catch (err) {
-      alert('Error de conexión')
+      alert(feedbackCopy.networkError)
     }
   }
 
@@ -217,7 +218,7 @@ export default function CategoryManagement({ onClose }: { onClose: () => void })
                   is_active: true,
                 })
               }}
-              className="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-bold"
+              className="mb-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-lg hover:from-amber-400 hover:to-orange-500 font-bold shadow-md shadow-amber-500/20"
             >
               + Agregar Categoría
             </button>
@@ -313,9 +314,9 @@ export default function CategoryManagement({ onClose }: { onClose: () => void })
                 <button
                   onClick={handleSave}
                   disabled={saving || !formData.slug || !formData.display_name}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-lg hover:from-amber-400 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-amber-500/20"
                 >
-                  {saving ? 'Guardando...' : 'Guardar'}
+                  {saving ? surfaceCopy.saving : surfaceCopy.save}
                 </button>
                 <button
                   onClick={handleCancel}
@@ -354,7 +355,7 @@ export default function CategoryManagement({ onClose }: { onClose: () => void })
                   )}
                   <button
                     onClick={() => handleEdit(cat)}
-                    className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200"
+                    className="bg-amber-100 text-amber-900 px-3 py-1 rounded text-sm hover:bg-amber-200 font-semibold"
                   >
                     Editar
                   </button>

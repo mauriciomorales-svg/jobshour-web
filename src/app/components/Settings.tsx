@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { navCopy } from '@/lib/userFacingCopy'
 import { API_BASE_URL } from '../lib/api'
 
 interface SettingsProps {
@@ -74,7 +75,7 @@ export default function Settings({ user, onClose }: SettingsProps) {
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[70vh] space-y-6">
           {/* Visibilidad Switch */}
-          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-2xl p-5">
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-5 border border-amber-100/80">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className="text-lg font-bold text-gray-800">Visibilidad</h3>
@@ -83,7 +84,7 @@ export default function Settings({ user, onClose }: SettingsProps) {
               <button
                 onClick={toggleVisibility}
                 disabled={saving}
-                className={`relative w-14 h-8 rounded-full transition-colors ${isVisible ? 'bg-green-500' : 'bg-gray-300'} ${saving ? 'opacity-50' : ''}`}
+                className={`relative w-14 h-8 rounded-full transition-colors ${isVisible ? 'bg-teal-500 shadow-md shadow-teal-500/25' : 'bg-gray-300'} ${saving ? 'opacity-50' : ''}`}
               >
                 <span className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${isVisible ? 'translate-x-6' : ''}`} />
               </button>
@@ -119,9 +120,9 @@ export default function Settings({ user, onClose }: SettingsProps) {
           </div>
 
           {/* Información de privacidad */}
-          <div className="bg-blue-50 rounded-2xl p-5">
-            <h3 className="text-sm font-bold text-blue-800 mb-2">🔒 Sobre tu privacidad</h3>
-            <ul className="text-xs text-blue-700 space-y-2">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-slate-800 mb-2">🔒 Sobre tu privacidad</h3>
+            <ul className="text-xs text-slate-700 space-y-2">
               <li>• Tu nombre real solo se muestra a tus amigos</li>
               <li>• Los clientes solo ven tu nickname y rating</li>
               <li>• Puedes bloquear usuarios en cualquier momento</li>
@@ -138,7 +139,7 @@ export default function Settings({ user, onClose }: SettingsProps) {
             }}
             className="w-full py-4 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition"
           >
-            Cerrar Sesión
+            {navCopy.logout}
           </button>
         </div>
       </div>

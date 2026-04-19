@@ -5,8 +5,9 @@ import { apiFetch } from '@/lib/api'
 import ServiceCard from './ServiceCard'
 import LiveStats from './LiveStats'
 import { motion } from 'framer-motion'
+import { emptyStateCopy, surfaceCopy } from '@/lib/userFacingCopy'
 
-interface ServiceRequest {
+export interface ServiceRequest {
   id: number
   type?: 'ride_share' | 'express_errand' | 'fixed_job'
   category_type: 'fixed' | 'travel' | 'errand'
@@ -255,20 +256,20 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
       >
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs text-slate-400 font-semibold">Meta del día (potencial en CLP)</span>
-          <span className="text-xs font-bold text-emerald-400">
+          <span className="text-xs font-bold text-amber-400">
             ${dailyViewed.toLocaleString()} / ${dailyGoal.toLocaleString()}
           </span>
         </div>
         <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
+            className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${goalProgress}%` }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           />
         </div>
         {goalProgress >= 100 && (
-          <p className="text-xs text-emerald-400 font-bold mt-1 text-center">🎉 ¡Meta alcanzada!</p>
+          <p className="text-xs text-amber-400 font-bold mt-1 text-center">🎉 ¡Meta alcanzada!</p>
         )}
       </motion.div>
 
@@ -308,8 +309,8 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
           animate={{ opacity: 1, y: 0 }}
           className="text-center py-10 px-4"
         >
-          <div className="text-6xl mb-4">�</div>
-          <p className="text-white font-black text-lg mb-2">Sin oportunidades cerca</p>
+          <div className="text-6xl mb-4" aria-hidden>🔍</div>
+          <p className="text-white font-black text-lg mb-2">{emptyStateCopy.noOpportunitiesNearby}</p>
           <p className="text-slate-400 text-sm mb-6 leading-relaxed">
             No hay solicitudes activas en tu zona ahora mismo.<br />¿Por qué no publicas la tuya?
           </p>
@@ -318,7 +319,7 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
               onClick={() => window.dispatchEvent(new Event('open-publish-demand'))}
               className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl text-sm font-black shadow-lg shadow-amber-500/30 active:scale-95 transition"
             >
-              ✨ Publicar una demanda
+              {surfaceCopy.publishDemandFeed}
             </button>
             <button
               onClick={() => loadMore(true)}

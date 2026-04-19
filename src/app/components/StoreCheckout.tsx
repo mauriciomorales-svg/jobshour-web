@@ -1,4 +1,6 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState } from 'react'
 import { ArrowLeft, CreditCard, Truck } from 'lucide-react'
@@ -47,10 +49,10 @@ export default function StoreCheckout({ onClose, onBack }: Props) {
         setDone(true)
         clearCart()
       } else {
-        alert(data.message || 'Error al procesar el pedido')
+        alert(data.message || feedbackCopy.orderProcessError)
       }
     } catch {
-      alert('Error de conexión')
+      alert(feedbackCopy.networkError)
     } finally {
       setLoading(false)
     }
@@ -68,11 +70,11 @@ export default function StoreCheckout({ onClose, onBack }: Props) {
             href={payLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition mb-3"
+            className={`${uiTone.ctaPayCart} mb-3`}
           >
             Pagar {formatPrice(totalWithCommission)} →
           </a>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-sm transition">Cerrar</button>
+          <button type="button" onClick={onClose} className={uiTone.modalCloseGhost}>{surfaceCopy.close}</button>
         </div>
       </div>
     )

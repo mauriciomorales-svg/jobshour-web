@@ -1,4 +1,7 @@
 const path = require('path')
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
 
 /** @type {import('next').NextConfig} */
 const isExport = process.env.NEXT_EXPORT === 'true'
@@ -53,4 +56,4 @@ const nextConfig = {
   } : {}),
 }
 
-module.exports = nextConfig
+module.exports = withBundleAnalyzer(nextConfig)

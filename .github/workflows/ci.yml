@@ -4,13 +4,16 @@ on:
   push:
     branches: [main, master, develop]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, develop]
   # Botón "Run workflow" en GitHub → Actions → CI — JobsHour Web (sin push ni SSH manual)
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
-  group: jobshour-web-${{ github.ref }}
-  cancel-in-progress: false
+  group: jobshour-web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint-and-build:
@@ -29,19 +32,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: ESLint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
       - name: TypeScript type check
         run: npx tsc --noEmit
 
       - name: Build Next.js app
         env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_PUSHER_KEY: ${{ secrets.NEXT_PUBLIC_PUSHER_KEY }}
-          NEXT_PUBLIC_PUSHER_CLUSTER: ${{ secrets.NEXT_PUBLIC_PUSHER_CLUSTER }}
+          # Secretos opcionales: si no están (p. ej. PR desde fork), el build sigue con valores de desarrollo
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL != '' && secrets.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8095/api' }}
+          NEXT_PUBLIC_PUSHER_KEY: ${{ secrets.NEXT_PUBLIC_PUSHER_KEY != '' && secrets.NEXT_PUBLIC_PUSHER_KEY || '' }}
+          NEXT_PUBLIC_PUSHER_CLUSTER: ${{ secrets.NEXT_PUBLIC_PUSHER_CLUSTER != '' && secrets.NEXT_PUBLIC_PUSHER_CLUSTER || 'us2' }}
         run: npm run build
 
   deploy:
     needs: lint-and-build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: |
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -59,5 +71,6 @@ jobs:
           command_timeout: 15m
           script: |
             set -e
+            export DEPLOY_BRANCH="${{ github.ref_name }}"
             # Misma lógica que scripts/deploy-on-server.sh (evita build distinto CI vs manual)
             bash /var/www/jobshour-web/scripts/deploy-on-server.sh

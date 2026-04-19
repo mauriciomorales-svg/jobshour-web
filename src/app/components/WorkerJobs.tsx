@@ -96,7 +96,7 @@ export default function WorkerJobs({ user, onClose }: WorkerJobsProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-500'
+      case 'completed': return 'bg-teal-500'
       case 'cancelled': return 'bg-red-500'
       case 'pending': return 'bg-amber-400'
       default: return 'bg-gray-400'
@@ -193,7 +193,7 @@ export default function WorkerJobs({ user, onClose }: WorkerJobsProps) {
 
           {/* Can Charge More Badge */}
           {metrics.can_charge_more && (
-            <div className="mt-2 bg-green-500/20 backdrop-blur-sm rounded-xl p-3 border border-green-300/50">
+            <div className="mt-2 bg-teal-500/20 backdrop-blur-sm rounded-xl p-3 border border-teal-300/50">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🚀</span>
                 <div>
@@ -208,13 +208,13 @@ export default function WorkerJobs({ user, onClose }: WorkerJobsProps) {
         {/* Metrics Dashboard */}
         <div className="p-4 space-y-3">
           {/* Conversion Rate */}
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200/50">
+          <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-200/50">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-600">Tasa de Conversión</span>
-              <span className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{metrics.conversion_rate}%</span>
+              <span className="text-2xl font-black bg-gradient-to-r from-teal-600 to-teal-800 bg-clip-text text-transparent">{metrics.conversion_rate}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500" style={{ width: `${metrics.conversion_rate}%` }}></div>
+              <div className="bg-gradient-to-r from-teal-500 to-cyan-500 h-2 rounded-full transition-all duration-500" style={{ width: `${metrics.conversion_rate}%` }}></div>
             </div>
             <p className="text-[10px] text-slate-500 mt-1">De pendiente a liquidado</p>
           </div>
@@ -235,11 +235,11 @@ export default function WorkerJobs({ user, onClose }: WorkerJobsProps) {
               <div className="grid grid-cols-2 gap-2 pt-3 border-t border-orange-200">
                 <div className="bg-white/60 rounded-lg p-2 text-center">
                   <p className="text-xs text-slate-500">🏢 Empresas</p>
-                  <p className="text-lg font-black text-blue-600">{metrics.profile_views_employers}</p>
+                  <p className="text-lg font-black text-teal-700">{metrics.profile_views_employers}</p>
                 </div>
                 <div className="bg-white/60 rounded-lg p-2 text-center">
                   <p className="text-xs text-slate-500">👤 Clientes</p>
-                  <p className="text-lg font-black text-green-600">{metrics.profile_views_clients}</p>
+                  <p className="text-lg font-black text-amber-700">{metrics.profile_views_clients}</p>
                 </div>
               </div>
             </div>
@@ -273,7 +273,7 @@ export default function WorkerJobs({ user, onClose }: WorkerJobsProps) {
 
               {job.status === 'completed' && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-black text-green-600">{formatCLP(job.amount)}</span>
+                  <span className="text-sm font-black text-amber-700">{formatCLP(job.amount)}</span>
                   <div className="flex items-center gap-1">
                     <span className="text-xs text-orange-500">{'★'.repeat(job.rating)}</span>
                   </div>

@@ -128,11 +128,11 @@ export default function AddressAutocomplete({ value, onChange, onSelect, placeho
             type="button"
             onClick={handleCurrentLocation}
             disabled={locating}
-            className="px-2 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg border border-blue-200 transition disabled:opacity-50"
+            className="px-2 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg border border-teal-200 transition disabled:opacity-50"
             title="Usar mi ubicación"
           >
             {locating ? (
-              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
             ) : (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />

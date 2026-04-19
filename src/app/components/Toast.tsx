@@ -41,10 +41,10 @@ const icons: Record<ToastType, JSX.Element> = {
 }
 
 const styles: Record<ToastType, { bg: string; icon: string; bar: string; shadow: string }> = {
-  success: { bg: 'bg-white border-l-4 border-green-500', icon: 'text-green-600 bg-green-100', bar: 'bg-green-500', shadow: 'shadow-green-500/20' },
+  success: { bg: 'bg-white border-l-4 border-teal-500', icon: 'text-teal-700 bg-teal-100', bar: 'bg-teal-500', shadow: 'shadow-teal-500/20' },
   error:   { bg: 'bg-red-950 border-l-4 border-red-500 text-white', icon: 'text-red-400 bg-red-900', bar: 'bg-red-400', shadow: 'shadow-red-500/40' },
   warning: { bg: 'bg-amber-950 border-l-4 border-amber-400 text-white', icon: 'text-amber-400 bg-amber-900', bar: 'bg-amber-400', shadow: 'shadow-amber-500/30' },
-  info:    { bg: 'bg-white border-l-4 border-blue-500', icon: 'text-blue-600 bg-blue-100', bar: 'bg-blue-500', shadow: 'shadow-blue-500/20' },
+  info:    { bg: 'bg-white border-l-4 border-slate-400', icon: 'text-teal-700 bg-slate-100', bar: 'bg-teal-500', shadow: 'shadow-slate-400/20' },
 }
 
 const DEFAULT_DURATIONS: Record<ToastType, number> = {

@@ -116,7 +116,7 @@ export default function FullScreenSearchOverlay({ isOpen, onClose, onSearch, cit
                 <button
                   key={s}
                   onClick={() => handleSearch(s)}
-                  className="px-3 py-1.5 bg-slate-100 rounded-full text-xs text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition font-medium"
+                  className="px-3 py-1.5 bg-slate-100 rounded-full text-xs text-slate-600 hover:bg-teal-50 hover:text-teal-700 transition font-medium"
                 >
                   {s}
                 </button>
@@ -129,7 +129,7 @@ export default function FullScreenSearchOverlay({ isOpen, onClose, onSearch, cit
         {query && (
           <div className="px-4 pb-3 border-t border-slate-100">
             <p className="text-xs text-slate-500 mt-2">
-              🔍 Filtrando pines en el mapa por: <span className="font-bold text-blue-600">&quot;{query}&quot;</span>
+              🔍 Filtrando pines en el mapa por: <span className="font-bold text-teal-700">&quot;{query}&quot;</span>
             </p>
           </div>
         )}

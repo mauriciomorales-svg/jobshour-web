@@ -1,11 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Wrench, Car, Package, ShoppingCart } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import dynamic from 'next/dynamic'
 const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
 import CategoryPicker from './CategoryPicker'
 import StoreBrowserInline from './StoreBrowserInline'
+import { trackEvent } from '@/lib/analytics'
+import { demandTypeGlossary, feedbackCopy, surfaceCopy, type DemandTypeKey } from '@/lib/userFacingCopy'
+import { ModalShell } from '@/app/components/ui/ModalShell'
 
 interface Category {
   id: number
@@ -24,6 +28,19 @@ interface Props {
 
 type DemandType = 'fixed_job' | 'ride_share' | 'express_errand' | 'buscar_producto'
 type TravelRole = 'driver' | 'passenger'
+
+const DEMAND_TYPE_CARDS: {
+  val: DemandType
+  Icon: typeof Wrench
+  label: string
+  sub: string
+  accent: 'amber' | 'orange'
+}[] = [
+  { val: 'fixed_job', Icon: Wrench, label: 'Trabajo', sub: 'Electricista, plomero…', accent: 'amber' },
+  { val: 'ride_share', Icon: Car, label: 'Viaje', sub: 'Llevarme o traerme', accent: 'amber' },
+  { val: 'express_errand', Icon: Package, label: 'Mandado', sub: 'Compras, delivery', accent: 'amber' },
+  { val: 'buscar_producto', Icon: ShoppingCart, label: 'Buscar producto', sub: 'Ver tiendas cercanas', accent: 'orange' },
+]
 
 export default function PublishDemandModal({ userLat, userLng, categories, onClose, onPublished }: Props) {
   const [demandType, setDemandType] = useState<DemandType>('fixed_job')
@@ -70,6 +87,10 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
     if (demandType === 'fixed_job') setCategoryId(null)
     // Para ride_share y express_errand, dejar que el usuario elija
   }, [demandType])
+
+  useEffect(() => {
+    trackEvent('demand_publish_modal_open', {})
+  }, [])
 
   useEffect(() => {
     // Obtener ubicación actual como pickup por defecto
@@ -212,18 +233,23 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
       const data = await res.json()
       if (res.ok && data.status === 'success') {
-        // Mostrar mensaje de éxito
+        trackEvent('demand_publish_success', {
+          type: demandType,
+          category_type: demandType === 'ride_share' ? 'travel' : demandType === 'express_errand' ? 'errand' : 'fixed',
+        })
         setError('')
-        // Pequeño delay para mostrar feedback visual
         setTimeout(() => {
           onPublished()
           onClose()
         }, 300)
       } else {
-        setError(data.message || data.errors ? JSON.stringify(data.errors) : 'Error al publicar demanda')
+        const msg = data.message || (data.errors ? JSON.stringify(data.errors) : 'Error al publicar demanda')
+        trackEvent('demand_publish_error', { type: demandType, message: String(msg).slice(0, 200) })
+        setError(msg)
       }
     } catch (err: any) {
-      setError(err.message || 'Error de conexión')
+      trackEvent('demand_publish_error', { type: demandType, message: err?.message || 'connection' })
+      setError(err.message || feedbackCopy.networkError)
     } finally {
       setSaving(false)
     }
@@ -234,28 +260,16 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
   const inputCls = "w-full bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
 
   return (
-    <div className="fixed inset-0 z-[400] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-slate-900 rounded-t-3xl shadow-2xl overflow-hidden">
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-slate-700 rounded-full" />
-        </div>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-slate-800">
-          <div>
-            <h2 className="text-lg font-black text-white">¿Qué necesitas?</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Publica tu demanda y recibe ofertas</p>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center transition">
-            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-
-        <div className="overflow-y-auto max-h-[78vh] px-5 py-4 space-y-4 pb-8">
+    <ModalShell
+      onClose={onClose}
+      titleId="demand-modal-title"
+      title="¿Qué necesitas?"
+      subtitle="Publica tu demanda y recibe ofertas"
+      variant="bottomSheet"
+      bodyClassName="max-h-[78vh] px-5 py-4 space-y-5 pb-8"
+    >
           {error && (
-            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+            <div role="alert" aria-live="assertive" className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
               <svg className="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               <p className="text-red-400 text-xs">{error}</p>
             </div>
@@ -263,27 +277,58 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
           {/* Tipo de servicio — PRIMERO y visible */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">¿Qué necesitas?</label>
-            <div className="grid grid-cols-2 gap-2">
-              {([
-                ['fixed_job',       '🔧', 'Trabajo',          'Electricista, plomero...'],
-                ['ride_share',      '🚗', 'Viaje',             'Llevarme o traerme'],
-                ['express_errand',  '📦', 'Mandado',           'Compras, delivery'],
-                ['buscar_producto', '🛒', 'Buscar producto',   'Ver tiendas cercanas'],
-              ] as const).map(([val, icon, label, sub]) => (
-                <button key={val} type="button" onClick={() => setDemandType(val as DemandType)}
-                  className={`py-3 px-3 rounded-xl text-left flex flex-col gap-1 transition active:scale-95 ${
-                    demandType === val
-                      ? val === 'buscar_producto'
-                        ? 'bg-orange-500/20 ring-2 ring-orange-500'
-                        : 'bg-amber-500/20 ring-2 ring-amber-500'
-                      : 'bg-slate-800 border border-slate-700 hover:border-slate-600'
-                  }`}>
-                  <span className="text-2xl">{icon}</span>
-                  <span className={`text-xs font-black leading-tight ${ demandType === val ? (val === 'buscar_producto' ? 'text-orange-300' : 'text-amber-300') : 'text-slate-200'}`}>{label}</span>
-                  <span className="text-[10px] text-slate-500 leading-tight">{sub}</span>
-                </button>
-              ))}
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Tipo de necesidad
+            </label>
+            <p className="text-[11px] text-slate-500 mb-3 -mt-1">Elige una opción; luego completa los datos abajo.</p>
+            <div className="grid grid-cols-2 gap-2.5">
+              {DEMAND_TYPE_CARDS.map(({ val, Icon, label, sub, accent }) => {
+                const selected = demandType === val
+                const isOrange = accent === 'orange'
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => {
+                      setDemandType(val)
+                      trackEvent('demand_type_select', { type: val })
+                    }}
+                    title={demandTypeGlossary[val as DemandTypeKey].body}
+                    aria-pressed={selected}
+                    className={`min-h-[104px] py-3 px-3 rounded-2xl text-left flex flex-col justify-between gap-2 transition active:scale-[0.98] motion-safe:transition-transform ${
+                      selected
+                        ? isOrange
+                          ? 'bg-orange-500/15 ring-2 ring-orange-400 shadow-[0_0_0_1px_rgba(251,146,60,0.15)]'
+                          : 'bg-amber-500/15 ring-2 ring-amber-400 shadow-[0_0_0_1px_rgba(251,191,36,0.12)]'
+                        : 'bg-slate-800/90 border border-slate-700/90 hover:border-slate-600 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        selected
+                          ? isOrange
+                            ? 'bg-orange-500/25 text-orange-200'
+                            : 'bg-amber-500/25 text-amber-200'
+                          : 'bg-slate-700/70 text-slate-400'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" strokeWidth={2} aria-hidden />
+                    </div>
+                    <div className="min-w-0">
+                      <span
+                        className={`block text-xs font-black leading-tight ${
+                          selected ? (isOrange ? 'text-orange-200' : 'text-amber-100') : 'text-slate-100'
+                        }`}
+                      >
+                        {label}
+                      </span>
+                      <span className={`block text-[10px] leading-snug mt-0.5 ${selected ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {sub}
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -322,19 +367,22 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
                 value={description}
                 onChange={(e) => { setDescription(e.target.value); setFieldErrors(er => ({...er, description: ''})) }}
                 placeholder="Describe brevemente lo que necesitas..."
-                className={`w-full h-24 px-3.5 py-2.5 pr-12 bg-slate-800 border text-white placeholder:text-slate-500 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition ${fieldErrors.description ? 'border-red-500' : 'border-slate-700'}`}
+                className={`w-full min-h-[104px] px-3.5 py-2.5 pb-9 pr-12 bg-slate-800 border text-white placeholder:text-slate-500 rounded-xl text-sm resize-y focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition ${fieldErrors.description ? 'border-red-500' : 'border-slate-700'}`}
                 maxLength={500}
+                rows={4}
               />
-              <div className="absolute bottom-2.5 right-2.5">
+              <span className="pointer-events-none absolute bottom-2.5 left-3.5 text-[10px] tabular-nums text-slate-500">
+                {description.length}/500
+              </span>
+              <div className="absolute bottom-2 right-2.5">
                 <VoiceInput onTranscript={(t) => setDescription(prev => prev ? prev + ' ' + t : t)} />
               </div>
             </div>
-            {fieldErrors.description && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.description}</p>}
-            <p className="text-right text-[10px] text-slate-600 mt-1">{description.length}/500</p>
+            {fieldErrors.description && <p data-field-error className="text-red-400 text-xs mt-1.5">{fieldErrors.description}</p>}
           </div>
 
           {/* Precio */}
-          <div>
+          <div className="pt-1 border-t border-slate-800/90">
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">¿Cuánto pagarías? <span className="text-slate-600 font-normal normal-case">(opcional)</span></label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
@@ -346,13 +394,13 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
                 className="w-full bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl pl-7 pr-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
               />
             </div>
-            <p className="text-[10px] text-slate-600 mt-1">Pesos chilenos (CLP) · El trabajador puede negociar</p>
+            <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Pesos chilenos (CLP). El trabajador puede proponer otro monto.</p>
           </div>
 
           {/* Campos ride_share */}
           {demandType === 'ride_share' && (
-            <div className="space-y-3 bg-blue-500/5 border border-blue-500/20 rounded-xl p-3">
-              <p className="text-xs font-black text-blue-400 uppercase tracking-wider">Detalles del viaje</p>
+            <div className="space-y-3 bg-teal-500/5 border border-teal-500/20 rounded-xl p-3">
+              <p className="text-xs font-black text-teal-400 uppercase tracking-wider">Detalles del viaje</p>
               <div>
                 <input type="text" value={pickupAddress} onChange={e => { setPickupAddress(e.target.value); setFieldErrors(er => ({...er, pickup: ''})) }} placeholder="Origen (ej: Plaza de Renaico)" className={inputCls} />
                 {fieldErrors.pickup && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.pickup}</p>}
@@ -370,15 +418,15 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
 
           {/* Campos express_errand */}
           {demandType === 'express_errand' && (
-            <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-3 space-y-2">
-              <p className="text-xs font-black text-violet-400 uppercase tracking-wider">Detalles del mandado</p>
+            <div className="bg-amber-500/5 border border-amber-500/25 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-black text-amber-400 uppercase tracking-wider">Detalles del mandado</p>
               <div>
                 <input type="text" value={storeName} onChange={e => { setStoreName(e.target.value); setFieldErrors(er => ({...er, storeName: ''})) }} placeholder="Nombre del negocio (ej: Supermercado Angol)" className={inputCls} />
                 {fieldErrors.storeName && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.storeName}</p>}
               </div>
               {storeName.trim().length > 2 && (
                 <a href={`https://maps.google.com/maps?saddr=Mi+ubicaci%C3%B3n&daddr=${encodeURIComponent(storeName)}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition">
+                  className="flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 transition">
                   <span>📍</span><span>Cómo llegar (Google Maps)</span>
                 </a>
               )}
@@ -444,15 +492,13 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
                 {saving ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                    Publicando...
+                    {surfaceCopy.publishing}
                   </span>
-                ) : '✨ Publicar demanda'}
+                ) : surfaceCopy.publishDemandCta}
               </button>
               <p className="text-[10px] text-slate-600 text-center pb-2">Los trabajadores cercanos recibirán una notificación</p>
             </>
           )}
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 interface NotificationSettingsProps {
   isOpen: boolean
@@ -100,11 +102,11 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
       if (response.ok) {
         onClose()
       } else {
-        alert('Error al guardar preferencias')
+        alert(feedbackCopy.savePreferencesError)
       }
     } catch (err) {
       console.error('Error saving preferences:', err)
-      alert('Error al guardar preferencias')
+      alert(feedbackCopy.savePreferencesError)
     } finally {
       setSaving(false)
     }
@@ -142,14 +144,16 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
     <div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-6 shrink-0">
+        <div className={`${uiTone.paymentHeaderStrip} p-6 shrink-0`}>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-white font-bold text-xl">Configuración de Notificaciones</h3>
+              <h3 className="text-white font-bold text-xl">Configuración de notificaciones</h3>
               <p className="text-white/90 text-sm mt-1">Personaliza cómo recibes las notificaciones</p>
             </div>
             <button
+              type="button"
               onClick={onClose}
+              aria-label={surfaceCopy.close}
               className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -163,14 +167,14 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
             <div className="space-y-4">
               {preferences.map((pref) => (
                 <div
                   key={pref.type}
-                  className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-purple-300 transition"
+                  className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-amber-200 transition"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
@@ -184,7 +188,7 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
                         onChange={(e) => updatePreference(pref.type, 'enabled', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
                     </label>
                   </div>
 
@@ -195,7 +199,7 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
                           type="checkbox"
                           checked={pref.push}
                           onChange={(e) => updatePreference(pref.type, 'push', e.target.checked)}
-                          className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
+                          className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500"
                         />
                         <span className="text-sm text-gray-700">Push</span>
                       </label>
@@ -204,7 +208,7 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
                           type="checkbox"
                           checked={pref.email}
                           onChange={(e) => updatePreference(pref.type, 'email', e.target.checked)}
-                          className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
+                          className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500"
                         />
                         <span className="text-sm text-gray-700">Email</span>
                       </label>
@@ -219,26 +223,28 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
         {/* Footer */}
         <div className="p-6 border-t border-gray-200 shrink-0 flex gap-3">
           <button
+            type="button"
             onClick={onClose}
             disabled={saving}
-            className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition disabled:opacity-50"
+            className={uiTone.modalCancelLight}
           >
-            Cancelar
+            {surfaceCopy.cancel}
           </button>
           <button
+            type="button"
             onClick={savePreferences}
             disabled={saving}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl font-bold hover:from-purple-600 hover:to-indigo-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className={uiTone.ctaRating}
           >
             {saving ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Guardando...</span>
+                <span>{surfaceCopy.saving}</span>
               </>
             ) : (
               <>
                 <span>💾</span>
-                <span>Guardar Cambios</span>
+                <span>{surfaceCopy.saveChanges}</span>
               </>
             )}
           </button>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ICON_MAP as SHARED_ICON_MAP } from '@/lib/iconMap'
+import { feedbackCopy } from '@/lib/userFacingCopy'
 
 interface Props {
   isOpen: boolean
@@ -81,7 +82,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
 
   const handleLocationSelect = () => {
     if (!('geolocation' in navigator)) {
-      setError('Tu navegador no soporta geolocalización')
+      setError(feedbackCopy.browserNoGeolocation)
       return
     }
     setLocating(true)
@@ -99,7 +100,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
         setLocating(false)
       },
       () => {
-        setError('No pudimos obtener tu ubicación. Activa el GPS e intenta de nuevo.')
+        setError(feedbackCopy.gpsCouldNotGet)
         setLocating(false)
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -154,10 +155,10 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
         localStorage.setItem(`onboarding_done_${userName}`, 'true')
         onComplete({ ...data, category_id: selectedCategories[0] || selectedCategory || undefined, category_ids: selectedCategories })
       } else {
-        setError('Error al guardar. Intenta nuevamente.')
+        setError(feedbackCopy.saveRetryGeneric)
       }
     } catch {
-      setError('Sin conexión. Revisa tu internet.')
+      setError(feedbackCopy.offlineWizard)
     }
     setLoading(false)
   }

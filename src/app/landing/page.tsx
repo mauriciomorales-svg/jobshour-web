@@ -1,9 +1,15 @@
 'use client'
+import { useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
+import { trackEvent } from '@/lib/analytics'
 
 const LANDING_URL = 'https://jobshours.com/landing'
 
 export default function LandingPage() {
+  useEffect(() => {
+    trackEvent('landing_view', {})
+  }, [])
+
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans">
 

@@ -1,4 +1,6 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect } from 'react'
 
@@ -81,7 +83,7 @@ export default function RutVerificationModal({ isOpen, onClose, onVerified }: Pr
         setError(data.message || 'Error al verificar RUT')
       }
     } catch {
-      setError('Error de conexión')
+      setError(feedbackCopy.networkError)
     }
 
     setLoading(false)
@@ -93,39 +95,46 @@ export default function RutVerificationModal({ isOpen, onClose, onVerified }: Pr
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
+        <div className={`${uiTone.paymentHeaderStrip} px-6 py-5`}>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              🛡️ Verificación de Identidad
+              {surfaceCopy.rutVerifyTitle}
             </h2>
-            <button onClick={onClose} className="text-white/70 hover:text-white text-2xl">×</button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={surfaceCopy.close}
+              className="text-white/80 hover:text-white text-2xl leading-none"
+            >
+              ×
+            </button>
           </div>
-          <p className="text-blue-100 text-sm mt-1">Verifica tu RUT para mayor confianza</p>
+          <p className="text-white/90 text-sm mt-1">{surfaceCopy.rutVerifySubtitle}</p>
         </div>
 
         <div className="p-6">
           {/* Ya verificado */}
           {status?.rut_verified ? (
             <div className="text-center py-6">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl">✅</span>
               </div>
               <h3 className="text-lg font-bold text-gray-900">RUT Verificado</h3>
               <p className="text-gray-500 mt-1">{status.rut}</p>
-              <p className="text-xs text-emerald-600 mt-2">Tu identidad está verificada</p>
+              <p className="text-xs text-teal-700 mt-2">Tu identidad está verificada</p>
             </div>
           ) : success ? (
             <div className="text-center py-6">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl">🎉</span>
               </div>
-              <h3 className="text-lg font-bold text-emerald-700">¡RUT verificado!</h3>
+              <h3 className="text-lg font-bold text-teal-800">¡RUT verificado!</h3>
               <p className="text-gray-500 mt-1">Tu cuenta ahora tiene mayor confiabilidad</p>
             </div>
           ) : (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
-                <p className="text-blue-800 text-sm">
+              <div className={`${uiTone.surfaceInfoAmber} mb-5`}>
+                <p className="text-amber-950 text-sm">
                   <strong>¿Por qué verificar?</strong> Los usuarios verificados generan más confianza y reciben más solicitudes.
                 </p>
               </div>
@@ -138,7 +147,7 @@ export default function RutVerificationModal({ isOpen, onClose, onVerified }: Pr
                 value={rut}
                 onChange={handleChange}
                 placeholder="12.345.678-9"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-lg font-mono text-center tracking-wider focus:outline-none focus:border-blue-500 transition-colors"
+                className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-lg font-mono text-center tracking-wider ${uiTone.inputFocusBrand}`}
                 maxLength={12}
               />
 
@@ -147,15 +156,16 @@ export default function RutVerificationModal({ isOpen, onClose, onVerified }: Pr
               )}
 
               <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={loading || rut.replace(/[^0-9kK]/gi, '').length < 8}
-                className="w-full mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50"
+                className={`w-full mt-4 ${uiTone.ctaFormSaveWide}`}
               >
-                {loading ? 'Verificando...' : 'Verificar RUT'}
+                {loading ? surfaceCopy.verifying : surfaceCopy.rutVerifyCta}
               </button>
 
               <p className="text-xs text-gray-400 text-center mt-3">
-                Solo validamos el formato. Tu RUT se almacena de forma segura.
+                {surfaceCopy.rutPrivacyNote}
               </p>
             </>
           )}

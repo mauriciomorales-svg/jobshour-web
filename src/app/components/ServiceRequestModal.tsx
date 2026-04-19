@@ -1,4 +1,6 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
@@ -26,19 +28,6 @@ interface Props {
 }
 
 export default function ServiceRequestModal({ expert, currentUser, onClose, onSent }: Props) {
-  // Verificación defensiva
-  if (!expert || !expert.id) {
-    console.error('❌ ServiceRequestModal: expert no válido', expert)
-    return (
-      <div className="fixed inset-0 z-[300] flex items-center justify-center">
-        <div className="bg-white rounded-xl p-6 shadow-2xl">
-          <p className="text-red-500">Error: Datos del trabajador no válidos</p>
-          <button onClick={onClose} className="mt-4 bg-gray-900 text-white px-4 py-2 rounded-lg">Cerrar</button>
-        </div>
-      </div>
-    )
-  }
-
   const [description, setDescription] = useState('')
   const [urgency, setUrgency] = useState<'normal' | 'urgent'>('normal')
   const [sending, setSending] = useState(false)
@@ -66,7 +55,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
 
   // Calcular distancia aproximada al worker usando GPS del usuario
   useEffect(() => {
-    if (!expert.pos?.lat || !expert.pos?.lng) return
+    if (!expert?.pos?.lat || !expert?.pos?.lng) return
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition((pos) => {
       const R = 6371
@@ -75,13 +64,14 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
       const a = Math.sin(dLat/2)**2 + Math.cos(pos.coords.latitude * Math.PI/180) * Math.cos(expert.pos!.lat * Math.PI/180) * Math.sin(dLng/2)**2
       setDistanceKm(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)))
     }, () => {}, { enableHighAccuracy: false, timeout: 5000 })
-  }, [expert.pos])
-  
-  const isRecados = expert.category?.icon === 'package'
-  const hasActiveRoute = expert.active_route && expert.active_route.destination
-  
+  }, [expert?.pos])
+
+  const isRecados = expert?.category?.icon === 'package'
+  const hasActiveRoute = !!(expert?.active_route && expert.active_route.destination)
+
   // Detectar tipo de solicitud automáticamente
   useEffect(() => {
+    if (!expert) return
     if (hasActiveRoute && expert.active_route) {
       setRequestType('ride_share')
       setRideDeliveryAddress(expert.active_route.destination?.address || '')
@@ -96,7 +86,19 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
     } else if (isRecados) {
       setRequestType('express_errand')
     }
-  }, [hasActiveRoute, isRecados, expert.active_route])
+  }, [hasActiveRoute, isRecados, expert?.active_route, expert?.id])
+
+  if (!expert || !expert.id) {
+    console.error('❌ ServiceRequestModal: expert no válido', expert)
+    return (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center">
+        <div className="bg-white rounded-xl p-6 shadow-2xl">
+          <p className="text-red-500">Error: Datos del trabajador no válidos</p>
+          <button type="button" onClick={onClose} className={uiTone.modalCloseCompact}>{surfaceCopy.close}</button>
+        </div>
+      </div>
+    )
+  }
 
   // Verificar autenticación
   const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -117,10 +119,11 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             <h3 className="text-lg font-black text-gray-900 mb-2">Sesión expirada</h3>
             <p className="text-sm text-gray-600 mb-4">Debes iniciar sesión para solicitar servicios</p>
             <button 
+              type="button"
               onClick={onClose}
-              className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-gray-800 transition"
+              className={uiTone.modalGateFull}
             >
-              Cerrar
+              {surfaceCopy.close}
             </button>
           </div>
         </div>
@@ -136,18 +139,19 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
         <div className="absolute inset-0 bg-black/40" onClick={onClose} />
         <div className="relative w-full max-w-md bg-white rounded-t-2xl shadow-2xl p-5 pb-8 animate-slide-up">
           <div className="text-center py-6">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
             <h3 className="text-lg font-black text-gray-900 mb-2">Completa tu perfil</h3>
             <p className="text-sm text-gray-600 mb-4">Necesitas agregar tu foto y nombre para solicitar servicios</p>
             <button 
+              type="button"
               onClick={onClose}
-              className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-gray-800 transition"
+              className={uiTone.modalGateFull}
             >
-              Cerrar
+              {surfaceCopy.close}
             </button>
           </div>
         </div>
@@ -274,7 +278,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
       console.error('Error completo:', err)
       console.error('Error message:', err?.message)
       console.error('Error stack:', err?.stack)
-      setError(err?.message || 'Error de conexión - revisa consola (F12)')
+      setError(err?.message || feedbackCopy.networkErrorConsole)
     }
     setSending(false)
   }
@@ -327,7 +331,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: expert.category.color }}>{expert.category.name}</span>
                 )}
                 {hasActiveRoute && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">🚗 Viaje disponible</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300">🚗 Viaje disponible</span>
                 )}
               </div>
             </div>
@@ -345,13 +349,13 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tipo de servicio</label>
               <div className="grid grid-cols-3 gap-2">
-                {([['fixed_job','🔧','Trabajo','teal'],['ride_share','🚗','Viaje','blue'],['express_errand','📦','Compra','violet']] as const).map(([val, icon, label, color]) => (
+                {([['fixed_job','🔧','Trabajo','teal'],['ride_share','🚗','Viaje','amber'],['express_errand','📦','Compra','orange']] as const).map(([val, icon, label, color]) => (
                   <button key={val} onClick={() => setRequestType(val)}
                     className={`py-3 rounded-2xl text-xs font-black transition flex flex-col items-center gap-1 ${
                       requestType === val
                         ? color === 'teal' ? 'bg-teal-500/20 text-teal-300 ring-2 ring-teal-500'
-                        : color === 'blue' ? 'bg-blue-500/20 text-blue-300 ring-2 ring-blue-500'
-                        : 'bg-violet-500/20 text-violet-300 ring-2 ring-violet-500'
+                        : color === 'amber' ? 'bg-amber-500/20 text-amber-300 ring-2 ring-amber-500'
+                        : 'bg-orange-500/20 text-orange-300 ring-2 ring-orange-500'
                         : 'bg-slate-800 text-slate-500 hover:bg-slate-700'
                     }`}>
                     <span className="text-lg">{icon}</span>{label}
@@ -363,8 +367,8 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
 
           {/* Campos RIDE_SHARE */}
           {requestType === 'ride_share' && (
-            <div className="space-y-3 bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
-              <p className="text-xs font-black text-blue-400 uppercase tracking-wider">Detalles del viaje</p>
+            <div className="space-y-3 bg-teal-500/5 border border-teal-500/20 rounded-2xl p-4">
+              <p className="text-xs font-black text-teal-400 uppercase tracking-wider">Detalles del viaje</p>
               <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Origen</label>
                 <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} placeholder="Ej: Renaico, Plaza" /></div>
               <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Destino</label>
@@ -384,8 +388,8 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
 
           {/* Campos EXPRESS_ERRAND */}
           {requestType === 'express_errand' && (
-            <div className="space-y-3 bg-violet-500/5 border border-violet-500/20 rounded-2xl p-4">
-              <p className="text-xs font-black text-violet-400 uppercase tracking-wider">Detalles de la compra</p>
+            <div className="space-y-3 bg-amber-500/5 border border-amber-500/25 rounded-2xl p-4">
+              <p className="text-xs font-black text-amber-400 uppercase tracking-wider">Detalles de la compra</p>
               <div>
                 <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Nombre del negocio</label>
                 <div className="relative">
@@ -400,15 +404,15 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
                 <div className="grid grid-cols-3 gap-2">
                   {(['light','medium','heavy'] as const).map(t => (
                     <button key={t} onClick={() => setLoadType(t)}
-                      className={`py-2.5 rounded-xl text-xs font-bold transition ${loadType === t ? 'bg-violet-500/20 text-violet-300 ring-2 ring-violet-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
+                      className={`py-2.5 rounded-xl text-xs font-bold transition ${loadType === t ? 'bg-amber-500/20 text-amber-300 ring-2 ring-amber-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
                       {t === 'light' ? '🪶 Ligera' : t === 'medium' ? '📦 Media' : '🏋️ Pesada'}
                     </button>
                   ))}
                 </div>
               </div>
               <button onClick={() => setRequiresVehicle(v => !v)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition ${requiresVehicle ? 'bg-violet-500/15 border-violet-500/40 text-violet-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
-                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${requiresVehicle ? 'bg-violet-500 border-violet-500' : 'border-slate-600'}`}>
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition ${requiresVehicle ? 'bg-amber-500/15 border-amber-500/40 text-amber-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${requiresVehicle ? 'bg-amber-500 border-amber-500' : 'border-slate-600'}`}>
                   {requiresVehicle && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                 </div>
                 <span className="text-sm font-semibold">Requiere vehículo</span>
@@ -421,7 +425,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
                 </div>
                 {deliveryAddress.trim().length > 3 && (
                   <a href={`https://maps.google.com/maps?saddr=Mi+ubicaci%C3%B3n&daddr=${encodeURIComponent(deliveryAddress)}`} target="_blank" rel="noopener noreferrer"
-                    className="mt-1.5 flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition">
+                    className="mt-1.5 flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 transition">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     📍 Cómo llegar (Google Maps)
                   </a>
@@ -454,7 +458,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
                 </div>
                 {deliveryAddress.trim().length > 3 && (
                   <a href={`https://maps.google.com/maps?saddr=Mi+ubicaci%C3%B3n&daddr=${encodeURIComponent(deliveryAddress)}`} target="_blank" rel="noopener noreferrer"
-                    className="mt-1.5 flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition">
+                    className="mt-1.5 flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 transition">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     📍 Cómo llegar (Google Maps)
                   </a>
@@ -520,14 +524,14 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
           )}
 
           {/* Botón enviar */}
-          <button onClick={handleSend} disabled={sending}
-            className="w-full py-4 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white rounded-2xl font-black text-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-teal-500/25">
+          <button type="button" onClick={handleSend} disabled={sending}
+            className={uiTone.ctaServiceSend}>
             {sending ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                Enviando solicitud...
+                {surfaceCopy.sendingRequest}
               </span>
-            ) : '⚡ Enviar solicitud'}
+            ) : surfaceCopy.sendServiceRequest}
           </button>
 
           <p className="text-[10px] text-slate-600 text-center pb-2">El trabajador tiene 5 minutos para responder</p>

@@ -3,12 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
 import { ICON_MAP } from '@/lib/iconMap'
+import { feedbackCopy, formatSaveSkillsLabel, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 import { motion, AnimatePresence } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import ExperienceSelector from './ExperienceSelector'
 
 function InlineFeedback({ msg, type }: { msg: string; type: 'ok' | 'err' | 'info' }) {
-  const colors = { ok: 'bg-green-50 border-green-300 text-green-800', err: 'bg-red-50 border-red-300 text-red-800', info: 'bg-blue-50 border-blue-300 text-blue-800' }
+  const colors = { ok: 'bg-teal-50 border-teal-300 text-teal-900', err: 'bg-red-50 border-red-300 text-red-800', info: 'bg-slate-50 border-slate-200 text-slate-800' }
   const icons = { ok: '✅', err: '❌', info: 'ℹ️' }
   return (
     <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className={`mt-2 px-3 py-2 rounded-lg border text-sm flex items-center gap-2 ${colors[type]}`}>
@@ -440,7 +442,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
 
   const copyLink = () => {
     navigator.clipboard.writeText(profileUrl)
-    setFeedback({ msg: 'Enlace copiado al portapapeles', type: 'ok' })
+    setFeedback({ msg: surfaceCopy.linkCopiedToClipboard, type: 'ok' })
     setTimeout(() => setFeedback(null), 2500)
   }
 
@@ -466,7 +468,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                   : <div className="w-full h-full flex items-center justify-center text-white font-black text-3xl">{profileName.charAt(0)}</div>
                 }
               </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 border-2 border-white rounded-full" />
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-teal-500 border-2 border-white rounded-full" />
             </div>
 
             <div className="flex-1 min-w-0">
@@ -532,7 +534,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
           <div className="grid grid-cols-3 gap-2">
             <button
               onClick={handleShare}
-              className="flex flex-col items-center gap-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition active:scale-95"
+              className="flex flex-col items-center gap-1 py-2.5 bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-md shadow-amber-500/20"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
               Compartir
@@ -542,7 +544,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                 const text = `¡Hola! Soy ${profileName} y ofrezco mis servicios en JobsHours 🔧\nMírame aquí: ${profileUrl}`
                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
               }}
-              className="flex flex-col items-center gap-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition active:scale-95"
+              className="flex flex-col items-center gap-1 py-2.5 bg-gradient-to-br from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-md shadow-teal-500/20"
             >
               <span className="text-base leading-none">💬</span>
               WhatsApp
@@ -552,7 +554,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
               className="flex flex-col items-center gap-1 py-2.5 bg-slate-600 hover:bg-slate-500 text-white rounded-xl text-xs font-bold transition active:scale-95"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-              Copiar link
+              {surfaceCopy.copyLink}
             </button>
           </div>
         </div>
@@ -565,10 +567,10 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`bg-white rounded-2xl border-2 overflow-hidden ${cvUploaded ? 'border-green-300' : 'border-gray-100'}`}
+          className={`bg-white rounded-2xl border-2 overflow-hidden ${cvUploaded ? 'border-teal-300' : 'border-gray-100'}`}
         >
           <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${cvUploaded ? 'bg-green-500' : 'bg-gray-300'}`}>{cvUploaded ? '✓' : '1'}</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${cvUploaded ? 'bg-teal-600' : 'bg-gray-300'}`}>{cvUploaded ? '✓' : '1'}</div>
             <div>
               <h2 className="font-black text-gray-900 text-sm">Sube tu CV <span className="text-gray-400 font-normal">(opcional)</span></h2>
               <p className="text-xs text-gray-500">PDF hasta 5MB — si no tienes uno, ¡no importa!</p>
@@ -599,15 +601,15 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                 />
               </div>
             ) : (
-              <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-center gap-3">
-                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+              <div className="bg-teal-50 border-2 border-teal-200 rounded-xl p-4 flex items-center gap-3">
+                <div className="w-12 h-12 bg-teal-600 rounded-xl flex items-center justify-center">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-green-900">{cvFile?.name}</p>
-                  <p className="text-xs text-green-700">CV subido exitosamente</p>
+                  <p className="text-sm font-bold text-teal-950">{cvFile?.name}</p>
+                  <p className="text-xs text-teal-800">CV subido exitosamente</p>
                 </div>
               </div>
             )}
@@ -684,7 +686,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                           animate={{ scale: 1 }}
                           className="w-4 h-4 bg-white rounded-full flex items-center justify-center ml-1"
                         >
-                          <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3 h-3 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
                         </motion.div>
@@ -720,15 +722,15 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                         setFeedback({ msg: 'Error al guardar. Intenta de nuevo.', type: 'err' })
                       }
                     } catch (err) {
-                      setFeedback({ msg: 'Error de conexión', type: 'err' })
+                      setFeedback({ msg: feedbackCopy.networkError, type: 'err' })
                     }
                   }}
-                  className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-black text-base shadow-lg hover:from-green-600 hover:to-green-700 transition flex items-center justify-center gap-2"
+                  className={`${uiTone.ctaFormSaveWide} font-black text-base flex items-center justify-center gap-2`}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Guardar {selectedSkills.length} habilidad{selectedSkills.length > 1 ? 'es' : ''}
+                  {formatSaveSkillsLabel(selectedSkills.length)}
                 </button>
                 <p className="text-xs text-gray-500 text-center mt-2">
                   📍 Después actívate en el mapa con el botón de estado
@@ -743,10 +745,10 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className={`bg-white rounded-2xl border-2 overflow-hidden ${videoFile ? 'border-green-300' : 'border-yellow-300'}`}
+          className={`bg-white rounded-2xl border-2 overflow-hidden ${videoFile ? 'border-teal-300' : 'border-amber-300'}`}
         >
           <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${videoFile ? 'bg-green-500' : 'bg-yellow-400'}`}>{videoFile ? '✓' : '3'}</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${videoFile ? 'bg-teal-600' : 'bg-amber-500'}`}>{videoFile ? '✓' : '3'}</div>
             <div>
               <h2 className="font-black text-gray-900 text-sm">Video de presentación <span className="text-yellow-600 font-normal text-xs">(recomendado)</span></h2>
               <p className="text-xs text-gray-500">30 segundos mostrando lo que haces — genera mucha más confianza que un CV</p>
@@ -765,15 +767,15 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                 <p className="text-white/70 text-xs mt-1">MP4/MOV/WEBM • 30MB máx</p>
               </div>
             ) : (
-              <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+              <div className="bg-teal-50 border-2 border-teal-200 rounded-xl p-4 flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-teal-600 rounded-xl flex items-center justify-center">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-green-900">Video subido</p>
-                  <p className="text-xs text-green-700">{videoFile.name}</p>
+                  <p className="text-sm font-bold text-teal-950">Video subido</p>
+                  <p className="text-xs text-teal-800">{videoFile.name}</p>
                 </div>
               </div>
             )}
@@ -834,10 +836,10 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className={`bg-white rounded-2xl border-2 overflow-hidden ${bioTarjeta.length > 10 ? 'border-blue-300' : 'border-gray-100'}`}
+          className={`bg-white rounded-2xl border-2 overflow-hidden ${bioTarjeta.length > 10 ? 'border-amber-300' : 'border-gray-100'}`}
         >
           <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${bioTarjeta.length > 10 ? 'bg-blue-500' : 'bg-gray-300'}`}>{bioTarjeta.length > 10 ? '✓' : '4'}</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${bioTarjeta.length > 10 ? 'bg-amber-600' : 'bg-gray-300'}`}>{bioTarjeta.length > 10 ? '✓' : '4'}</div>
             <div>
               <h2 className="font-black text-gray-900 text-sm">Tu presentación en una frase</h2>
               <p className="text-xs text-gray-500">Aparece en tu tarjeta compartible — cuéntanos quién eres</p>
@@ -863,17 +865,17 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className={`bg-white rounded-2xl border-2 overflow-hidden ${experiences.length > 0 ? 'border-purple-300' : 'border-gray-100'}`}
+          className={`bg-white rounded-2xl border-2 overflow-hidden ${experiences.length > 0 ? 'border-teal-300' : 'border-gray-100'}`}
         >
           <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${experiences.length > 0 ? 'bg-purple-500' : 'bg-gray-300'}`}>{experiences.length > 0 ? '✓' : '5'}</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${experiences.length > 0 ? 'bg-teal-600' : 'bg-gray-300'}`}>{experiences.length > 0 ? '✓' : '5'}</div>
             <div className="flex-1">
               <h2 className="font-black text-gray-900 text-sm">Tus trabajos anteriores <span className="text-gray-400 font-normal">(opcional)</span></h2>
               <p className="text-xs text-gray-500">Da más confianza mostrar qué has hecho antes</p>
             </div>
             <button
               onClick={() => setShowExperienceSelector(true)}
-              className="shrink-0 bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition"
+              className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition shadow-md shadow-amber-500/20"
             >
               + Agregar
             </button>
@@ -959,7 +961,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                   }
                 } catch {
                   setIsSeller(!next)
-                  setFeedback({ msg: 'Error de conexión', type: 'err' })
+                  setFeedback({ msg: feedbackCopy.networkError, type: 'err' })
                 } finally {
                   setSavingStore(false)
                   setTimeout(() => setFeedback(null), 3000)
@@ -1043,7 +1045,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                     <div className="flex gap-2">
                       <button onClick={() => setShowAddProducto(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm text-gray-600">Cancelar</button>
                       <button onClick={handleAddProducto} disabled={savingProducto} className="flex-1 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold disabled:opacity-50">
-                        {savingProducto ? '...' : 'Guardar'}
+                        {savingProducto ? surfaceCopy.saving : surfaceCopy.save}
                       </button>
                     </div>
                   </div>
@@ -1095,10 +1097,11 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
             Compartir mi tarjeta
           </button>
           <button
+            type="button"
             onClick={onClose}
-            className="px-5 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition active:scale-95"
+            className={uiTone.modalSecondaryNextToPrimary}
           >
-            Cerrar
+            {surfaceCopy.close}
           </button>
         </div>
       </div>

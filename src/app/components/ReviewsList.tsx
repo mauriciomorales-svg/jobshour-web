@@ -175,7 +175,7 @@ export default function ReviewsList({ workerId, showAverage = true, canRespond =
                 const text = '¿Necesitas ayuda con algo? Mira este trabajador en JobsHours 👇'
                 window.open(`https://wa.me/?text=${encodeURIComponent(text + '\n' + url)}`, '_blank')
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-bold transition active:scale-95"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl text-sm font-bold transition shadow-md shadow-amber-500/20 active:scale-95"
             >
               <span>💬</span> WhatsApp
             </button>

@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { Tag } from 'lucide-react'
 import { ICON_MAP as SHARED_ICON_MAP } from '@/lib/iconMap'
+import { emptyStateCopy } from '@/lib/userFacingCopy'
 
 interface Category {
   id: number
@@ -120,10 +122,8 @@ export default function CategoryPicker({
           </>
         ) : (
           <>
-            <span className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-slate-400 shrink-0">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-              </svg>
+            <span className="w-8 h-8 rounded-lg bg-slate-700/80 flex items-center justify-center text-amber-500/80 shrink-0 ring-1 ring-slate-600/50">
+              <Tag className="w-4 h-4" strokeWidth={2} aria-hidden />
             </span>
             <span className="flex-1 text-sm text-slate-500">{placeholder}</span>
             <svg className={`w-4 h-4 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,7 +195,7 @@ export default function CategoryPicker({
             {filtered.length === 0 ? (
               <div className="py-8 text-center">
                 <div className="text-3xl mb-2">🔍</div>
-                <p className="text-slate-500 text-sm">Sin resultados para "{search}"</p>
+                <p className="text-slate-500 text-sm">{`${emptyStateCopy.searchNoResultsPrefix} "${search}"`}</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-1.5">

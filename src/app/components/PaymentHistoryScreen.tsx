@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 interface PaymentHistoryScreenProps {
   isOpen: boolean
@@ -83,8 +85,8 @@ export default function PaymentHistoryScreen({ isOpen, onClose }: PaymentHistory
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-700 border-green-200'
-      case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+      case 'completed': return 'bg-teal-100 text-teal-800 border-teal-200'
+      case 'pending': return 'bg-amber-100 text-amber-800 border-amber-200'
       case 'failed': return 'bg-red-100 text-red-700 border-red-200'
       default: return 'bg-gray-100 text-gray-700 border-gray-200'
     }
@@ -114,14 +116,16 @@ export default function PaymentHistoryScreen({ isOpen, onClose }: PaymentHistory
     <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 shrink-0">
+        <div className={`${uiTone.paymentHeaderStrip} p-6 shrink-0`}>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-white font-bold text-xl">Historial de Pagos</h3>
+              <h3 className="text-white font-bold text-xl capitalize">Historial de pagos</h3>
               <p className="text-white/90 text-sm mt-1">Todos tus pagos y transacciones</p>
             </div>
             <button
+              type="button"
               onClick={onClose}
+              aria-label={surfaceCopy.close}
               className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,7 +140,7 @@ export default function PaymentHistoryScreen({ isOpen, onClose }: PaymentHistory
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white rounded-xl p-4 border border-gray-200">
               <p className="text-xs text-gray-500 mb-1">Total Pagado</p>
-              <p className="text-2xl font-black text-green-600">{formatCLP(totalPaid)}</p>
+              <p className="text-2xl font-black text-amber-700">{formatCLP(totalPaid)}</p>
             </div>
             <div className="bg-white rounded-xl p-4 border border-gray-200">
               <p className="text-xs text-gray-500 mb-1">Pagos Completados</p>
@@ -159,9 +163,10 @@ export default function PaymentHistoryScreen({ isOpen, onClose }: PaymentHistory
               <button
                 key={key}
                 onClick={() => setFilter(key as any)}
+                type="button"
                 className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${
                   filter === key
-                    ? 'bg-green-600 text-white shadow-lg'
+                    ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -175,7 +180,7 @@ export default function PaymentHistoryScreen({ isOpen, onClose }: PaymentHistory
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : filteredPayments.length === 0 ? (
             <div className="text-center py-12">
@@ -192,11 +197,11 @@ export default function PaymentHistoryScreen({ isOpen, onClose }: PaymentHistory
               {filteredPayments.map((payment) => (
                 <div
                   key={payment.id}
-                  className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-green-300 transition"
+                  className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-amber-200 transition"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-2xl">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/20`}>
                         {getPaymentMethodIcon(payment.payment_method)}
                       </div>
                       <div>
@@ -215,7 +220,7 @@ export default function PaymentHistoryScreen({ isOpen, onClose }: PaymentHistory
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-black text-green-600">
+                      <p className="text-lg font-black text-amber-800">
                         {formatCLP(payment.amount)}
                       </p>
                       <span className={`text-xs px-2 py-1 rounded-full border font-bold ${getStatusColor(payment.status)}`}>
@@ -243,10 +248,11 @@ export default function PaymentHistoryScreen({ isOpen, onClose }: PaymentHistory
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 shrink-0">
           <button
+            type="button"
             onClick={onClose}
-            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-lg"
+            className={uiTone.modalFooterClose}
           >
-            Cerrar
+            {surfaceCopy.close}
           </button>
         </div>
       </div>

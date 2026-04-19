@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import { emptyStateCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 interface LiveStatsProps {
   lat: number
@@ -55,7 +57,7 @@ export default function LiveStats({ lat, lng, radius = 50 }: LiveStatsProps) {
           setStats({
             active_workers: 0,
             active_demands: 0,
-            message: 'Sin datos disponibles'
+            message: emptyStateCopy.liveStatsUnavailable
           })
           setLoading(false)
         }
@@ -83,7 +85,7 @@ export default function LiveStats({ lat, lng, radius = 50 }: LiveStatsProps) {
     <motion.div
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-4 text-white shadow-lg"
+      className={uiTone.liveStatsStrip}
     >
       <div className="flex items-start gap-3">
         <motion.span

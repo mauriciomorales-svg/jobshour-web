@@ -8,7 +8,7 @@ const SLIDES = [
     emoji: '🗺️',
     title: 'Encuentra expertos cerca',
     body: 'El mapa muestra trabajadores disponibles en tiempo real. Toca cualquier pin para ver su perfil y solicitar el servicio.',
-    color: 'from-teal-500 to-emerald-600',
+    color: 'from-teal-500 to-teal-800',
   },
   {
     emoji: '📋',
@@ -20,7 +20,7 @@ const SLIDES = [
     emoji: '💬',
     title: 'Coordina por chat',
     body: 'Habla directamente con el trabajador, comparte fotos y llega a un acuerdo antes de comenzar.',
-    color: 'from-blue-500 to-indigo-600',
+    color: 'from-slate-700 to-teal-800',
   },
 ]
 

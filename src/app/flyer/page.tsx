@@ -1,6 +1,7 @@
 'use client'
 import { QRCodeSVG } from 'qrcode.react'
 import { useRef, useState } from 'react'
+import { feedbackCopy } from '@/lib/userFacingCopy'
 
 const LANDING_URL = 'https://jobshours.com/landing'
 
@@ -24,7 +25,7 @@ export default function FlyerPage() {
       link.href = canvas.toDataURL('image/png')
       link.click()
     } catch (e) {
-      alert('Error al generar imagen')
+      alert(feedbackCopy.flyerImageError)
     }
     setDownloading(false)
   }

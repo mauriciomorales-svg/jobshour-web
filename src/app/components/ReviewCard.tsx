@@ -59,14 +59,14 @@ export default function ReviewCard({ review, canRespond = false, onRespond }: Re
 
       {/* Respuesta del worker */}
       {review.response && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-lg p-3 mb-3">
+        <div className="bg-teal-50 border-l-4 border-teal-500 rounded-r-lg p-3 mb-3">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold text-blue-700">Respuesta del trabajador</span>
+            <span className="text-xs font-bold text-teal-800">Respuesta del trabajador</span>
             {review.responded_at && (
-              <span className="text-xs text-blue-500">{review.responded_at}</span>
+              <span className="text-xs text-teal-600">{review.responded_at}</span>
             )}
           </div>
-          <p className="text-sm text-blue-900">{review.response}</p>
+          <p className="text-sm text-slate-900">{review.response}</p>
         </div>
       )}
 
@@ -74,7 +74,7 @@ export default function ReviewCard({ review, canRespond = false, onRespond }: Re
       {canRespond && !review.response && onRespond && (
         <button
           onClick={() => onRespond(review.id)}
-          className="text-xs text-blue-600 hover:text-blue-700 font-semibold"
+          className="text-xs text-amber-600 hover:text-amber-700 font-semibold"
         >
           Responder reseña
         </button>

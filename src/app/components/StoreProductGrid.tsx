@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Package, Search, Loader2 } from 'lucide-react'
 import { useStoreCart } from '@/lib/storeCartContext'
+import { emptyStateCopy } from '@/lib/userFacingCopy'
 
 const INVENTARIO_API = '/inventario'
 
@@ -79,7 +80,7 @@ export default function StoreProductGrid({ workerId, storeName }: Props) {
       ) : productos.length === 0 ? (
         <div className="text-center py-8 text-slate-400 text-sm">
           <Package className="w-10 h-10 mx-auto mb-2 opacity-40" />
-          <p>Sin productos disponibles</p>
+          <p>{emptyStateCopy.noProducts}</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-1">

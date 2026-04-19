@@ -1,4 +1,6 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState } from 'react'
 
@@ -69,7 +71,7 @@ export default function RatingModal({
         setError(data.message || 'Error al enviar la reseña')
       }
     } catch (err) {
-      setError('Error de conexión. Por favor intenta nuevamente.')
+      setError(feedbackCopy.networkErrorPleaseRetry)
     } finally {
       setSubmitting(false)
     }
@@ -163,26 +165,28 @@ export default function RatingModal({
         {/* Footer */}
         <div className="p-6 border-t border-slate-700 flex gap-3">
           <button
+            type="button"
             onClick={onClose}
             disabled={submitting}
-            className="flex-1 px-4 py-3 bg-slate-800 text-slate-300 rounded-xl font-bold hover:bg-slate-700 transition disabled:opacity-50"
+            className={uiTone.modalCancelMuted}
           >
-            Cancelar
+            {surfaceCopy.cancel}
           </button>
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={submitting || stars === 0 || comment.trim().length < 10}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-500 hover:to-orange-600 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className={uiTone.ctaRating}
           >
             {submitting ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Enviando...</span>
+                <span>{surfaceCopy.sending}</span>
               </>
             ) : (
               <>
                 <span>⭐</span>
-                <span>Enviar Reseña</span>
+                <span>{surfaceCopy.sendReviewTitle}</span>
               </>
             )}
           </button>

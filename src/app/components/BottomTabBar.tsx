@@ -60,12 +60,12 @@ export default function BottomTabBar({ active, onChange, requestsBadge = 0, dema
               key={tab.key}
               onClick={() => onChange(tab.key)}
               className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 relative transition-all duration-150 active:scale-95 ${
-                isActive ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
+                isActive ? 'text-teal-600' : 'text-gray-400 hover:text-gray-600'
               }`}
             >
               {/* Active indicator */}
               {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-600 rounded-full" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-teal-600 rounded-full" />
               )}
 
               {/* Icon with badge */}
@@ -78,7 +78,7 @@ export default function BottomTabBar({ active, onChange, requestsBadge = 0, dema
                 )}
               </div>
 
-              <span className={`text-[10px] font-semibold leading-none ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
+              <span className={`text-[10px] font-semibold leading-none ${isActive ? 'text-teal-600' : 'text-gray-400'}`}>
                 {tab.label}
               </span>
             </button>

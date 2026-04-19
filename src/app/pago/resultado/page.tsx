@@ -45,7 +45,7 @@ function PagoResultadoContent() {
     <>
       {status === 'loading' && (
         <>
-          <Loader2 className="h-16 w-16 text-emerald-500 animate-spin mx-auto mb-4" />
+          <Loader2 className="h-16 w-16 text-teal-500 animate-spin mx-auto mb-4" />
           <h1 className="text-xl font-bold mb-2 text-white">Procesando pago</h1>
           <p className="text-slate-400">{message}</p>
         </>
@@ -53,13 +53,13 @@ function PagoResultadoContent() {
 
       {status === 'success' && (
         <>
-          <CheckCircle className="h-16 w-16 text-emerald-400 mx-auto mb-4" />
-          <h1 className="text-xl font-bold mb-2 text-emerald-400">¡Pago Exitoso!</h1>
+          <CheckCircle className="h-16 w-16 text-teal-400 mx-auto mb-4" />
+          <h1 className="text-xl font-bold mb-2 text-teal-400">¡Pago Exitoso!</h1>
           <p className="text-slate-300 mb-6">{message}</p>
           <p className="text-sm text-slate-500 mb-6">Serás redirigido al inicio en unos segundos...</p>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition shadow-lg"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-teal-700 text-white rounded-xl hover:from-teal-400 hover:to-teal-600 transition shadow-lg shadow-teal-500/20"
           >
             Volver al inicio
           </Link>
@@ -73,7 +73,7 @@ function PagoResultadoContent() {
           <p className="text-slate-300 mb-6">{message}</p>
           <Link
             href="/"
-            className="block px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition"
+            className="block px-6 py-3 bg-gradient-to-r from-slate-600 to-slate-800 text-white rounded-xl hover:from-slate-500 hover:to-slate-700 transition"
           >
             Volver al inicio
           </Link>
@@ -87,7 +87,7 @@ export default function PagoResultadoPage() {
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
-        <Suspense fallback={<Loader2 className="h-16 w-16 text-emerald-500 animate-spin mx-auto" />}>
+        <Suspense fallback={<Loader2 className="h-16 w-16 text-teal-500 animate-spin mx-auto" />}>
           <PagoResultadoContent />
         </Suspense>
       </div>

@@ -1,4 +1,5 @@
 'use client'
+import { feedbackCopy } from '@/lib/userFacingCopy'
 
 import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
@@ -83,7 +84,7 @@ export default function WorkerActivationModal({ isOpen, onClose, onSuccess }: Pr
             setError(data.message || 'Error al activar modo Worker')
           }
         } catch {
-          setError('Error de conexión')
+          setError(feedbackCopy.networkError)
         }
         setLoading(false)
       },
@@ -117,8 +118,8 @@ export default function WorkerActivationModal({ isOpen, onClose, onSuccess }: Pr
             />
           </div>
 
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <p className="text-sm text-blue-800">
+          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+            <p className="text-sm text-amber-950">
               📍 Usando ubicación actual
             </p>
           </div>
@@ -133,7 +134,7 @@ export default function WorkerActivationModal({ isOpen, onClose, onSuccess }: Pr
             onClick={handleActivate}
             disabled={loading}
             className={`w-full py-3 rounded-lg font-semibold text-white ${
-              loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'
+              loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 shadow-md shadow-teal-500/20'
             }`}
           >
             {loading ? 'Activando...' : '¡ACTIVAR AHORA!'}

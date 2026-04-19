@@ -1,4 +1,5 @@
 'use client'
+import { feedbackCopy } from '@/lib/userFacingCopy'
 
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from '@/lib/api'
@@ -84,7 +85,7 @@ export default function MercadoPagoPayment({ serviceRequestId, amount, onSuccess
               onError(data.message || 'Error al procesar el pago')
             }
           } catch (e) {
-            onError('Error de conexión')
+            onError(feedbackCopy.networkError)
           } finally {
             setProcessing(false)
           }
@@ -104,7 +105,7 @@ export default function MercadoPagoPayment({ serviceRequestId, amount, onSuccess
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <h2 className="text-lg font-black text-gray-900">Pagar servicio</h2>
-            <p className="text-sm text-gray-500">Total: <span className="font-bold text-emerald-600">${Math.round(amount).toLocaleString('es-CL')}</span> <span className="text-xs">(incluye comisión 8%)</span></p>
+            <p className="text-sm text-gray-500">Total: <span className="font-bold text-amber-700">${Math.round(amount).toLocaleString('es-CL')}</span> <span className="text-xs">(incluye comisión 8%)</span></p>
           </div>
           <button onClick={onClose} className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center">
             <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,12 +118,12 @@ export default function MercadoPagoPayment({ serviceRequestId, amount, onSuccess
         <div className="p-4">
           {loading && (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
             </div>
           )}
           {processing && (
-            <div className="flex items-center justify-center gap-2 py-4 text-emerald-600 font-semibold">
-              <div className="w-5 h-5 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center justify-center gap-2 py-4 text-amber-700 font-semibold">
+              <div className="w-5 h-5 border-3 border-amber-500 border-t-transparent rounded-full animate-spin" />
               Procesando pago...
             </div>
           )}

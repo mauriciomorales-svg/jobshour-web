@@ -1,4 +1,6 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState } from 'react'
 
@@ -29,7 +31,7 @@ export default function FlowPaymentModal({
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
       if (!token) {
-        setError('Debes iniciar sesión para realizar el pago')
+        setError(feedbackCopy.mustLoginToPay)
         setLoading(false)
         return
       }
@@ -56,7 +58,7 @@ export default function FlowPaymentModal({
         setLoading(false)
       }
     } catch (err) {
-      setError('Error de conexión. Por favor intenta nuevamente.')
+      setError(feedbackCopy.networkErrorPleaseRetry)
       setLoading(false)
     }
   }
@@ -67,14 +69,16 @@ export default function FlowPaymentModal({
     <div className="fixed inset-0 z-[800] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6">
+        <div className={`${uiTone.paymentHeaderStrip} p-6`}>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-white font-bold text-xl">Pagar Servicio</h3>
-              <p className="text-white/90 text-sm mt-1">Pago seguro con Flow</p>
+              <h3 className="text-white font-bold text-xl capitalize">{surfaceCopy.paymentTitle}</h3>
+              <p className="text-white/90 text-sm mt-1">{surfaceCopy.paymentSecureTagline}</p>
             </div>
             <button
+              type="button"
               onClick={onClose}
+              aria-label={surfaceCopy.close}
               className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,22 +96,19 @@ export default function FlowPaymentModal({
             </div>
           )}
 
-          <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200">
-            <span className="text-gray-700 font-semibold">Total a pagar:</span>
-            <span className="text-2xl font-black text-green-600">
+          <div className={uiTone.paymentAmountPanelLight}>
+            <span className="text-slate-700 font-semibold">{surfaceCopy.totalToPayColon}</span>
+            <span className={uiTone.paymentAmountTextLight}>
               ${amount.toLocaleString('es-CL')}
             </span>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div className={uiTone.surfaceInfoAmber}>
             <div className="flex items-start gap-3">
               <div className="text-2xl">🔒</div>
               <div>
-                <p className="font-bold text-blue-900 text-sm mb-1">Pago Seguro</p>
-                <p className="text-xs text-blue-700">
-                  Serás redirigido a Flow para completar el pago de forma segura. 
-                  Aceptamos WebPay, tarjetas de crédito y débito.
-                </p>
+                <p className="font-bold text-amber-950 text-sm mb-1">{surfaceCopy.paymentSecureHeading}</p>
+                <p className="text-xs text-amber-900">{surfaceCopy.paymentSecureFlowDescription}</p>
               </div>
             </div>
           </div>
@@ -120,27 +121,29 @@ export default function FlowPaymentModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 flex gap-3">
+        <div className="p-6 border-t border-slate-200 flex gap-3">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition"
+            className={uiTone.modalCancelLight}
           >
-            Cancelar
+            {surfaceCopy.cancel}
           </button>
           <button
+            type="button"
             onClick={handlePay}
             disabled={loading}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className={uiTone.ctaPayFlow}
           >
             {loading ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Procesando...</span>
+                <span>{surfaceCopy.processing}</span>
               </>
             ) : (
               <>
                 <span>💳</span>
-                <span>Pagar con Flow</span>
+                <span>{surfaceCopy.payWithFlow}</span>
               </>
             )}
           </button>

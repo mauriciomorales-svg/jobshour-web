@@ -1,4 +1,6 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect } from 'react'
 import { isCapacitor, openExternalBrowser, onAppResume } from '@/lib/capacitor'
@@ -67,7 +69,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
       onSuccess(data.user, data.token)
       onClose()
     } catch (err) {
-      setError('Error de conexión. Intenta nuevamente.')
+      setError(feedbackCopy.networkErrorRetry)
       setLoading(false)
     }
   }
@@ -91,7 +93,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
         const error = urlObj.searchParams.get('error')
 
         if (error) {
-          setError('Error al autenticar con Google')
+          setError(feedbackCopy.oauthGoogleFailed)
           return
         }
 
@@ -122,10 +124,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
     <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto py-4">
       <div className="bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 p-6 relative overflow-hidden">
+        <div className={uiTone.authHeader}>
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
           <button
+            type="button"
             onClick={onClose}
+            aria-label={surfaceCopy.close}
             className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition z-10"
           >
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,8 +142,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <h3 className="text-white text-2xl font-black text-center">Bienvenido</h3>
-            <p className="text-white/80 text-sm text-center mt-1">Inicia sesión para continuar</p>
+            <h3 className="text-white text-2xl font-black text-center">{surfaceCopy.loginWelcome}</h3>
+            <p className="text-white/80 text-sm text-center mt-1">{surfaceCopy.loginContinueSubtitle}</p>
           </div>
         </div>
 
@@ -169,7 +173,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu@email.com"
                   required
-                  className="w-full px-4 py-3 pl-11 bg-slate-800 border-2 border-slate-700 text-white placeholder-slate-500 rounded-xl outline-none transition-all focus:border-blue-500"
+                  className="w-full px-4 py-3 pl-11 bg-slate-800 border-2 border-slate-700 text-white placeholder-slate-500 rounded-xl outline-none transition-all focus:border-amber-500"
                 />
                 <svg className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
@@ -190,7 +194,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
                   placeholder="••••••••"
                   required
                   minLength={8}
-                  className="w-full px-4 py-3 pl-11 pr-11 bg-slate-800 border-2 border-slate-700 text-white placeholder-slate-500 rounded-xl outline-none transition-all focus:border-blue-500"
+                  className="w-full px-4 py-3 pl-11 pr-11 bg-slate-800 border-2 border-slate-700 text-white placeholder-slate-500 rounded-xl outline-none transition-all focus:border-amber-500"
                 />
                 <svg className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -221,10 +225,10 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
                 id="remember"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 text-blue-500 rounded border-slate-600 bg-slate-800 focus:ring-blue-500"
+                className="w-4 h-4 text-amber-500 rounded border-slate-600 bg-slate-800 focus:ring-amber-500"
               />
               <label htmlFor="remember" className="text-sm text-slate-400">
-                Recordarme
+                {surfaceCopy.rememberMe}
               </label>
             </div>
 
@@ -233,9 +237,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
               <button
                 type="button"
                 onClick={onForgotPassword}
-                className="text-sm text-blue-400 hover:text-blue-300 font-semibold transition"
+                className="text-sm text-amber-400 hover:text-amber-300 font-semibold transition"
               >
-                ¿Olvidaste tu contraseña?
+                {surfaceCopy.forgotPassword}
               </button>
             </div>
 
@@ -243,15 +247,15 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:from-blue-600 hover:to-indigo-700 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className={uiTone.ctaFormSaveWide}
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Iniciando sesión...</span>
+                  <span>{surfaceCopy.loginSigningIn}</span>
                 </div>
               ) : (
-                'Iniciar Sesión'
+                surfaceCopy.loginSubmit
               )}
             </button>
           </form>
@@ -262,7 +266,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
               <div className="w-full border-t border-slate-700" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-slate-900 px-3 text-slate-500 font-semibold">O continúa con</span>
+              <span className="bg-slate-900 px-3 text-slate-500 font-semibold">{surfaceCopy.oauthOrContinue}</span>
             </div>
           </div>
 
@@ -297,12 +301,13 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
           {/* Register Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-400">
-              ¿No tienes cuenta?{' '}
+              {surfaceCopy.registerPrompt}{' '}
               <button
+                type="button"
                 onClick={onSwitchToRegister}
-                className="text-blue-400 hover:text-blue-300 font-bold transition"
+                className="text-amber-400 hover:text-amber-300 font-bold transition"
               >
-                Regístrate aquí
+                {surfaceCopy.registerHere}
               </button>
             </p>
           </div>

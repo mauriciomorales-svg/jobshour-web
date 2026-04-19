@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { apiFetch } from '@/lib/api'
+import { emptyStateCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 const LiveTrackingModal = dynamic(() => import('./LiveTrackingModal'), { ssr: false })
 const RatingModal = dynamic(() => import('./RatingModal'), { ssr: false })
@@ -101,10 +103,10 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-amber-100 text-amber-700 border-amber-200'
-      case 'accepted': return 'bg-green-100 text-green-700 border-green-200'
+      case 'accepted': return 'bg-teal-100 text-teal-800 border-teal-200'
       case 'rejected': return 'bg-red-100 text-red-700 border-red-200'
       case 'cancelled': return 'bg-slate-100 text-slate-700 border-slate-200'
-      case 'completed': return 'bg-blue-100 text-blue-700 border-blue-200'
+      case 'completed': return 'bg-teal-100 text-teal-800 border-teal-200'
       default: return 'bg-slate-100 text-slate-700 border-slate-200'
     }
   }
@@ -137,10 +139,12 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
     <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
       <div className="bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl w-[90%] max-w-2xl mx-4 overflow-hidden animate-scale-in max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 p-6 relative overflow-hidden shrink-0">
+        <div className={`${uiTone.authHeader} shrink-0`}>
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
           <button
+            type="button"
             onClick={onClose}
+            aria-label={surfaceCopy.close}
             className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition z-10"
           >
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,9 +169,10 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
               <button
                 key={key}
                 onClick={() => setFilter(key as any)}
+                type="button"
                 className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${
                   filter === key
-                    ? 'bg-blue-600 text-white shadow-lg'
+                    ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20'
                     : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                 }`}
               >
@@ -181,7 +186,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-12">
@@ -238,7 +243,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
                   {/* Price */}
                   {(request.offered_price || request.final_price) && (
                     <div className="flex items-center gap-2 mb-3">
-                      <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
                       </svg>
@@ -247,7 +252,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
                           ? `Precio final: $${request.final_price.toLocaleString()}`
                           : request.offered_price
                           ? `Oferta: $${request.offered_price.toLocaleString()}`
-                          : 'Sin precio definido'}
+                          : emptyStateCopy.noPrice}
                       </span>
                     </div>
                   )}
@@ -256,22 +261,28 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
                   <div className="flex gap-2">
                     {request.status === 'pending' && (
                       <button
+                        type="button"
                         onClick={() => cancelRequest(request.id)}
                         className="flex-1 bg-red-500/20 text-red-400 py-2 rounded-xl text-sm font-bold hover:bg-red-500/30 transition border border-red-500/30"
                       >
-                        Cancelar
+                        {surfaceCopy.cancel}
                       </button>
                     )}
                     {(request.status === 'accepted' || request.status === 'in_progress') && (
                       <>
                         <button
+                          type="button"
                           onClick={() => setTrackingRequestId(request.id)}
-                          className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-2 rounded-xl text-sm font-bold hover:from-emerald-600 hover:to-teal-700 transition shadow-lg flex items-center justify-center gap-2"
+                          className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white py-2 rounded-xl text-sm font-bold hover:from-teal-400 hover:to-teal-500 transition shadow-lg shadow-teal-500/25 flex items-center justify-center gap-2"
                         >
                           <span>📍</span>
-                          <span>Ver Tracking</span>
+                          <span>{surfaceCopy.viewTracking}</span>
                         </button>
-                        <button onClick={() => onOpenChat?.(request.id)} className="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-xl text-sm font-bold hover:bg-blue-500/30 transition border border-blue-500/30">
+                        <button
+                          type="button"
+                          onClick={() => onOpenChat?.(request.id)}
+                          className={uiTone.chipActionTeal}
+                        >
                           💬 Chat
                         </button>
                       </>
@@ -280,19 +291,21 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
                       <div className="flex gap-2 w-full">
                         {(!request.payment_status || request.payment_status === 'pending') && (
                           <button
+                            type="button"
                             onClick={() => setPaymentRequestId(request.id)}
-                            className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 rounded-xl text-sm font-bold hover:from-blue-600 hover:to-indigo-700 transition shadow-lg flex items-center justify-center gap-2"
+                            className={uiTone.ctaPayRow}
                           >
                             <span>💳</span>
                             <span>Pagar</span>
                           </button>
                         )}
                         {request.payment_status === 'completed' && (
-                          <span className="flex-1 text-center py-2 text-emerald-400 text-sm font-bold">✅ Pagado</span>
+                          <span className="flex-1 text-center py-2 text-amber-400 text-sm font-bold">✅ Pagado</span>
                         )}
                         <button
+                          type="button"
                           onClick={() => setRatingRequestId(request.id)}
-                          className="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 rounded-xl text-sm font-bold hover:from-yellow-500 hover:to-orange-600 transition shadow-lg flex items-center justify-center gap-2"
+                          className="flex-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white py-2 rounded-xl text-sm font-bold hover:from-amber-500 hover:to-orange-600 transition shadow-lg shadow-amber-500/15 flex items-center justify-center gap-2"
                         >
                           <span>⭐</span>
                           <span>Calificar</span>

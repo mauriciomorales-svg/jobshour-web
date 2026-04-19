@@ -1,4 +1,6 @@
 'use client'
+import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect, useRef } from 'react'
 import ChatImageUpload from './ChatImageUpload'
@@ -204,7 +206,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
 
   const handleShareLocation = async () => {
     if (!navigator.geolocation) {
-      alert('Tu navegador no soporta geolocalización')
+      alert(feedbackCopy.browserNoGeolocation)
       return
     }
 
@@ -219,7 +221,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
         // await handleSend()
       },
       (error) => {
-        alert('Error obteniendo ubicación: ' + error.message)
+        alert(feedbackCopy.geolocationErrorPrefix + error.message)
       }
     )
   }
@@ -238,17 +240,17 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
         <div className="bg-gradient-to-r from-slate-800 to-slate-800/95 border-b border-slate-700 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {otherPersonAvatar ? (
-              <img src={otherPersonAvatar} alt={otherPersonName} className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/40" />
+              <img src={otherPersonAvatar} alt={otherPersonName} className="w-10 h-10 rounded-full object-cover ring-2 ring-amber-500/40" />
             ) : (
-              <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center border border-blue-500/30">
-                <span className="text-blue-300 font-black text-lg">{otherPersonName?.charAt(0) ?? '💬'}</span>
+              <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center border border-amber-500/35">
+                <span className="text-amber-200 font-black text-lg">{otherPersonName?.charAt(0) ?? '💬'}</span>
               </div>
             )}
             <div>
               <h3 className="font-black text-white text-sm leading-tight">{otherPersonName ?? 'Chat'}</h3>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {myRole && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-bold">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/25 text-amber-200 font-bold">
                     Tú: {myRole === 'cliente' ? 'Cliente' : 'Trabajador'}
                   </span>
                 )}
@@ -262,7 +264,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
             {otherPersonPhone && (
               <a
                 href={`tel:${otherPersonPhone}`}
-                className="w-8 h-8 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-full flex items-center justify-center text-emerald-400 transition"
+                className="w-8 h-8 bg-teal-500/20 hover:bg-teal-500/30 rounded-full flex items-center justify-center text-teal-300 transition"
                 title="Llamar"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,7 +289,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
             <div className="text-5xl mb-4">🚫</div>
             <h3 className="text-white font-bold text-lg mb-2">No puedes chatear contigo mismo</h3>
             <p className="text-slate-400 text-sm">Este chat es para comunicarte con la otra persona de la solicitud.</p>
-            <button onClick={onClose} className="mt-6 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition">Cerrar</button>
+            <button type="button" onClick={onClose} className={`mt-6 ${uiTone.modalCloseFilled}`}>{surfaceCopy.close}</button>
           </div>
         )}
 
@@ -296,12 +298,12 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-950/50">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full py-12">
-              <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center mb-3">
-                <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/25 rounded-full flex items-center justify-center mb-3">
+                <svg className="w-8 h-8 text-amber-400/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <p className="text-slate-400 text-sm font-medium">Sin mensajes aún</p>
+              <p className="text-slate-400 text-sm font-medium">{emptyStateCopy.noMessagesYet}</p>
               <p className="text-slate-600 text-xs mt-1">Comienza la conversación con {otherPersonName ?? 'la otra persona'}</p>
             </div>
           )}
@@ -342,7 +344,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                   )}
                   <div className={`px-3.5 py-2.5 rounded-2xl ${
                     isMine
-                      ? 'bg-blue-600 text-white rounded-br-sm'
+                      ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-br-sm shadow-md shadow-amber-500/20'
                       : 'bg-slate-800 text-slate-100 border border-slate-700 rounded-bl-sm'
                   }`}>
                     {m.type === 'image' ? (
@@ -364,7 +366,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                     ) : m.type === 'location' ? (
                       <div>
                         <p className="text-sm mb-1">📍 Ubicación compartida</p>
-                        <a href={m.body} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-300 underline">Ver en mapa</a>
+                        <a href={m.body} target="_blank" rel="noopener noreferrer" className="text-xs text-teal-200 underline hover:text-teal-100">Ver en mapa</a>
                       </div>
                     ) : m.type === 'payment_link' ? (
                       (() => {
@@ -381,7 +383,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                                 href={pd.link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block w-full text-center bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black py-2 px-3 rounded-xl transition"
+                                className="block w-full text-center bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white text-xs font-black py-2 px-3 rounded-xl transition shadow-md shadow-amber-500/20"
                               >
                                 Pagar ahora →
                               </a>
@@ -394,13 +396,13 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                     ) : (
                       <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
                     )}
-                    <p className={`text-[10px] mt-1 ${isMine ? 'text-blue-200/70' : 'text-slate-500'}`}>
+                    <p className={`text-[10px] mt-1 ${isMine ? 'text-amber-100/80' : 'text-slate-500'}`}>
                       {formatTime(m.created_at)}
                     </p>
                   </div>
                 </div>
                 {isMine && (
-                  <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">Tú</div>
+                  <div className="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">Tú</div>
                 )}
               </div>
             )
@@ -440,13 +442,13 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                       setShowReviewModal(true)
                     } else {
                       const d = await r.json()
-                      alert(d.message || 'Error al completar')
+                      alert(d.message || feedbackCopy.completeActionError)
                     }
-                  } catch { alert('Error de conexión') }
+                  } catch { alert(feedbackCopy.networkError) }
                   finally { setCompleting(false) }
                 }}
                 disabled={completing}
-                className="w-9 h-9 bg-green-700 hover:bg-green-600 rounded-xl flex items-center justify-center text-white transition disabled:opacity-50 shrink-0"
+                className="w-9 h-9 bg-teal-600 hover:bg-teal-500 rounded-xl flex items-center justify-center text-white transition disabled:opacity-50 shrink-0 shadow-md shadow-teal-500/20"
                 title="Marcar trabajo completado"
               >
                 {completing
@@ -468,12 +470,12 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                       body: JSON.stringify({ service_request_id: requestId }),
                     })
                     const data = await r.json()
-                    if (!r.ok) alert(data.message || 'Error al generar link')
-                  } catch { alert('Error de conexión') }
+                    if (!r.ok) alert(data.message || feedbackCopy.linkGenerateError)
+                  } catch { alert(feedbackCopy.networkError) }
                   finally { setRequestingPayment(false) }
                 }}
                 disabled={requestingPayment}
-                className="w-9 h-9 bg-emerald-700 hover:bg-emerald-600 rounded-xl flex items-center justify-center text-white transition disabled:opacity-50 shrink-0"
+                className="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl flex items-center justify-center text-white transition disabled:opacity-50 shrink-0 shadow-md shadow-amber-500/25"
                 title="Solicitar pago"
               >
                 {requestingPayment
@@ -486,7 +488,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
             <button
               onClick={handleShareLocation}
               disabled={sending}
-              className="w-9 h-9 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center text-slate-400 hover:text-emerald-400 transition disabled:opacity-50"
+              className="w-9 h-9 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center text-slate-400 hover:text-teal-400 transition disabled:opacity-50"
               title="Compartir ubicación"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -499,14 +501,14 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
               onChange={(e) => { setNewMsg(e.target.value); handleTyping() }}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
               placeholder={`Mensaje a ${otherPersonName ?? 'la otra persona'}...`}
-              className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl px-4 py-2.5 text-sm text-white outline-none focus:border-blue-500 transition placeholder:text-slate-500"
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl px-4 py-2.5 text-sm text-white outline-none focus:border-amber-500 transition placeholder:text-slate-500"
               maxLength={1000}
             />
             <VoiceInput onTranscript={(t) => setNewMsg(prev => prev ? prev + ' ' + t : t)} />
             <button
               onClick={handleSend}
               disabled={sending || (!newMsg.trim() && !selectedImage)}
-              className="w-10 h-10 bg-blue-600 hover:bg-blue-500 rounded-2xl flex items-center justify-center text-white transition shadow-lg disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              className={uiTone.ctaChatSend}
             >
               {sending
                 ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -527,7 +529,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                 <div className="text-5xl mb-3">🎉</div>
                 <h3 className="text-lg font-black text-gray-900 mb-1">¡Gracias por tu reseña!</h3>
                 <p className="text-sm text-gray-500 mb-4">Tu opinión ayuda a otros clientes.</p>
-                <button onClick={() => setShowReviewModal(false)} className="px-6 py-2.5 bg-emerald-500 text-white rounded-xl font-bold">Cerrar</button>
+                <button type="button" onClick={() => setShowReviewModal(false)} className={uiTone.modalCloseFilled}>{surfaceCopy.close}</button>
               </div>
             ) : (
               <>
@@ -550,17 +552,19 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                   placeholder="Cuéntanos cómo fue la experiencia (opcional)..."
                   rows={3}
                   maxLength={500}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-emerald-400 resize-none mb-4"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none resize-none mb-4 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
                 />
 
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={() => setShowReviewModal(false)}
-                    className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold text-sm transition"
+                    className={uiTone.modalReviewCancel}
                   >
                     Ahora no
                   </button>
                   <button
+                    type="button"
                     disabled={submittingReview}
                     onClick={async () => {
                       setSubmittingReview(true)
@@ -579,14 +583,14 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                           setReviewDone(true)
                         } else {
                           const d = await r.json()
-                          alert(d.message || 'Error al enviar reseña')
+                          alert(d.message || feedbackCopy.reviewSendError)
                         }
-                      } catch { alert('Error de conexión') }
+                      } catch { alert(feedbackCopy.networkError) }
                       finally { setSubmittingReview(false) }
                     }}
-                    className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-bold text-sm transition disabled:opacity-50"
+                    className={uiTone.ctaReview}
                   >
-                    {submittingReview ? 'Enviando...' : 'Enviar reseña'}
+                    {submittingReview ? surfaceCopy.sending : surfaceCopy.sendReview}
                   </button>
                 </div>
               </>

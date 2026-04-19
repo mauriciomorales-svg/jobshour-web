@@ -11,7 +11,7 @@ Plan priorizado para abordar deuda técnica, operación y calidad. Cada fase pue
 | 0.1 | Deploy manual alineado: `scripts/deploy-on-server.sh` con `npm ci` sin `NODE_ENV=production` previo, `NEXT_PUBLIC_*` en build, `pm2 reload` | Hecho |
 | 0.2 | `getPublicApiBase()` para no embeber localhost en clientes | Hecho |
 | 0.3 | Service Worker: subir `CACHE_NAME` cuando haya release visible | Manual por release |
-| 0.4 | **CI deploy = mismo script que VPS** (`.github/workflows/ci.yml` llama `deploy-on-server.sh`) | Pendiente → PR |
+| 0.4 | **CI deploy = mismo script que VPS** (`.github/workflows/ci.yml` llama `deploy-on-server.sh`) | Hecho |
 
 ---
 
@@ -19,10 +19,10 @@ Plan priorizado para abordar deuda técnica, operación y calidad. Cada fase pue
 
 | ID | Tarea | Criterio de hecho |
 |----|--------|-------------------|
-| 1.1 | Añadir **ESLint** + `eslint-config-next` | `npm run lint` en verde |
-| 1.2 | Script **`lint`** en `package.json` | `next lint` o `eslint src` |
-| 1.3 | Añadir job **lint** en CI antes del build (o dentro del mismo job) | Pipeline falla si hay errores ESLint |
-| 1.4 | Corregir solo **errores** ESLint críticos (no todo el estilo de golpe) | 0 errores; warnings opcionales |
+| 1.1 | Añadir **ESLint** + `eslint-config-next` | Hecho (`npm run lint`) |
+| 1.2 | Script **`lint`** en `package.json` | Hecho (`next lint --max-warnings 99999`) |
+| 1.3 | Añadir job **lint** en CI antes del build (o dentro del mismo job) | Hecho |
+| 1.4 | Corregir solo **errores** ESLint críticos (no todo el estilo de golpe) | Hecho (hooks en `ServiceRequestModal`; resto warnings) |
 
 ---
 
@@ -30,10 +30,10 @@ Plan priorizado para abordar deuda técnica, operación y calidad. Cada fase pue
 
 | ID | Tarea | Criterio de hecho |
 |----|--------|-------------------|
-| 2.1 | Instalar **Vitest** o **Jest** + `jsdom` mínimo | `npm run test` ejecuta |
-| 2.2 | Tests unitarios: `getPublicApiBase` / `apiUrl` (`src/lib/api.ts`) | Cubrir localhost → origin |
-| 2.3 | Test opcional: `readInitialMapCoords` o helpers puros si se extraen | 1–2 archivos |
-| 2.4 | CI: paso `npm run test` | Obligatorio en PR |
+| 2.1 | Instalar **Vitest** o **Jest** + `jsdom` mínimo | Hecho (`vitest`) |
+| 2.2 | Tests unitarios: `getPublicApiBase` / `apiUrl` (`src/lib/api.ts`) | Hecho (`src/lib/api.test.ts`) |
+| 2.3 | Test opcional: `readInitialMapCoords` o helpers puros si se extraen | Pendiente (helpers en `mapStorage.ts`) |
+| 2.4 | CI: paso `npm run test` | Hecho |
 
 ---
 
@@ -41,11 +41,12 @@ Plan priorizado para abordar deuda técnica, operación y calidad. Cada fase pue
 
 | ID | Tarea | Notas |
 |----|--------|--------|
-| 3.1 | Extraer hooks: `useNearbyFetch`, `useMapViewport`, `useEchoWorker` | Sin cambiar comportamiento |
-| 3.2 | Mover constantes LS / mapa a `src/lib/mapStorage.ts` | Tipos estrictos |
-| 3.3 | Componentes contenedor: `MapScreen`, `HomeHeader`, `HomeModals` | Props claras |
+| 3.1 | Extraer hooks: `useNearbyFetch`, `useMapViewport`, `useEchoWorker` | Parcial: **`useNearbyFetch`**, **`useMapViewport`**, **`useEchoRealtime`**, **`useActiveServiceRequests`** |
+| 3.2 | Mover constantes LS / mapa a `src/lib/mapStorage.ts` | Hecho |
+| 3.3 | Componentes contenedor: `MapScreen`, `HomeHeader`, `HomeModals` | **Hecho**: `MapScreen` (mapa + header + sheet + dashboard + prompt), `HomeChatPanels`, más los listados antes (`HomeMapPanel`, `HomeHeader`, …). |
 | 3.4 | Reducir `any` en interfaces API (tipos `Expert`, `Demand`, `MapPoint`) | Progresivo |
-| 3.5 | Objetivo: **`page.tsx` &lt; 500 líneas** | Iterativo |
+| 3.5 | Extraer lógica a hooks: `useUserAuth`, `useWorkerProfile`, `useWorkerStatus`, `usePointDetail`, `useHomeBootstrap`, `useHomeChatState` | **Hecho** — `page.tsx` **~498 líneas** (objetivo &lt;500). |
+| 3.6 | Objetivo: **`page.tsx` &lt; 500 líneas** | **Hecho**. |
 
 ---
 
@@ -53,10 +54,10 @@ Plan priorizado para abordar deuda técnica, operación y calidad. Cada fase pue
 
 | ID | Tarea |
 |----|--------|
-| 4.1 | Documentar en README: variables `NEXT_PUBLIC_*`, puerto API interno (8095), no commitear `.env.local` de prod |
-| 4.2 | `next.config.js`: valorar `env` o documentar que rewrites apuntan al backend en el mismo host |
-| 4.3 | Quitar o acotar `(window as any).mapRef` solo en desarrollo |
-| 4.4 | Revisión `npm audit` + actualizar dependencias críticas |
+| 4.1 | Documentar variables `NEXT_PUBLIC_*`, puerto API (8095), no commitear `.env.local` de prod | Hecho (`docs/ENV.md`) |
+| 4.2 | `next.config.js`: valorar `env` o documentar que rewrites apuntan al backend en el mismo host | Parcial (documentado en `docs/ENV.md`) |
+| 4.3 | Quitar o acotar `(window as any).mapRef` solo en desarrollo | Hecho |
+| 4.4 | Revisión `npm audit` + actualizar dependencias críticas | Pendiente |
 
 ---
 
@@ -64,9 +65,9 @@ Plan priorizado para abordar deuda técnica, operación y calidad. Cada fase pue
 
 | ID | Tarea |
 |----|--------|
-| 5.1 | Meta `mobile-web-app-capable` en `layout.tsx` |
-| 5.2 | Mensajes de error de red visibles si falla `experts/nearby` |
-| 5.3 | Reducir logs ruidosos en producción (`MapSection`, filtros de consola) |
+| 5.1 | Meta `mobile-web-app-capable` en `layout.tsx` | Hecho |
+| 5.2 | Mensajes de error de red visibles si falla `experts/nearby` | Hecho (toast en `fetchNearby`) |
+| 5.3 | Reducir logs ruidosos en producción (`MapSection`, filtros de consola) | Hecho (`MapSection`, `__leafletMap` solo dev) |
 
 ---
 
@@ -74,9 +75,15 @@ Plan priorizado para abordar deuda técnica, operación y calidad. Cada fase pue
 
 | ID | Tarea |
 |----|--------|
-| 6.1 | Auditar bundle (`@next/bundle-analyzer`) |
-| 6.2 | Más `dynamic(..., { ssr: false })` en modales pesados |
-| 6.3 | Revisar `images.unoptimized` vs necesidades Capacitor vs web |
+| 6.1 | Auditar bundle (`@next/bundle-analyzer`) | Hecho (`npm run analyze` = `ANALYZE=true next build`) |
+| 6.2 | Más `dynamic(..., { ssr: false })` en modales pesados | Parcial (ya hay varios en `page.tsx`) |
+| 6.3 | Revisar `images.unoptimized` vs necesidades Capacitor vs web | Pendiente |
+
+---
+
+## Negocio — retención y monetización
+
+Plan con hipótesis, métricas y prioridad: **`docs/NEGOCIO-RETENCION-MONETIZACION.md`**. Incluye cintillos (`OpenRequestsBanner`, `WorkerAvailabilityBanner`), `trackEvent` / `POST /api/jh-analytics` y reenvío opcional `ANALYTICS_FORWARD_URL`.
 
 ---
 

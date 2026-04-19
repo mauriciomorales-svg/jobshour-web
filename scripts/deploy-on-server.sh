@@ -16,10 +16,14 @@ command -v pm2 >/dev/null || { echo "ERROR: pm2 no instalado" >&2; exit 1; }
 echo "=== JobsHour Web deploy ==="
 echo "PWD=$(pwd)  NODE=$(node -v 2>/dev/null || echo ?)  GIT=$(git rev-parse --short HEAD 2>/dev/null || echo ?)"
 
+# Rama a desplegar (CI pasa DEPLOY_BRANCH=${{ github.ref_name }}; por defecto master)
+BRANCH="${DEPLOY_BRANCH:-master}"
+echo "Rama: $BRANCH"
+
 git fetch origin
 # -f: descarta cambios locales en el VPS que rompen el deploy
-git checkout -f master
-git reset --hard origin/master
+git checkout -f "$BRANCH"
+git reset --hard "origin/$BRANCH"
 
 export NODE_OPTIONS="--max-old-space-size=1536"
 # npm ci con NODE_ENV=production NO instala devDependencies → falta tailwindcss en el build

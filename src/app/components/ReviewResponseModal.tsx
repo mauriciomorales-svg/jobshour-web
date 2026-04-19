@@ -1,4 +1,6 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState } from 'react'
 import { apiFetch } from '@/lib/api'
@@ -32,7 +34,7 @@ export default function ReviewResponseModal({
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
       if (!token) {
-        setError('Debes iniciar sesión para responder')
+        setError(feedbackCopy.mustLoginFirst)
         setSubmitting(false)
         return
       }
@@ -58,7 +60,7 @@ export default function ReviewResponseModal({
         setError(data.message || 'Error al enviar la respuesta')
       }
     } catch (err) {
-      setError('Error de conexión. Por favor intenta nuevamente.')
+      setError(feedbackCopy.networkErrorPleaseRetry)
     } finally {
       setSubmitting(false)
     }
@@ -70,9 +72,9 @@ export default function ReviewResponseModal({
     <div className="fixed inset-0 z-[900] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6">
-          <h3 className="text-white font-bold text-lg">Responder Reseña</h3>
-          <p className="text-white/90 text-sm mt-1">Tu respuesta será visible públicamente</p>
+        <div className={`${uiTone.paymentHeaderStrip} p-6`}>
+          <h3 className="text-white font-bold text-lg capitalize">{surfaceCopy.reviewReplyTitle}</h3>
+          <p className="text-white/90 text-sm mt-1">{surfaceCopy.reviewReplySubtitle}</p>
         </div>
 
         {/* Content */}
@@ -85,7 +87,7 @@ export default function ReviewResponseModal({
               value={response}
               onChange={(e) => setResponse(e.target.value)}
               placeholder="Agradece al cliente o aclara cualquier punto..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none resize-none"
+              className={uiTone.textareaFocusTeal}
               rows={4}
               maxLength={500}
             />
@@ -104,26 +106,28 @@ export default function ReviewResponseModal({
         {/* Footer */}
         <div className="p-6 border-t border-gray-200 flex gap-3">
           <button
+            type="button"
             onClick={onClose}
             disabled={submitting}
-            className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition disabled:opacity-50"
+            className={uiTone.modalCancelLight}
           >
-            Cancelar
+            {surfaceCopy.cancel}
           </button>
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={submitting || response.trim().length < 10}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-600 hover:to-indigo-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className={uiTone.ctaReplyPublish}
           >
             {submitting ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Enviando...</span>
+                <span>{surfaceCopy.sending}</span>
               </>
             ) : (
               <>
                 <span>💬</span>
-                <span>Publicar Respuesta</span>
+                <span>{surfaceCopy.publishReply}</span>
               </>
             )}
           </button>

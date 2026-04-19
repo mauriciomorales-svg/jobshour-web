@@ -1,6 +1,8 @@
 'use client'
 import { useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
+import { trackEvent } from '@/lib/analytics'
+import { buyerQuoteTimelineSteps, feedbackCopy } from '@/lib/userFacingCopy'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://jobshours.com/api'
 
@@ -79,6 +81,7 @@ function SuccessContent() {
       } catch {}
     }
     if (!resolvedOrderId) return
+    trackEvent('tienda_success_view', { order_id: resolvedOrderId })
     loadTimeline()
 
     const interval = window.setInterval(() => {
@@ -115,7 +118,7 @@ function SuccessContent() {
         setError(data.message || 'Código incorrecto')
       }
     } catch {
-      setError('Error de conexión')
+      setError(feedbackCopy.networkError)
     } finally {
       setConfirming(false)
     }
@@ -123,7 +126,7 @@ function SuccessContent() {
 
   const Step = ({ done, title, desc }: { done: boolean, title: string, desc?: string }) => (
     <div className="flex items-start gap-3">
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${done ? 'bg-green-500/15 text-green-400' : 'bg-slate-700/50 text-slate-300'}`}>
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${done ? 'bg-teal-500/15 text-teal-300' : 'bg-slate-700/50 text-slate-300'}`}>
         <span className="text-xl">{done ? '✅' : '⏳'}</span>
       </div>
       <div>
@@ -165,12 +168,28 @@ function SuccessContent() {
           </div>
 
           <div className="space-y-4">
-            <Step done={paymentDone} title="Pago Mercado Pago" desc={paymentDone ? 'Liberación para confirmar recepción' : 'Esperando confirmación de MP'} />
-            <Step done={materialsDone} title="Materiales confirmados (PIN)" desc={materialsDone ? 'Pago liberado al vendedor' : 'Ingresa el PIN cuando recibas'} />
+            <Step
+              done={paymentDone}
+              title={buyerQuoteTimelineSteps.payment.title}
+              desc={paymentDone ? buyerQuoteTimelineSteps.payment.done : buyerQuoteTimelineSteps.payment.pending}
+            />
+            <Step
+              done={materialsDone}
+              title={buyerQuoteTimelineSteps.materials.title}
+              desc={materialsDone ? buyerQuoteTimelineSteps.materials.done : buyerQuoteTimelineSteps.materials.pending}
+            />
             {hasService && (
-              <Step done={serviceDone} title="Servicio completado" desc={serviceDone ? 'Trabajo finalizado' : 'Esperando que el trabajador termine'} />
+              <Step
+                done={serviceDone}
+                title={buyerQuoteTimelineSteps.service.title}
+                desc={serviceDone ? buyerQuoteTimelineSteps.service.done : buyerQuoteTimelineSteps.service.pending}
+              />
             )}
-            <Step done={isClosed} title="Cotización cerrada" desc={isClosed ? 'Todo el flujo quedó finalizado' : 'Se cerrará automáticamente al completar el flujo'} />
+            <Step
+              done={isClosed}
+              title={buyerQuoteTimelineSteps.closed.title}
+              desc={isClosed ? buyerQuoteTimelineSteps.closed.done : buyerQuoteTimelineSteps.closed.pending}
+            />
           </div>
         </div>
 
@@ -187,7 +206,7 @@ function SuccessContent() {
                   placeholder="Código de 4 dígitos"
                   className="w-full bg-slate-700 text-white text-center text-2xl tracking-widest rounded-xl px-4 py-3 mb-3 outline-none border border-slate-600 focus:border-teal-400"
                 />
-                {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+                {error && <p className="text-red-400 text-sm mb-3" role="alert">{error}</p>}
                 <button
                   onClick={handleConfirm}
                   disabled={confirming || code.length !== 4}

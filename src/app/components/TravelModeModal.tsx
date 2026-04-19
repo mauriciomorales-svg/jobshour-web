@@ -1,4 +1,6 @@
 'use client'
+import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { uiTone } from '@/lib/uiTone'
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -141,7 +143,7 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
       }
     } catch (err) {
       console.error('Error activating travel mode:', err)
-      setError('Error de conexión. Verifica tu internet e intenta nuevamente.')
+      setError(feedbackCopy.networkErrorVerifyInternet)
       setStep('input')
     }
   }
@@ -178,9 +180,11 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
         className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl"
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 p-6 relative">
-          <button 
+        <div className={uiTone.travelModeHeader}>
+          <button
+            type="button"
             onClick={onClose}
+            aria-label={surfaceCopy.close}
             className="absolute top-4 right-4 text-white/80 hover:text-white transition"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,7 +223,7 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                     value={origin}
                     onChange={(e) => setOrigin(e.target.value)}
                     placeholder="Ej: Mi casa, Renaico"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 outline-none transition"
+                    className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl ${uiTone.inputFocusTeal}`}
                   />
                 </div>
 
@@ -233,7 +237,7 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                     value={destination}
                     onChange={(e) => handleDestinationChange(e.target.value)}
                     placeholder="Ej: Angol, Collipulli, Los Ángeles"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 outline-none transition"
+                    className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl ${uiTone.inputFocusTeal}`}
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Escribe: Angol, Collipulli o Los Ángeles
@@ -250,12 +254,12 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                     value={departureTime}
                     onChange={(e) => setDepartureTime(e.target.value)}
                     min={new Date().toISOString().slice(0, 16)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 outline-none transition"
+                    className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl ${uiTone.inputFocusTeal}`}
                   />
                 </div>
 
                 {/* Capacidad */}
-                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4">
+                <div className={uiTone.travelModePanelSoft}>
                   <p className="text-sm font-bold text-gray-700 mb-3">
                     ¿Qué puedes llevar en tu viaje?
                   </p>
@@ -264,7 +268,7 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-gray-700">👥 Pasajeros</span>
-                      <span className="text-lg font-bold text-blue-600">{availableSeats}</span>
+                      <span className="text-lg font-bold text-teal-700">{availableSeats}</span>
                     </div>
                     <input
                       type="range"
@@ -290,7 +294,7 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                           onClick={() => setCargoSpace(cargoSpace === option.value ? null : option.value as any)}
                           className={`px-3 py-2 rounded-lg text-xs font-bold transition ${
                             cargoSpace === option.value
-                              ? 'bg-blue-500 text-white'
+                              ? 'bg-teal-600 text-white'
                               : 'bg-white text-gray-600 border-2 border-gray-200'
                           }`}
                         >
@@ -315,7 +319,7 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                         onClick={() => setRouteType(option.value as any)}
                         className={`px-3 py-2 rounded-lg text-sm font-bold transition ${
                           routeType === option.value
-                            ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
+                            ? 'bg-gradient-to-r from-teal-500 to-teal-700 text-white'
                             : 'bg-gray-100 text-gray-600'
                         }`}
                       >
@@ -333,8 +337,9 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
 
                 {/* Botón activar */}
                 <button
+                  type="button"
                   onClick={handleActivate}
-                  className="w-full py-4 bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 text-white font-black rounded-xl shadow-lg hover:shadow-xl transition text-lg"
+                  className={uiTone.travelModeCta}
                 >
                   🚗 Activar Modo Viaje
                 </button>
@@ -353,7 +358,7 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                 exit={{ opacity: 0 }}
                 className="py-12 text-center"
               >
-                <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <div className={uiTone.travelModeLoadingOrb}>
                   <span className="text-4xl">🚗</span>
                 </div>
                 <p className="text-lg font-bold text-gray-800">Buscando necesidades en tu ruta...</p>
@@ -369,16 +374,16 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-4"
               >
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-4 border-2 border-green-200">
+                <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-4 border-2 border-teal-200">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                    <div className="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center">
                       <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <p className="font-black text-green-900">¡Modo Viaje Activado!</p>
-                      <p className="text-sm text-green-700">
+                      <p className="font-black text-teal-900">¡Modo Viaje Activado!</p>
+                      <p className="text-sm text-teal-800">
                         {matches.length > 0 
                           ? `Encontramos ${matches.length} ${matches.length === 1 ? 'persona que necesita' : 'personas que necesitan'} ir en tu dirección`
                           : 'Te avisaremos si alguien necesita ir en tu dirección'
@@ -392,7 +397,7 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                   <div className="space-y-3">
                     <p className="text-sm font-bold text-gray-700">Personas que te quedan de camino:</p>
                     {matches.map((match: any, index: number) => (
-                      <div key={index} className="bg-white border-2 border-blue-200 rounded-xl p-4">
+                      <div key={index} className="bg-white border-2 border-teal-200 rounded-xl p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <p className="font-bold text-gray-800">{match.client_name}</p>
@@ -403,11 +408,11 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                               🎯 {match.delivery_address}
                             </p>
                             <div className="flex items-center gap-2 mt-2">
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-bold">
+                              <span className="text-xs bg-teal-100 text-teal-800 px-2 py-1 rounded-full font-bold">
                                 +{match.pickup_detour_km?.toFixed(1)}km desvío
                               </span>
                               {match.offered_price && (
-                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">
+                                <span className="text-xs bg-amber-100 text-amber-900 px-2 py-1 rounded-full font-bold">
                                   ${match.offered_price.toLocaleString()}
                                 </span>
                               )}
@@ -420,10 +425,11 @@ export default function TravelModeModal({ user, onClose, onActivated }: TravelMo
                 )}
 
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="w-full py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition"
+                  className={uiTone.modalLightDismiss}
                 >
-                  Cerrar
+                  {surfaceCopy.close}
                 </button>
               </motion.div>
             )}

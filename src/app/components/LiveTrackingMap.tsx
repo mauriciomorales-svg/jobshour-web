@@ -68,7 +68,7 @@ export default function LiveTrackingMap({
     : []
 
   return (
-    <div className="w-full h-full rounded-xl overflow-hidden border-2 border-green-500 shadow-lg">
+    <div className="w-full h-full rounded-xl overflow-hidden border-2 border-teal-500 shadow-lg shadow-teal-500/15">
       <MapContainer
         center={workerLocation || [-37.6672, -72.5730]}
         zoom={15}
@@ -130,11 +130,11 @@ export default function LiveTrackingMap({
         <div className="bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-lg">
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <div className="w-3 h-3 bg-teal-500 rounded-full animate-pulse"></div>
               <span className="font-semibold text-gray-700">En camino</span>
             </div>
             {eta !== undefined && (
-              <span className="font-bold text-green-600">
+              <span className="font-bold text-teal-700">
                 Llegada: {Math.round(eta)} min
               </span>
             )}

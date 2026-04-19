@@ -54,8 +54,8 @@ interface ServiceCardProps {
 
 const TYPE_CONFIG = {
   fixed:  { gradient: 'from-amber-500 to-orange-600',  bg: 'bg-amber-500',  icon: '🔧', label: 'Trabajo fijo'   },
-  travel: { gradient: 'from-blue-500 to-indigo-600',   bg: 'bg-blue-500',   icon: '🚗', label: 'Viaje compartido' },
-  errand: { gradient: 'from-violet-500 to-purple-600', bg: 'bg-violet-500', icon: '🛍️', label: 'Mandado express' },
+  travel: { gradient: 'from-teal-500 to-teal-800',      bg: 'bg-teal-600',   icon: '🚗', label: 'Viaje compartido' },
+  errand: { gradient: 'from-amber-500 to-orange-700',   bg: 'bg-amber-600', icon: '🛍️', label: 'Mandado express' },
 }
 
 function formatTimeAgo(dateStr: string) {
@@ -164,7 +164,7 @@ function ActionButtons({ request, onRequestService, onOpenChat, onGoToLocation }
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center justify-center gap-1 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-xl text-sm font-bold transition active:scale-95"
+          className="flex items-center justify-center gap-1 py-2.5 bg-amber-500/25 hover:bg-amber-500/35 text-amber-100 rounded-xl text-sm font-bold transition active:scale-95"
         >
           📲 Compartir
         </a>
@@ -188,7 +188,7 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, cu
         <div className="flex items-center gap-2">
           <span className="text-slate-500">{cfg.icon}</span>
           <span className="text-sm text-slate-400">
-            Alguien ganó <span className="font-bold text-emerald-500">${request.offered_price.toLocaleString('es-CL')}</span>
+            Alguien ganó <span className="font-bold text-amber-400">${request.offered_price.toLocaleString('es-CL')}</span>
           </span>
         </div>
         <span className="text-xs text-slate-600">{request.completed_at ? formatTimeAgo(request.completed_at) : ''}</span>
@@ -267,7 +267,7 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, cu
           {request.pickup_address && request.delivery_address ? (
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-400 shrink-0"></span>
+                <span className="w-2 h-2 rounded-full bg-teal-400 shrink-0"></span>
                 <span className="font-medium truncate">{request.pickup_address}</span>
               </div>
               <div className="flex items-center gap-1.5">

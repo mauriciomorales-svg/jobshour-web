@@ -130,7 +130,7 @@ export default function WorkerFAB({ user, onActivate, onShowLogin, onRequireCate
       case 'listening':
         return 'bg-yellow-500 hover:bg-yellow-600 text-white'
       case 'active':
-        return 'bg-green-500 hover:bg-green-600 text-white'
+        return 'bg-teal-500 hover:bg-teal-600 text-white'
     }
   }
 

@@ -36,6 +36,8 @@ export interface MapPoint {
   store_url?: string | null
 }
 
+const isDev = process.env.NODE_ENV === 'development'
+
 const STATUS_STYLES = {
   active: { ring: '#22c55e', dot: '#22c55e', bg: '#22c55e', opacity: '1', shadow: '0 8px 24px rgba(34,197,94,0.25)', grayscale: '' }, // Verde - Disponibilidad inmediata
   intermediate: { ring: '#38bdf8', dot: '#38bdf8', bg: '#38bdf8', opacity: '0.9', shadow: '0 6px 18px rgba(56,189,248,0.3)', grayscale: '' }, // Azul cielo - Modo escucha
@@ -224,7 +226,7 @@ function MapMarkers({ points, onPointClick, highlightedId }: { points: MapPoint[
                 if (e.originalEvent) {
                   e.originalEvent.preventDefault()
                 }
-                console.log('📍 Pin clickeado:', p.pin_type || 'worker', p.id, p.name)
+                if (isDev) console.log('📍 Pin clickeado:', p.pin_type || 'worker', p.id, p.name)
                 onPointClick?.(p)
               },
             }}
@@ -294,7 +296,9 @@ const MapSection = forwardRef<any, {
   const handleMapReady = useCallback((map: L.Map) => {
     setMapInstance(map)
     mapInstanceRef.current = map
-    ;(window as any).__leafletMap = map
+    if (isDev) {
+      ;(window as unknown as { __leafletMap?: L.Map }).__leafletMap = map
+    }
     onLeafletReadyRef.current?.(map)
   }, [])
   
@@ -323,63 +327,59 @@ const MapSection = forwardRef<any, {
   // Exponer el ref - siempre disponible, pero puede que mapInstance aún no esté listo
   useImperativeHandle(ref, () => ({
     flyTo: (latlng: [number, number], zoom: number): Promise<boolean> => {
-      console.log('🗺️ MapSection.flyTo llamado:', latlng, zoom)
-      
+      if (isDev) console.log('🗺️ MapSection.flyTo llamado:', latlng, zoom)
+
       return new Promise((resolve) => {
-        // Función auxiliar para ejecutar flyTo en una instancia de mapa
         const executeFlyTo = (map: L.Map): boolean => {
           try {
             map.invalidateSize()
             if (typeof map.flyTo === 'function') {
               map.flyTo(latlng, zoom, { duration: 1.5 })
-              console.log('✅ flyTo ejecutado exitosamente')
+              if (isDev) console.log('✅ flyTo ejecutado exitosamente')
               return true
             } else if (typeof map.setView === 'function') {
               map.setView(latlng, zoom, { animate: true, duration: 1.5 })
-              console.log('✅ setView ejecutado como fallback')
+              if (isDev) console.log('✅ setView ejecutado como fallback')
               return true
             } else {
-              console.error('❌ El mapa no tiene métodos flyTo ni setView')
+              if (isDev) console.error('❌ El mapa no tiene métodos flyTo ni setView')
               return false
             }
           } catch (error) {
-            console.error('❌ Error ejecutando flyTo/setView:', error)
+            if (isDev) console.error('❌ Error ejecutando flyTo/setView:', error)
             return false
           }
         }
-        
-        // Intentar obtener el mapa inmediatamente
+
         const map = getMapInstance()
-        
+
         if (map) {
-          console.log('✅ Mapa encontrado, ejecutando flyTo')
+          if (isDev) console.log('✅ Mapa encontrado, ejecutando flyTo')
           resolve(executeFlyTo(map))
           return
         }
-        
-        // Si no está disponible, esperar a que se inicialice
-        console.warn('⚠️ Mapa no encontrado, esperando inicialización...')
+
+        if (isDev) console.warn('⚠️ Mapa no encontrado, esperando inicialización...')
         let checkCount = 0
-        const maxChecks = 40 // 2 segundos máximo (40 * 50ms)
-        
+        const maxChecks = 40
+
         const checkInterval = setInterval(() => {
           checkCount++
-          
+
           const currentMap = getMapInstance()
           if (currentMap) {
             clearInterval(checkInterval)
-            console.log('✅ Mapa encontrado durante espera')
+            if (isDev) console.log('✅ Mapa encontrado durante espera')
             resolve(executeFlyTo(currentMap))
             return
           }
-          
-          // Si alcanzamos el máximo de intentos, fallar
+
           if (checkCount >= maxChecks) {
             clearInterval(checkInterval)
-            console.error('❌ Mapa nunca se inicializó después de', maxChecks * 50, 'ms')
+            if (isDev) console.error('❌ Mapa nunca se inicializó después de', maxChecks * 50, 'ms')
             resolve(false)
           }
-        }, 50) // Verificar cada 50ms
+        }, 50)
       })
     },
     // Exponer también el mapInstance directamente para debugging
