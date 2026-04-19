@@ -10,6 +10,15 @@ import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, A
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
 const INVENTARIO_API = '/inventario'
 
+async function parseApiJson<T extends Record<string, unknown>>(r: Response): Promise<{ data: T | null }> {
+  const raw = await r.text()
+  try {
+    return { data: raw ? (JSON.parse(raw) as T) : null }
+  } catch {
+    return { data: null }
+  }
+}
+
 interface Producto {
   idproducto: number
   nombre: string
@@ -677,8 +686,8 @@ export default function TiendaPage() {
           } : null,
         }),
       })
-      const data = await r.json()
-      if (r.ok && data.payment_link) {
+      const { data } = await parseApiJson<{ payment_link?: string; store_order_id?: number; order_id?: number; confirmation_code?: string; quote_id?: number; message?: string }>(r)
+      if (r.ok && data?.payment_link) {
         trackEvent('tienda_integrated_checkout_success', {
           worker_id: workerId,
           store_order_id: data.store_order_id,
@@ -695,7 +704,15 @@ export default function TiendaPage() {
         window.location.href = data.payment_link
       } else {
         trackEvent('tienda_integrated_checkout_error', { worker_id: workerId, message: String(data?.message || '').slice(0, 120) })
-        alert(data.message || feedbackCopy.orderProcessError)
+        if (data?.message) {
+          alert(data.message)
+        } else if (r.status === 404) {
+          alert(feedbackCopy.quoteApiNotDeployed)
+        } else if (!data) {
+          alert(`${feedbackCopy.networkError} (HTTP ${r.status})`)
+        } else {
+          alert(feedbackCopy.orderProcessError)
+        }
       }
     } catch { alert(feedbackCopy.networkError) }
     finally { setPaying(false) }
@@ -729,8 +746,13 @@ export default function TiendaPage() {
           expires_in_hours: Math.max(1, parseInt(quoteExpiryHours || '72', 10) || 72),
         }),
       })
-      const data = await r.json()
-      if (r.ok && data.public_url) {
+      const { data } = await parseApiJson<{
+        public_url?: string
+        quote_id?: number
+        expires_at?: string | null
+        message?: string
+      }>(r)
+      if (r.ok && data?.public_url) {
         trackEvent('tienda_worker_quote_created', {
           worker_id: workerId,
           quote_id: data.quote_id,
@@ -742,9 +764,17 @@ export default function TiendaPage() {
         setQuoteExpiresAt(data.expires_at ?? null)
         setDone(true)
         setCart([])
+      } else if (data?.message) {
+        trackEvent('tienda_worker_quote_error', { worker_id: workerId, message: String(data.message).slice(0, 120) })
+        alert(data.message)
+      } else if (r.status === 404) {
+        trackEvent('tienda_worker_quote_error', { worker_id: workerId, message: 'route_404' })
+        alert(feedbackCopy.quoteApiNotDeployed)
+      } else if (!data) {
+        alert(`${feedbackCopy.networkError} (HTTP ${r.status})`)
       } else {
         trackEvent('tienda_worker_quote_error', { worker_id: workerId, message: String(data?.message || '').slice(0, 120) })
-        alert(data.message || feedbackCopy.quoteCreateFailed)
+        alert(feedbackCopy.quoteCreateFailed)
       }
     } catch {
       alert(feedbackCopy.networkError)

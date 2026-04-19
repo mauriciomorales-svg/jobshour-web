@@ -394,6 +394,9 @@ export const feedbackCopy = {
   deliveryCompleteError: 'Error al completar la entrega',
   paymentStartFailed: 'No se pudo iniciar el pago',
   quoteCreateFailed: 'No se pudo crear la cotización',
+  /** Producción sin las rutas integrated-quotes/worker/* desplegadas en Laravel */
+  quoteApiNotDeployed:
+    'La API de cotizaciones para trabajadores no está disponible en el servidor (backend desactualizado). Hay que desplegar la última versión de jobshour-api en el VPS y ejecutar: php artisan optimize:clear',
   completeActionError: 'Error al completar',
   linkGenerateError: 'Error al generar link',
   reviewSendError: 'Error al enviar reseña',
