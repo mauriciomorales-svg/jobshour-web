@@ -19,13 +19,11 @@ export const metadata: Metadata = {
     siteName: 'JobsHours',
     locale: 'es_CL',
     type: 'website',
-    images: [{ url: '/logo-1024.svg', width: 1024, height: 1024, alt: 'JobsHours' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'JobsHours | Expertos cerca de ti',
     description: 'Conecta con profesionales verificados en tu zona.',
-    images: ['/logo-1024.svg'],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: SITE },
@@ -38,7 +36,7 @@ const jsonLdOrganization = {
       '@type': 'Organization',
       name: 'JobsHours',
       url: SITE,
-      logo: `${SITE}/logo-1024.svg`,
+      logo: `${SITE}/opengraph-image`,
       description: 'Conecta con profesionales verificados en tu zona.',
     },
     {
