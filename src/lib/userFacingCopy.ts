@@ -209,6 +209,10 @@ export const surfaceCopy = {
   quoteBuilderModeLabel: 'Armar cotización',
   quoteBuilderModeTail: 'y comparte el link.',
 
+  /** PDF cotización — misma marca en todo el ecosistema */
+  downloadQuotePdf: 'Descargar PDF para compartir',
+  quotePdfPoweredBy: 'Incluye marca JobsHours para difundir el ecosistema',
+
   publishDemandCta: '✨ Publicar demanda',
   /** Feed vacío (variante “publicar una demanda”) */
   publishDemandFeed: '✨ Publicar una demanda',

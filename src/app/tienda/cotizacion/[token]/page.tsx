@@ -2,9 +2,10 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { CheckCircle2, Clock3, CreditCard, FileText, Info, Loader2 } from 'lucide-react'
+import { CheckCircle2, Clock3, CreditCard, FileText, FileDown, Info, Loader2 } from 'lucide-react'
 import { trackEvent } from '@/lib/analytics'
-import { labelIntegratedQuoteStatus, feedbackCopy } from '@/lib/userFacingCopy'
+import { labelIntegratedQuoteStatus, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://jobshours.com/api'
 
@@ -105,6 +106,34 @@ export default function PublicQuotePage() {
     return ['quote_sent', 'awaiting_payment'].includes(data.quote.status)
   }, [data])
 
+  const downloadPdf = () => {
+    if (!data) return
+    try {
+      trackEvent('quote_pdf_download', { source: 'public_quote_page', quote_id: data.quote.id })
+      const url = typeof window !== 'undefined' ? window.location.href : 'https://jobshours.com'
+      downloadBrandedQuotePdf({
+        storeName: data.worker.store_name || 'Tienda JobsHours',
+        workerName: data.worker.name || '—',
+        buyerName: data.quote.buyer_name || buyerName || '—',
+        buyerEmail: data.quote.buyer_email || buyerEmail || '—',
+        buyerPhone: data.quote.buyer_phone || buyerPhone || '',
+        rows: data.quote.items.map((i) => ({
+          title: i.title,
+          quantity: i.quantity,
+          amount: i.subtotal_amount,
+        })),
+        extras: [],
+        total: data.quote.total_amount,
+        expiresAt: data.quote.expires_at,
+        publicUrl: url,
+        quoteId: data.quote.id,
+        statusLabel: labelIntegratedQuoteStatus(data.quote.status),
+      })
+    } catch {
+      alert(feedbackCopy.pdfGenerateError)
+    }
+  }
+
   const doCheckout = async () => {
     if (!token || !data) return
     if (!buyerName.trim() || !buyerEmail.trim()) {
@@ -193,6 +222,15 @@ export default function PublicQuotePage() {
               Válida hasta {new Date(data.quote.expires_at).toLocaleString('es-CL')}
             </p>
           )}
+          <button
+            type="button"
+            onClick={downloadPdf}
+            className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 font-bold text-sm transition"
+          >
+            <FileDown className="w-4 h-4 shrink-0" aria-hidden />
+            {surfaceCopy.downloadQuotePdf}
+          </button>
+          <p className="text-[10px] text-slate-500 text-center">{surfaceCopy.quotePdfPoweredBy}</p>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">

@@ -1,12 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { FileText, Loader2, ChevronDown, ChevronUp, Link2, Clock } from 'lucide-react'
+import { FileText, FileDown, Loader2, ChevronDown, ChevronUp, Link2, Clock } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { trackEvent } from '@/lib/analytics'
 import { ModalShell } from '@/app/components/ui/ModalShell'
 import { StatusBadge } from '@/app/components/ui/StatusBadge'
-import { emptyStateCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { emptyStateCopy, feedbackCopy, labelIntegratedQuoteStatus, surfaceCopy } from '@/lib/userFacingCopy'
+import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
 
 interface QuoteRow {
   id: number
@@ -67,6 +68,42 @@ export default function WorkerQuotesPanel({ onClose }: { onClose: () => void }) 
       () => {},
       () => {}
     )
+  }
+
+  const downloadQuotePdf = (q: QuoteRow) => {
+    try {
+      trackEvent('quote_pdf_download', { source: 'worker_quotes_panel', quote_id: q.id })
+      const extras: { label: string; amount: number }[] = []
+      if (q.service_amount && q.service_amount > 0) {
+        extras.push({ label: 'Servicio / mano de obra', amount: q.service_amount })
+      }
+      if (q.delivery_amount && q.delivery_amount > 0) {
+        extras.push({ label: 'Delivery', amount: q.delivery_amount })
+      }
+      if (q.tool_wear_amount && q.tool_wear_amount > 0) {
+        extras.push({ label: 'Herramientas / otros', amount: q.tool_wear_amount })
+      }
+      downloadBrandedQuotePdf({
+        storeName: 'Tienda JobsHours',
+        workerName: 'Tu tienda',
+        buyerName: q.buyer_name || '—',
+        buyerEmail: q.buyer_email || '—',
+        buyerPhone: q.buyer_phone,
+        rows: (q.items ?? []).map((it) => ({
+          title: it.title,
+          quantity: it.quantity,
+          amount: it.subtotal_amount,
+        })),
+        extras,
+        total: q.total_amount,
+        expiresAt: q.expires_at,
+        publicUrl: q.public_url || 'https://jobshours.com',
+        quoteId: q.id,
+        statusLabel: labelIntegratedQuoteStatus(q.status),
+      })
+    } catch {
+      alert(feedbackCopy.pdfGenerateError)
+    }
   }
 
   return (
@@ -184,6 +221,15 @@ export default function WorkerQuotesPanel({ onClose }: { onClose: () => void }) 
                         </button>
                       </div>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => downloadQuotePdf(q)}
+                      className="w-full flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl border border-orange-500/40 text-orange-300 hover:bg-orange-500/10 transition"
+                    >
+                      <FileDown className="w-4 h-4 shrink-0" aria-hidden />
+                      {surfaceCopy.downloadQuotePdf}
+                    </button>
 
                     {q.store_order && (
                       <p className="text-[11px] text-slate-500">

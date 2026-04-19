@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { trackEvent } from '@/lib/analytics'
 import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
-import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info } from 'lucide-react'
+import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info, FileDown } from 'lucide-react'
+import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
 
 // Misma lógica que page.tsx: base sin /api para llamadas a jobshours API
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
@@ -33,6 +34,21 @@ interface Producto {
 }
 
 interface CartItem extends Producto { cantidad: number }
+
+interface QuotePdfSnapshot {
+  worker: { store_name: string | null; name: string | null }
+  buyer: { name: string; email: string; phone: string }
+  lines: { nombre: string; cantidad: number; subtotal: number }[]
+  cartTotal: number
+  commission: number
+  total: number
+  laborEnabled: boolean
+  laborAmountNum: number
+  laborDesc: string
+  publicUrl: string
+  expiresAt: string | null
+  quoteId?: number
+}
 
 interface WorkerInfo {
   id: number
@@ -513,6 +529,7 @@ export default function TiendaPage() {
   const [quoteExpiryHours, setQuoteExpiryHours] = useState('72')
   const [quotePublicUrl, setQuotePublicUrl] = useState<string | null>(null)
   const [quoteExpiresAt, setQuoteExpiresAt] = useState<string | null>(null)
+  const [quotePdfSnapshot, setQuotePdfSnapshot] = useState<QuotePdfSnapshot | null>(null)
 
   // Comprobar sesión — URL absoluta con origin actual (igual que servidor antiguo)
   const checkAuth = useCallback(() => {
@@ -751,12 +768,36 @@ export default function TiendaPage() {
         quote_id?: number
         expires_at?: string | null
         message?: string
+        total?: number
       }>(r)
       if (r.ok && data?.public_url) {
         trackEvent('tienda_worker_quote_created', {
           worker_id: workerId,
           quote_id: data.quote_id,
           expires_at: data.expires_at,
+        })
+        const totalNum = typeof data.total === 'number' ? data.total : totalFinal
+        setQuotePdfSnapshot({
+          worker: { store_name: worker?.store_name ?? null, name: worker?.name ?? null },
+          buyer: {
+            name: buyerName.trim(),
+            email: buyerEmail.trim(),
+            phone: buyerPhone.trim(),
+          },
+          lines: cart.map((i) => ({
+            nombre: i.nombre,
+            cantidad: i.cantidad,
+            subtotal: (i.precio_venta ?? i.precio) * i.cantidad,
+          })),
+          cartTotal,
+          commission,
+          total: totalNum,
+          laborEnabled,
+          laborAmountNum,
+          laborDesc: laborDesc.trim(),
+          publicUrl: data.public_url,
+          expiresAt: data.expires_at ?? null,
+          quoteId: data.quote_id,
         })
         setPayLink(null)
         setConfirmationCode(null)
@@ -1398,12 +1439,61 @@ export default function TiendaPage() {
             >
               <Link2 className="w-4 h-4" /> {surfaceCopy.copyLink}
             </button>
+            {quotePdfSnapshot && (
+              <div className="mb-3 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      trackEvent('quote_pdf_download', {
+                        source: 'tienda_worker_modal',
+                        quote_id: quotePdfSnapshot.quoteId,
+                      })
+                      downloadBrandedQuotePdf({
+                        storeName: quotePdfSnapshot.worker.store_name || 'Tienda JobsHours',
+                        workerName: quotePdfSnapshot.worker.name || '—',
+                        buyerName: quotePdfSnapshot.buyer.name,
+                        buyerEmail: quotePdfSnapshot.buyer.email,
+                        buyerPhone: quotePdfSnapshot.buyer.phone,
+                        rows: quotePdfSnapshot.lines.map((l) => ({
+                          title: l.nombre,
+                          quantity: l.cantidad,
+                          amount: l.subtotal,
+                        })),
+                        extras: [
+                          { label: 'Servicio plataforma JobsHours (8%)', amount: quotePdfSnapshot.commission },
+                          ...(quotePdfSnapshot.laborEnabled && quotePdfSnapshot.laborAmountNum > 0
+                            ? [
+                                {
+                                  label: quotePdfSnapshot.laborDesc || 'Mano de obra / servicio',
+                                  amount: quotePdfSnapshot.laborAmountNum,
+                                },
+                              ]
+                            : []),
+                        ],
+                        total: quotePdfSnapshot.total,
+                        expiresAt: quotePdfSnapshot.expiresAt,
+                        publicUrl: quotePdfSnapshot.publicUrl,
+                        quoteId: quotePdfSnapshot.quoteId,
+                      })
+                    } catch {
+                      alert(feedbackCopy.pdfGenerateError)
+                    }
+                  }}
+                  className="w-full bg-white border-2 border-orange-400 text-orange-600 hover:bg-orange-50 font-black py-3 rounded-xl transition flex items-center justify-center gap-2"
+                >
+                  <FileDown className="w-4 h-4" aria-hidden /> {surfaceCopy.downloadQuotePdf}
+                </button>
+                <p className="text-[10px] text-gray-400 text-center px-1">{surfaceCopy.quotePdfPoweredBy}</p>
+              </div>
+            )}
             <button
               onClick={() => {
                 setDone(false)
                 setShowCheckout(false)
                 setQuotePublicUrl(null)
                 setQuoteExpiresAt(null)
+                setQuotePdfSnapshot(null)
               }}
               className="text-gray-400 hover:text-gray-600 text-sm transition"
             >
