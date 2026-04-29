@@ -10,20 +10,198 @@ import StoreBrowserInline from './StoreBrowserInline'
 import { trackEvent } from '@/lib/analytics'
 import { demandTypeGlossary, feedbackCopy, surfaceCopy, type DemandTypeKey } from '@/lib/userFacingCopy'
 import { ModalShell } from '@/app/components/ui/ModalShell'
+import type { MapPoint } from '@/app/components/MapSection'
 
 interface Category {
   id: number
+  slug?: string
   name: string
   icon: string
   color: string
+}
+
+/** datetime-local → `Y-m-d H:i:s` sin duplicar `:00` si el navegador ya manda segundos */
+function formatDepartureForApi(raw: string): string {
+  if (!raw) return ''
+  const s = raw.includes('T') ? raw.replace('T', ' ') : raw.trim()
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) return s
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(s)) return `${s}:00`
+  return s
+}
+
+function slugHints(slug: string, hints: string[]): boolean {
+  const s = slug.toLowerCase()
+  return hints.some((h) => s.includes(h))
+}
+
+/** Alineado con categorías reales (ej. Fletes y Mudanzas / truck), no solo "viaje" + car */
+function pickRideShareCategoryId(categories: Category[]): number | null {
+  const hit = categories.find((c) => {
+    const name = (c.name || '').toLowerCase()
+    const slug = (c.slug || '').toLowerCase()
+    const icon = (c.icon || '').toLowerCase()
+    return (
+      name.includes('viaje') ||
+      name.includes('flete') ||
+      name.includes('mudanza') ||
+      name.includes('transporte') ||
+      slugHints(slug, ['viaje', 'ride', 'flete', 'mudanza', 'transporte', 'movilidad']) ||
+      icon === 'car' ||
+      icon === 'truck'
+    )
+  })
+  return hit?.id ?? null
+}
+
+function pickErrandCategoryId(categories: Category[]): number | null {
+  const hit = categories.find((c) => {
+    const name = (c.name || '').toLowerCase()
+    const slug = (c.slug || '').toLowerCase()
+    const icon = (c.icon || '').toLowerCase()
+    return (
+      name.includes('mandado') ||
+      name.includes('recado') ||
+      name.includes('trámite') ||
+      name.includes('tramite') ||
+      slugHints(slug, ['mandado', 'recado', 'recados', 'tramite', 'errand']) ||
+      icon === 'package' ||
+      icon === 'motorcycle'
+    )
+  })
+  return hit?.id ?? null
+}
+
+function firstApiErrorLine(data: { message?: string; errors?: Record<string, string[]> }): string {
+  if (data.errors && typeof data.errors === 'object') {
+    const lines = Object.entries(data.errors).flatMap(([key, msgs]) =>
+      Array.isArray(msgs) ? msgs.map((m) => `${m} (${key})`) : [`${msgs} (${key})`],
+    )
+    if (lines.length) return [data.message, ...lines].filter(Boolean).join(' ')
+  }
+  return data.message || 'Error al publicar demanda'
+}
+
+/** Tarjeta + pin para mostrar al instante sin esperar al API de listados */
+export interface PublishedDemandSnapshot {
+  feedItem: {
+    id: number
+    worker_id: null
+    type?: 'ride_share' | 'express_errand' | 'fixed_job'
+    category_type: 'fixed' | 'travel' | 'errand'
+    status: string
+    template: 'premium' | 'standard' | 'historical' | 'minimal'
+    pos: { lat: number; lng: number }
+    client: { id?: number; name: string; avatar: string | null }
+    category: { name: string; color: string; icon?: string }
+    offered_price: number
+    urgency: string
+    distance_km: number
+    pickup_address?: string
+    delivery_address?: string
+    created_at: string
+    workers_needed?: number
+    workers_accepted?: number
+    recurrence?: string
+    recurrence_days?: number[] | null
+    description?: string
+    payload?: Record<string, unknown> | null
+    scheduled_at?: string | null
+  }
+  mapPoint: MapPoint
+}
+
+function mapUrgencyToDb(u: 'low' | 'medium' | 'high'): 'normal' | 'urgent' {
+  return u === 'high' ? 'urgent' : 'normal'
+}
+
+function buildOptimisticSnapshot(input: {
+  requestId: number
+  publisher: { id: number; name: string; avatarUrl: string | null } | null
+  demandType: DemandType
+  resolvedCategoryId: number
+  categories: Category[]
+  description: string
+  offeredPrice: string
+  urgency: 'low' | 'medium' | 'high'
+  pickupLat: number
+  pickupLng: number
+  workersNeeded: number
+  recurrence: 'once' | 'daily' | 'weekly' | 'custom'
+  recurrenceDays: number[]
+  scheduledAt: string
+  pickupAddress?: string
+  deliveryAddress?: string
+  payloadForCard: Record<string, unknown> | null
+}): PublishedDemandSnapshot | null {
+  if (input.demandType === 'buscar_producto') return null
+
+  const cat = input.categories.find((c) => c.id === input.resolvedCategoryId)
+  const dbUrgency = mapUrgencyToDb(input.urgency)
+  const price = Math.round(input.offeredPrice ? parseFloat(input.offeredPrice) : 0)
+  const category_type: 'fixed' | 'travel' | 'errand' =
+    input.demandType === 'ride_share' ? 'travel' : input.demandType === 'express_errand' ? 'errand' : 'fixed'
+
+  const feedItem: PublishedDemandSnapshot['feedItem'] = {
+    id: input.requestId,
+    worker_id: null,
+    type: input.demandType as 'fixed_job' | 'ride_share' | 'express_errand',
+    category_type,
+    status: 'pending',
+    template: 'standard',
+    description: input.description,
+    pos: { lat: input.pickupLat, lng: input.pickupLng },
+    client: {
+      id: input.publisher?.id,
+      name: input.publisher?.name ?? 'Tú',
+      avatar: input.publisher?.avatarUrl ?? null,
+    },
+    category: {
+      name: cat?.name ?? 'General',
+      color: cat?.color ?? '#f59e0b',
+      icon: cat?.icon,
+    },
+    offered_price: price,
+    urgency: dbUrgency,
+    distance_km: 0,
+    pickup_address: input.pickupAddress,
+    delivery_address: input.deliveryAddress,
+    created_at: new Date().toISOString(),
+    workers_needed: input.workersNeeded,
+    workers_accepted: 0,
+    recurrence: input.recurrence,
+    recurrence_days: input.recurrenceDays.length > 0 ? input.recurrenceDays : null,
+    scheduled_at: input.scheduledAt ? new Date(input.scheduledAt).toISOString() : null,
+    payload: input.payloadForCard,
+  }
+
+  const mapPoint: MapPoint = {
+    id: input.requestId,
+    pos: { lat: input.pickupLat, lng: input.pickupLng },
+    name: feedItem.client.name,
+    avatar: feedItem.client.avatar,
+    price,
+    category_color: feedItem.category.color,
+    category_slug: cat?.slug ?? null,
+    category_name: feedItem.category.name,
+    fresh_score: 0,
+    status: 'demand',
+    pin_type: 'demand',
+    urgency: dbUrgency,
+    payload: (feedItem.payload ?? null) as MapPoint['payload'],
+    description: input.description,
+    distance_km: 0,
+  }
+
+  return { feedItem, mapPoint }
 }
 
 interface Props {
   userLat: number
   userLng: number
   categories: Category[]
+  publisher: { id: number; name: string; avatarUrl: string | null } | null
   onClose: () => void
-  onPublished: () => void
+  onPublished: (snapshot?: PublishedDemandSnapshot) => void
 }
 
 type DemandType = 'fixed_job' | 'ride_share' | 'express_errand' | 'buscar_producto'
@@ -42,7 +220,7 @@ const DEMAND_TYPE_CARDS: {
   { val: 'buscar_producto', Icon: ShoppingCart, label: 'Buscar producto', sub: 'Ver tiendas cercanas', accent: 'orange' },
 ]
 
-export default function PublishDemandModal({ userLat, userLng, categories, onClose, onPublished }: Props) {
+export default function PublishDemandModal({ userLat, userLng, categories, publisher, onClose, onPublished }: Props) {
   const [demandType, setDemandType] = useState<DemandType>('fixed_job')
   const [travelRole, setTravelRole] = useState<TravelRole>('passenger')
   const [categoryId, setCategoryId] = useState<number | null>(null)
@@ -111,8 +289,22 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
     setError('')
     const errs: Record<string,string> = {}
 
+    const resolvedCategoryId =
+      demandType === 'ride_share'
+        ? pickRideShareCategoryId(categories) ?? categoryId
+        : demandType === 'express_errand'
+          ? pickErrandCategoryId(categories) ?? categoryId
+          : categoryId
+
     // Validaciones básicas
     if (demandType === 'fixed_job' && !categoryId) errs.category = 'Selecciona una categoría'
+    if (
+      (demandType === 'ride_share' || demandType === 'express_errand') &&
+      !resolvedCategoryId
+    ) {
+      errs.category =
+        'No hay categoría de viaje o mandado en el sistema. Pide a un administrador revisar las categorías activas.'
+    }
     if (!description.trim()) errs.description = 'Describe lo que necesitas'
 
     // Validaciones por tipo
@@ -144,7 +336,7 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
       }
 
       const payload: any = {
-        category_id: categoryId,
+        category_id: resolvedCategoryId,
         description: description.trim(),
         lat: pickupLat,
         lng: pickupLng,
@@ -159,17 +351,9 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
         ...(recurrence === 'custom' && recurrenceDays.length > 0 ? { recurrence_days: recurrenceDays } : {}),
       }
 
-      // Asignar categoría automática para ride_share y express_errand
-      if (demandType === 'ride_share') {
-        const ridecat = categories.find(c => c.name?.toLowerCase().includes('viaje') || c.icon === 'car')
-        if (ridecat) payload.category_id = ridecat.id
-      } else if (demandType === 'express_errand') {
-        const errandcat = categories.find(c => c.name?.toLowerCase().includes('mandado') || c.icon === 'package')
-        if (errandcat) payload.category_id = errandcat.id
-      }
-
       // Agregar campos específicos según el tipo
       if (demandType === 'ride_share') {
+        const depStr = formatDepartureForApi(departureTime)
         payload.travel_role = travelRole
         payload.pickup_address = pickupAddress.trim()
         payload.delivery_address = deliveryAddress.trim()
@@ -178,13 +362,13 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
         payload.delivery_lat = deliveryLat
         payload.delivery_lng = deliveryLng
         // Enviar como string local (sin convertir a UTC) para que el backend valide correctamente
-        payload.departure_time = departureTime.replace('T', ' ') + ':00'
+        payload.departure_time = depStr
         payload.seats = seats
         payload.destination_name = destinationName.trim() || deliveryAddress.trim()
         payload.payload = {
           travel_role: travelRole,
           seats,
-          departure_time: departureTime.replace('T', ' ') + ':00',
+          departure_time: depStr,
           destination_name: destinationName.trim() || deliveryAddress.trim(),
           origin_address: pickupAddress.trim(),
           destination_address: deliveryAddress.trim(),
@@ -238,12 +422,40 @@ export default function PublishDemandModal({ userLat, userLng, categories, onClo
           category_type: demandType === 'ride_share' ? 'travel' : demandType === 'express_errand' ? 'errand' : 'fixed',
         })
         setError('')
-        setTimeout(() => {
-          onPublished()
-          onClose()
-        }, 300)
+        const requestId = Number(data?.data?.request_id)
+        let snapshot: PublishedDemandSnapshot | undefined
+        if (Number.isFinite(requestId) && resolvedCategoryId != null) {
+          const payloadForCard: Record<string, unknown> | null =
+            demandType === 'ride_share' && payload.payload && typeof payload.payload === 'object'
+              ? { ...(payload.payload as Record<string, unknown>) }
+              : demandType === 'express_errand' && payload.payload && typeof payload.payload === 'object'
+                ? { ...(payload.payload as Record<string, unknown>) }
+                : null
+          snapshot =
+            buildOptimisticSnapshot({
+              requestId,
+              publisher,
+              demandType,
+              resolvedCategoryId,
+              categories,
+              description: description.trim(),
+              offeredPrice,
+              urgency,
+              pickupLat,
+              pickupLng,
+              workersNeeded,
+              recurrence,
+              recurrenceDays,
+              scheduledAt,
+              pickupAddress: demandType === 'ride_share' ? pickupAddress.trim() : undefined,
+              deliveryAddress: demandType === 'ride_share' ? deliveryAddress.trim() : undefined,
+              payloadForCard,
+            }) ?? undefined
+        }
+        onPublished(snapshot)
+        onClose()
       } else {
-        const msg = data.message || (data.errors ? JSON.stringify(data.errors) : 'Error al publicar demanda')
+        const msg = firstApiErrorLine(data)
         trackEvent('demand_publish_error', { type: demandType, message: String(msg).slice(0, 200) })
         setError(msg)
       }

@@ -29,6 +29,7 @@ import { useHomeChatState } from '@/hooks/useHomeChatState'
 import type { HomeMapRef } from './components/HomeMapPanel'
 import { MapScreen } from './components/MapScreen'
 import { HomeModals } from './components/HomeModals'
+import type { PublishedDemandSnapshot } from './components/PublishDemandModal'
 import { HomeSidebar } from './components/HomeSidebar'
 import { HomeLoadingScreen } from './components/HomeLoadingScreen'
 import { HomeBottomBar } from './components/HomeBottomBar'
@@ -56,7 +57,6 @@ export default function Home() {
   const [showChatHistory, setShowChatHistory] = useState(false)
   const [showSolicitudesPanel, setShowSolicitudesPanel] = useState(false)
   const [dashHidden, setDashHidden] = useState(true)
-  const [dashExpanded, setDashExpanded] = useState(false)
   const [dismissEmptyMap, setDismissEmptyMap] = useState(false)
   const [showLocationPrompt, setShowLocationPrompt] = useState(false)
   const [openRequestsBannerDismissed, setOpenRequestsBannerDismissed] = useState(() => {
@@ -250,16 +250,31 @@ export default function Home() {
     setShowSidebar((s) => !s); setNotifBadge(0)
   }, [])
 
-  const handlePublishDemandSuccess = useCallback(() => {
+  const handlePublishDemandSuccess = useCallback((snapshot?: PublishedDemandSnapshot) => {
     setShowPublishDemand(false)
     setShowPublishSuccess(true)
     setTimeout(() => setShowPublishSuccess(false), 3000)
-    toast('Demanda publicada', 'success', 'Aparecerá en el mapa en unos segundos.')
+    toast('Demanda publicada', 'success', 'Ya aparece en el mapa y en Demandas.')
+    if (snapshot?.mapPoint) {
+      setPoints((prev) => {
+        if (prev.some((p) => p.id === snapshot.mapPoint.id)) return prev
+        return [...prev, snapshot.mapPoint]
+      })
+    }
+    if (snapshot?.feedItem) {
+      window.dispatchEvent(new CustomEvent('demand-published', { detail: snapshot }))
+    }
+    // El feed del servidor excluye las demandas del propio cliente; recargar borraría la tarjeta optimista.
+    const skipFeedReload = !!snapshot?.feedItem
+    queueMicrotask(() => {
+      fetchNearby()
+      if (!skipFeedReload) window.dispatchEvent(new Event('reload-feed'))
+    })
     setTimeout(() => {
       fetchNearby()
-      if (dashExpanded) window.dispatchEvent(new Event('reload-feed'))
+      if (!skipFeedReload) window.dispatchEvent(new Event('reload-feed'))
     }, 1000)
-  }, [dashExpanded, fetchNearby, toast])
+  }, [fetchNearby, toast, setPoints])
 
   const handleDashboardRefresh = useCallback(() => {
     setPoints([]); fetchNearby()
@@ -552,6 +567,9 @@ export default function Home() {
         userLng={userLng}
         publishCategories={categories}
         onClosePublishDemand={() => setShowPublishDemand(false)}
+        publishDemandPublisher={
+          user ? { id: user.id, name: user.name, avatarUrl: user.avatarUrl } : null
+        }
         onPublishDemandSuccess={handlePublishDemandSuccess}
         showRatingModal={showRatingModal}
         ratingRequestId={ratingRequestId}

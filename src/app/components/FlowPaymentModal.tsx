@@ -1,8 +1,12 @@
 'use client'
 import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
+import { shouldUseMercadoPagoPublic } from '@/lib/paymentGateway'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
+
+const MercadoPagoPayment = dynamic(() => import('./MercadoPagoPayment'), { ssr: false })
 
 interface FlowPaymentModalProps {
   isOpen: boolean
@@ -64,6 +68,21 @@ export default function FlowPaymentModal({
   }
 
   if (!isOpen) return null
+
+  if (shouldUseMercadoPagoPublic()) {
+    return (
+      <MercadoPagoPayment
+        serviceRequestId={serviceRequestId}
+        amount={amount}
+        onSuccess={() => {
+          onSuccess?.()
+          onClose()
+        }}
+        onError={(msg) => setError(msg)}
+        onClose={onClose}
+      />
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-[800] flex items-center justify-center bg-black/60 backdrop-blur-sm">

@@ -6,6 +6,7 @@ import ServiceCard from './ServiceCard'
 import LiveStats from './LiveStats'
 import { motion } from 'framer-motion'
 import { emptyStateCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import type { PublishedDemandSnapshot } from '@/app/components/PublishDemandModal'
 
 export interface ServiceRequest {
   id: number
@@ -136,18 +137,29 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLat, userLng])
 
-  // Listen for reload-feed and remove-feed-item events
+  // Listen for reload-feed, demand-published (optimista) y remove-feed-item
   useEffect(() => {
     const handleReload = () => loadMore(true)
     const handleRemove = (e: Event) => {
       const id = (e as CustomEvent).detail?.id
       if (id) setFeed(prev => prev.filter(s => s.id !== id))
     }
+    const handleDemandPublished = (e: Event) => {
+      const detail = (e as CustomEvent<PublishedDemandSnapshot>).detail
+      if (!detail?.feedItem) return
+      const row = detail.feedItem as ServiceRequest
+      setFeed((prev) => {
+        if (prev.some((s) => s.id === row.id)) return prev
+        return [row, ...prev]
+      })
+    }
     window.addEventListener('reload-feed', handleReload)
     window.addEventListener('remove-feed-item', handleRemove)
+    window.addEventListener('demand-published', handleDemandPublished)
     return () => {
       window.removeEventListener('reload-feed', handleReload)
       window.removeEventListener('remove-feed-item', handleRemove)
+      window.removeEventListener('demand-published', handleDemandPublished)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

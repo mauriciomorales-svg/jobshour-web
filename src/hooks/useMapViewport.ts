@@ -78,17 +78,29 @@ export function useMapViewport({
         try {
           localStorage.setItem('user_lat', String(lat))
           localStorage.setItem('user_lng', String(lng))
+          localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
+          localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
         } catch {
           /* ignore */
         }
+        mapPannedByUserRef.current = true
+        userLatRef.current = lat
+        userLngRef.current = lng
+        setUserLat(lat)
+        setUserLng(lng)
+        fetchNearbyRef.current.lastCall = 0
+        queueMicrotask(() => {
+          fetchNearby(activeCategory, lat, lng)
+        })
         void mapRef.current?.flyTo([lat, lng], 15)
       },
       () => {
         toast('No se pudo obtener la ubicación. Activa el GPS y revisa permisos.', 'error')
       },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 60_000 },
+      // maximumAge 0: evita caché del navegador (a veces devolvía un punto fijo / zona Renaico).
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     )
-  }, [toast, mapRef])
+  }, [toast, mapRef, activeCategory, fetchNearby, setUserLat, setUserLng, userLatRef, userLngRef, fetchNearbyRef])
 
   const handleLeafletMapReady = useCallback((map: LeafletMap) => {
     const v = readInitialMapCoords()

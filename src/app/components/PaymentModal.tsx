@@ -4,6 +4,10 @@ import { uiTone } from '@/lib/uiTone'
 
 import { useState } from 'react'
 import { apiFetch } from '@/lib/api'
+import dynamic from 'next/dynamic'
+import { shouldUseMercadoPagoPublic } from '@/lib/paymentGateway'
+
+const MercadoPagoPayment = dynamic(() => import('./MercadoPagoPayment'), { ssr: false })
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -57,6 +61,19 @@ export default function PaymentModal({
   }
 
   if (!isOpen) return null
+
+  // Mercado Pago por defecto; Flow si NEXT_PUBLIC_PAYMENT_GATEWAY=flow.
+  if (shouldUseMercadoPagoPublic()) {
+    return (
+      <MercadoPagoPayment
+        serviceRequestId={serviceRequestId}
+        amount={amount}
+        onSuccess={() => onClose()}
+        onError={(msg: string) => setError(msg)}
+        onClose={onClose}
+      />
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-[900] flex items-center justify-center bg-black/70 backdrop-blur-sm">

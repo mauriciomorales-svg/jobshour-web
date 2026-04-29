@@ -54,6 +54,36 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const interval = setInterval(() => {
+      fetchRequests()
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [isOpen])
+
+  useEffect(() => {
+    if (trackingRequestId) {
+      const selected = requests.find((r) => r.id === trackingRequestId)
+      if (!selected || !['accepted', 'in_progress'].includes(selected.status)) {
+        setTrackingRequestId(null)
+      }
+    }
+    if (ratingRequestId) {
+      const selected = requests.find((r) => r.id === ratingRequestId)
+      if (!selected || selected.status !== 'completed') {
+        setRatingRequestId(null)
+      }
+    }
+    if (paymentRequestId) {
+      const selected = requests.find((r) => r.id === paymentRequestId)
+      const paymentDone = selected?.payment_status === 'completed'
+      if (!selected || selected.status !== 'completed' || paymentDone) {
+        setPaymentRequestId(null)
+      }
+    }
+  }, [requests, trackingRequestId, ratingRequestId, paymentRequestId])
+
   const fetchRequests = async () => {
     setLoading(true)
     try {

@@ -80,7 +80,7 @@ export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
   pdf.setTextColor(15, 23, 42)
   pdf.setFontSize(14)
   pdf.setFont('helvetica', 'bold')
-  pdf.text('Lote listo', margin, y)
+  pdf.text('Feria de Pulgas', margin, y)
   y += 7
   pdf.setFontSize(10)
   pdf.setFont('helvetica', 'normal')

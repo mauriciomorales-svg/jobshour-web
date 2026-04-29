@@ -162,6 +162,35 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
     if (user) fetchSolicitudes()
   }, [user, fetchSolicitudes])
 
+  // Mantener estados frescos mientras el panel está abierto.
+  useEffect(() => {
+    if (!user) return
+    const interval = setInterval(() => {
+      fetchSolicitudes()
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [user, fetchSolicitudes])
+
+  // Evita modales "colgados" cuando la solicitud cambia estado o desaparece.
+  useEffect(() => {
+    if (ratingRequestId) {
+      const selected = solicitudes.find((x) => x.id === ratingRequestId)
+      if (!selected || selected.status !== 'completed') {
+        setRatingRequestId(null)
+      }
+    }
+  }, [ratingRequestId, solicitudes])
+
+  useEffect(() => {
+    if (paymentRequestId) {
+      const selected = solicitudes.find((x) => x.id === paymentRequestId)
+      const paymentDone = selected?.payment_status === 'completed'
+      if (!selected || selected.status !== 'completed' || paymentDone) {
+        setPaymentRequestId(null)
+      }
+    }
+  }, [paymentRequestId, solicitudes])
+
   const isMyWorkerRole = (s: Solicitud) => {
     return s.worker?.user?.id === user?.id
   }
@@ -552,7 +581,11 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
             serviceRequestId={ratingRequestId}
             workerName={otherPerson?.name ?? 'Trabajador'}
             workerAvatar={otherPerson?.avatar ?? null}
-            onRated={fetchSolicitudes}
+            onRated={() => {
+              localStorage.setItem(`rated_${ratingRequestId}`, 'true')
+              setRatingRequestId(null)
+              fetchSolicitudes()
+            }}
           />
         )
       })()}
@@ -565,7 +598,11 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
         return (
           <PaymentModal
             isOpen
-            onClose={() => setPaymentRequestId(null)}
+            onClose={() => {
+              setPaymentRequestId(null)
+              // Al volver de checkout externo, refrescar estado para evitar botones desactualizados.
+              fetchSolicitudes()
+            }}
             serviceRequestId={paymentRequestId}
             amount={s.final_price || s.offered_price || 0}
             workerName={s.worker?.user?.name ?? 'Trabajador'}

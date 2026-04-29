@@ -13,6 +13,7 @@ interface ReviewsListProps {
 
 interface Review {
   id: number
+  service_request_id?: number | null
   stars: number
   comment: string | null
   reviewer: {
@@ -64,6 +65,9 @@ export default function ReviewsList({ workerId, showAverage = true, canRespond =
           const avg = filteredReviews.reduce((sum, r) => sum + r.stars, 0) / filteredReviews.length
           setAverageRating(avg)
           setTotalReviews(filteredReviews.length)
+        } else {
+          setAverageRating(0)
+          setTotalReviews(0)
         }
       }
     } catch (err) {

@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
+import type { PublishedDemandSnapshot } from './PublishDemandModal'
 
 const LoginModal = dynamic(() => import('./LoginModal'), { ssr: false })
 const PublishDemandModal = dynamic(() => import('./PublishDemandModal'), { ssr: false })
@@ -35,6 +36,7 @@ export function HomeModals({
   userLng,
   publishCategories,
   onClosePublishDemand,
+  publishDemandPublisher,
   onPublishDemandSuccess,
   showRatingModal,
   ratingRequestId,
@@ -62,7 +64,8 @@ export function HomeModals({
   userLng: number
   publishCategories: PublishCategory[]
   onClosePublishDemand: () => void
-  onPublishDemandSuccess: () => void
+  publishDemandPublisher: { id: number; name: string; avatarUrl: string | null } | null
+  onPublishDemandSuccess: (snapshot?: PublishedDemandSnapshot) => void
   showRatingModal: boolean
   ratingRequestId: number | null
   ratingWorkerInfo: { name: string; avatar: string | null } | null
@@ -95,6 +98,7 @@ export function HomeModals({
           userLat={userLat}
           userLng={userLng}
           categories={publishCategories}
+          publisher={publishDemandPublisher}
           onClose={onClosePublishDemand}
           onPublished={onPublishDemandSuccess}
         />

@@ -49,6 +49,22 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const interval = setInterval(() => {
+      fetchRequests()
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!trackingRequestId) return
+    const selected = requests.find((r) => r.id === trackingRequestId)
+    if (!selected || !['accepted', 'in_progress'].includes(selected.status)) {
+      setTrackingRequestId(null)
+    }
+  }, [trackingRequestId, requests])
+
   const fetchRequests = async () => {
     setLoading(true)
     try {

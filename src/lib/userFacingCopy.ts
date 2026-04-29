@@ -196,7 +196,7 @@ export const surfaceCopy = {
   modalTitleMyOrders: '🛒 Mis Pedidos',
 
   workerQuotesHeading: 'Mis Cotizaciones',
-  workerQuotesSubtitle: 'Links desde tu tienda (Lote listo y otras ofertas)',
+  workerQuotesSubtitle: 'Links desde tu tienda (Feria de Pulgas y otras ofertas)',
 
   emittedQuotesSection: 'Cotizaciones emitidas',
 
@@ -207,24 +207,24 @@ export const surfaceCopy = {
   emptyIntegratedQuotesTitle: 'Aún no hay cotizaciones',
   quoteBuilderModeLead: 'En tu tienda, modo',
   /** Mismo flujo técnico que cotización integrada; nombre amable para packs / usados */
-  quoteBuilderModeLabel: 'Lote listo',
+  quoteBuilderModeLabel: 'Feria de Pulgas',
   quoteBuilderModeTail: 'y comparte el link.',
 
   /** Tienda (propietario): modo pack con precio vía integrated quote */
-  tiendaModeLoteListo: 'Lote listo',
-  tiendaLoteListoHintTitle: 'Modo Lote listo',
+  tiendaModeLoteListo: 'Feria de Pulgas',
+  tiendaLoteListoHintTitle: 'Feria de Pulgas',
   tiendaLoteListoHintBody:
-    'Armá el carrito como el pedido del comprador (varios ítems: usados, nuevos o mezclados). Acá no se cobra: se genera un link para que vea el detalle y pague con Mercado Pago cuando quiera.',
+    'Armá el lote como el pedido del comprador (cosas usadas, nuevas o mezcladas). Acá no se cobra al instante. Generás un link que el comprador ve con todos los detalles y paga con Mercado Pago cuando quiera.',
   tiendaCartLoteListo: 'Carrito lote',
-  tiendaContinueLoteListo: 'Continuar lote listo →',
-  tiendaModalCreateLoteListo: 'Crear lote listo',
+  tiendaContinueLoteListo: 'Continuar Feria de Pulgas →',
+  tiendaModalCreateLoteListo: 'Crear Feria de Pulgas',
   tiendaLoteValidityHours: 'Validez del link (horas)',
   tiendaCreateShareLoteListo: 'Crear y compartir link',
-  tiendaLoteListoCreatedTitle: 'Lote listo creado',
+  tiendaLoteListoCreatedTitle: 'Feria de Pulgas creada',
   tiendaLoteListoCreatedSubtitle: 'Comparte este link para que vea el detalle y pague.',
 
-  /** Página pública del link (integrated quote = Lote listo para el usuario) */
-  publicLoteEyebrow: 'Lote listo',
+  /** Página pública del link (integrated quote = Feria de Pulgas para el usuario) */
+  publicLoteEyebrow: 'Feria de Pulgas',
   publicLoteUnavailableTitle: 'Lote no disponible',
   publicLoteLoadError: 'No se pudo cargar el lote',
   publicLotePreparedBy: 'Preparado por',
