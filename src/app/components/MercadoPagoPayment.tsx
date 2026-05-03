@@ -7,6 +7,8 @@ import { apiFetch } from '@/lib/api'
 interface Props {
   serviceRequestId: number
   amount: number
+  /** Si no se pasa, se usa NEXT_PUBLIC_MP_PUBLIC_KEY */
+  publicKey?: string
   onSuccess: (paymentId: string) => void
   onError: (msg: string) => void
   onClose: () => void
@@ -18,85 +20,105 @@ declare global {
   }
 }
 
-export default function MercadoPagoPayment({ serviceRequestId, amount, onSuccess, onError, onClose }: Props) {
+export default function MercadoPagoPayment({
+  serviceRequestId,
+  amount,
+  publicKey: publicKeyProp,
+  onSuccess,
+  onError,
+  onClose,
+}: Props) {
   const brickRef = useRef<any>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
 
-  const PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || ''
+  const onSuccessRef = useRef(onSuccess)
+  const onErrorRef = useRef(onError)
+  onSuccessRef.current = onSuccess
+  onErrorRef.current = onError
+
+  const effectiveKey = (publicKeyProp ?? process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? '').trim()
 
   useEffect(() => {
+    if (!effectiveKey) {
+      setLoading(false)
+      return
+    }
+
     const script = document.createElement('script')
     script.src = 'https://sdk.mercadopago.com/js/v2'
     script.async = true
-    script.onload = () => initBrick()
+    script.onload = () => {
+      void (async () => {
+        if (!window.MercadoPago) return
+        const mp = new window.MercadoPago(effectiveKey, { locale: 'es-CL' })
+        const bricks = mp.bricks()
+
+        brickRef.current = await bricks.create('payment', 'mp-payment-brick', {
+          initialization: {
+            amount: amount,
+            preferenceId: null,
+          },
+          customization: {
+            paymentMethods: {
+              creditCard: 'all',
+              debitCard: 'all',
+            },
+            visual: {
+              style: { theme: 'default' },
+            },
+          },
+          callbacks: {
+            onReady: () => setLoading(false),
+            onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
+              setProcessing(true)
+              try {
+                const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
+                const res = await apiFetch('/api/v1/payments/mp/process', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    service_request_id: serviceRequestId,
+                    token: formData.token,
+                    payment_method_id: formData.payment_method_id,
+                    installments: formData.installments,
+                    issuer_id: formData.issuer_id,
+                    payer: formData.payer,
+                  }),
+                })
+                const data = await res.json()
+                if (data.status === 'success') {
+                  onSuccessRef.current(data.payment_id)
+                } else {
+                  onErrorRef.current(data.message || 'Error al procesar el pago')
+                }
+              } catch (e) {
+                onErrorRef.current(feedbackCopy.networkError)
+              } finally {
+                setProcessing(false)
+              }
+            },
+            onError: (error: any) => {
+              console.error('[MP Brick]', error)
+              onErrorRef.current('Error en el formulario de pago')
+            },
+          },
+        })
+      })()
+    }
     document.body.appendChild(script)
     return () => {
-      document.body.removeChild(script)
       brickRef.current?.unmount?.()
+      brickRef.current = null
+      if (script.parentNode) {
+        script.parentNode.removeChild(script)
+      }
     }
-  }, [])
-
-  const initBrick = async () => {
-    if (!window.MercadoPago) return
-    const mp = new window.MercadoPago(PUBLIC_KEY, { locale: 'es-CL' })
-    const bricks = mp.bricks()
-
-    brickRef.current = await bricks.create('payment', 'mp-payment-brick', {
-      initialization: {
-        amount: amount,
-        preferenceId: null,
-      },
-      customization: {
-        paymentMethods: {
-          creditCard: 'all',
-          debitCard: 'all',
-        },
-        visual: {
-          style: { theme: 'default' },
-        },
-      },
-      callbacks: {
-        onReady: () => setLoading(false),
-        onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
-          setProcessing(true)
-          try {
-            const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
-            const res = await apiFetch('/api/v1/payments/mp/process', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                service_request_id: serviceRequestId,
-                token: formData.token,
-                payment_method_id: formData.payment_method_id,
-                installments: formData.installments,
-                issuer_id: formData.issuer_id,
-                payer: formData.payer,
-              }),
-            })
-            const data = await res.json()
-            if (data.status === 'success') {
-              onSuccess(data.payment_id)
-            } else {
-              onError(data.message || 'Error al procesar el pago')
-            }
-          } catch (e) {
-            onError(feedbackCopy.networkError)
-          } finally {
-            setProcessing(false)
-          }
-        },
-        onError: (error: any) => {
-          console.error('[MP Brick]', error)
-          onError('Error en el formulario de pago')
-        },
-      },
-    })
-  }
+  }, [effectiveKey, amount, serviceRequestId])
 
   return (
     <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">

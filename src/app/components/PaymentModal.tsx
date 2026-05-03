@@ -2,10 +2,14 @@
 import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '@/lib/api'
 import dynamic from 'next/dynamic'
-import { shouldUseMercadoPagoPublic } from '@/lib/paymentGateway'
+import {
+  prefersMercadoPagoGateway,
+  getMercadoPagoPublicKeyFromEnv,
+  fetchMercadoPagoBrickConfig,
+} from '@/lib/paymentGateway'
 
 const MercadoPagoPayment = dynamic(() => import('./MercadoPagoPayment'), { ssr: false })
 
@@ -30,6 +34,25 @@ export default function PaymentModal({
 }: PaymentModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const envMpKey = useMemo(() => getMercadoPagoPublicKeyFromEnv(), [])
+  const [remoteMpKey, setRemoteMpKey] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (!isOpen) {
+      setRemoteMpKey(undefined)
+      return
+    }
+    if (!prefersMercadoPagoGateway() || envMpKey) {
+      return
+    }
+    let cancelled = false
+    void fetchMercadoPagoBrickConfig(userToken).then((k) => {
+      if (!cancelled) setRemoteMpKey(k || '')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, userToken, envMpKey])
 
   const handlePay = async () => {
     setLoading(true)
@@ -62,17 +85,34 @@ export default function PaymentModal({
 
   if (!isOpen) return null
 
-  // Mercado Pago por defecto; Flow si NEXT_PUBLIC_PAYMENT_GATEWAY=flow.
-  if (shouldUseMercadoPagoPublic()) {
-    return (
-      <MercadoPagoPayment
-        serviceRequestId={serviceRequestId}
-        amount={amount}
-        onSuccess={() => onClose()}
-        onError={(msg: string) => setError(msg)}
-        onClose={onClose}
-      />
-    )
+  // Mercado Pago por defecto; Flow si NEXT_PUBLIC_PAYMENT_GATEWAY=flow o sin clave MP (env ni API).
+  if (prefersMercadoPagoGateway()) {
+    const mpKey = envMpKey || (remoteMpKey ?? '')
+    if (!envMpKey && remoteMpKey === undefined) {
+      return (
+        <div className="fixed inset-0 z-[900] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700/50 rounded-2xl p-8 flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+            <p className="text-slate-300 text-sm">Cargando pago seguro…</p>
+            <button type="button" onClick={onClose} className={uiTone.modalCancelMuted}>
+              {surfaceCopy.cancel}
+            </button>
+          </div>
+        </div>
+      )
+    }
+    if (mpKey) {
+      return (
+        <MercadoPagoPayment
+          serviceRequestId={serviceRequestId}
+          amount={amount}
+          publicKey={mpKey}
+          onSuccess={() => onClose()}
+          onError={(msg: string) => setError(msg)}
+          onClose={onClose}
+        />
+      )
+    }
   }
 
   return (
