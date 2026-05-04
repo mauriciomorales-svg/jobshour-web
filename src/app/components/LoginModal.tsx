@@ -4,7 +4,7 @@ import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect } from 'react'
 import { isCapacitor, openExternalBrowser, onAppResume } from '@/lib/capacitor'
-import { apiUrl } from '@/lib/api'
+import { apiUrl, JSON_REQUEST_HEADERS } from '@/lib/api'
 
 interface Props {
   isOpen: boolean
@@ -45,7 +45,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_REQUEST_HEADERS,
         body: JSON.stringify({ email, password })
       })
 
@@ -77,7 +77,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
   const handleOAuth = async (e: React.MouseEvent, provider: 'google' | 'facebook') => {
     e.preventDefault()
     e.stopPropagation()
-    const authUrl = `https://jobshours.com/api/auth/${provider}?mobile=true`
+    const authUrl = apiUrl(`/api/auth/${provider}?mobile=true`)
     await openExternalBrowser(authUrl)
   }
 

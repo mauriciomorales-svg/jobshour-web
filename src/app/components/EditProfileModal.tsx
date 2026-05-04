@@ -4,6 +4,7 @@ import { uiTone } from '@/lib/uiTone'
 
 import { useState, useRef } from 'react'
 import { compressImageToWebP } from '@/lib/imageCompression'
+import { JSON_REQUEST_HEADERS } from '@/lib/api'
 
 interface Props {
   isOpen: boolean
@@ -64,7 +65,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess, userToken
       const res = await fetch('/api/auth/update-profile', {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          ...JSON_REQUEST_HEADERS,
           Authorization: `Bearer ${userToken}`
         },
         body: JSON.stringify(formData)
@@ -84,7 +85,10 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess, userToken
         
         await fetch('/api/auth/upload-avatar', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${userToken}` },
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${userToken}`,
+          },
           body: formData,
         })
       }
@@ -122,7 +126,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess, userToken
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          ...JSON_REQUEST_HEADERS,
           Authorization: `Bearer ${userToken}`
         },
         body: JSON.stringify({

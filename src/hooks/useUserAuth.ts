@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, Dispatch, SetStateAction } from 'react'
-import { getPublicApiBase } from '@/lib/api'
+import { apiUrl, getPublicApiBase, JSON_REQUEST_HEADERS } from '@/lib/api'
 import { feedbackCopy } from '@/lib/userFacingCopy'
 
 type WorkerStatus = 'guest' | 'inactive' | 'intermediate' | 'active'
@@ -45,7 +45,7 @@ export function useUserAuth({ fetchWorkerData, setWorkerStatus }: UseUserAuthOpt
   const fetchUserProfile = useCallback(async (token: string) => {
     try {
       const r = await fetch(`${getPublicApiBase()}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       })
       if (!r.ok) {
         localStorage.removeItem('auth_token')
@@ -111,7 +111,9 @@ export function useUserAuth({ fetchWorkerData, setWorkerStatus }: UseUserAuthOpt
         if (!authKey) return
         localStorage.removeItem('pending_auth_key')
         try {
-          const res = await fetch(`https://jobshours.com/api/auth/mobile-token?key=${authKey}`)
+          const res = await fetch(apiUrl(`/api/auth/mobile-token?key=${encodeURIComponent(authKey)}`), {
+            headers: { Accept: 'application/json' },
+          })
           if (res.ok) {
             const data = await res.json()
             if (data.token) {
@@ -132,7 +134,9 @@ export function useUserAuth({ fetchWorkerData, setWorkerStatus }: UseUserAuthOpt
           if (data.url.startsWith('jobshour://auth-success')) {
             const authKey = url.searchParams.get('key')
             if (!authKey) return
-            const res = await fetch(`https://jobshours.com/api/auth/mobile-token?key=${authKey}`)
+            const res = await fetch(apiUrl(`/api/auth/mobile-token?key=${encodeURIComponent(authKey)}`), {
+              headers: { Accept: 'application/json' },
+            })
             if (res.ok) {
               const d = await res.json()
               if (d.token) { localStorage.setItem('auth_token', d.token); fetchUserProfile(d.token) }
@@ -171,7 +175,7 @@ export function useUserAuth({ fetchWorkerData, setWorkerStatus }: UseUserAuthOpt
         if (savedEmail && savedPassword) {
           fetch(`${getPublicApiBase()}/api/auth/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: JSON_REQUEST_HEADERS,
             body: JSON.stringify({ email: savedEmail, password: savedPassword }),
           })
             .then((r) => r.json())

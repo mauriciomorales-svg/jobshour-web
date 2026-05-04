@@ -6,6 +6,7 @@ import {
   getMercadoPagoPublicKeyFromEnv,
   fetchMercadoPagoBrickConfig,
 } from '@/lib/paymentGateway'
+import { JSON_REQUEST_HEADERS } from '@/lib/api'
 
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
@@ -68,12 +69,17 @@ export default function FlowPaymentModal({
         return
       }
 
+      const signal =
+        typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
+          ? AbortSignal.timeout(60_000)
+          : undefined
       const response = await fetch('/api/v1/payments/flow/init', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          ...JSON_REQUEST_HEADERS,
+          Authorization: `Bearer ${token}`,
         },
+        ...(signal ? { signal } : {}),
         body: JSON.stringify({
           service_request_id: serviceRequestId,
           amount: amount,

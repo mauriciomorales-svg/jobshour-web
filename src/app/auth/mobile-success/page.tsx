@@ -18,7 +18,9 @@ function MobileSuccessContent() {
     // Fallback para navegador web: si el deep link no funciona, recuperar token via API
     setTimeout(async () => {
       try {
-        const res = await fetch('/api/auth/mobile-token?key=' + encodeURIComponent(authKey))
+        const res = await fetch('/api/auth/mobile-token?key=' + encodeURIComponent(authKey), {
+          headers: { Accept: 'application/json' },
+        })
         if (res.ok) {
           const data = await res.json()
           if (data.token) {

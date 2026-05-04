@@ -4,6 +4,7 @@ import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect, useRef } from 'react'
 import CategoryPicker from './CategoryPicker'
+import { JSON_REQUEST_HEADERS } from '@/lib/api'
 
 interface Props {
   isOpen: boolean
@@ -60,7 +61,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_REQUEST_HEADERS,
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
@@ -101,7 +102,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
     try {
       const res = await fetch('/api/auth/verify-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_REQUEST_HEADERS,
         body: JSON.stringify({
           user_id: pendingUserId,
           code: verificationCode,

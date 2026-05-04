@@ -28,11 +28,22 @@ export function shouldUseMercadoPagoPublic(): boolean {
   return prefersMercadoPagoGateway() && !!getMercadoPagoPublicKeyFromEnv()
 }
 
+const brickConfigTimeoutMs = 25_000
+
 export async function fetchMercadoPagoBrickConfig(bearerToken: string): Promise<string> {
-  const res = await apiFetch('/api/v1/payments/mp/brick-config', {
-    headers: { Authorization: `Bearer ${bearerToken}` },
-  })
-  if (!res.ok) return ''
-  const data = (await res.json()) as { public_key?: string }
-  return typeof data.public_key === 'string' ? data.public_key.trim() : ''
+  try {
+    const signal =
+      typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
+        ? AbortSignal.timeout(brickConfigTimeoutMs)
+        : undefined
+    const res = await apiFetch('/api/v1/payments/mp/brick-config', {
+      headers: { Authorization: `Bearer ${bearerToken}` },
+      ...(signal ? { signal } : {}),
+    })
+    if (!res.ok) return ''
+    const data = (await res.json()) as { public_key?: string }
+    return typeof data.public_key === 'string' ? data.public_key.trim() : ''
+  } catch {
+    return ''
+  }
 }

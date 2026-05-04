@@ -8,6 +8,12 @@
 
 const FALLBACK_ORIGIN = 'https://jobshour.dondemorales.cl'
 
+/** Laravel devuelve JSON (p. ej. 422) en lugar de HTML/302 si el cliente pide JSON explícitamente. */
+export const JSON_REQUEST_HEADERS: Record<string, string> = {
+  'Content-Type': 'application/json',
+  Accept: 'application/json',
+}
+
 function isLocalhostUrl(base: string): boolean {
   return (
     base.includes('localhost') ||
@@ -56,5 +62,9 @@ export function apiUrl(path: string): string {
  * Wrapper de fetch que agrega automáticamente la URL base correcta
  */
 export async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
-  return fetch(apiUrl(path), options)
+  const headers = new Headers(options?.headers ?? undefined)
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json')
+  }
+  return fetch(apiUrl(path), { ...options, headers })
 }
