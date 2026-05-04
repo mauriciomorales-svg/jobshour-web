@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev -p 3002 -H 0.0.0.0",
-    "build": "cross-env NEXT_EXPORT= next build",
+    "build": "next build",
     "build:safe": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next build",
     "build:android": "node scripts/build-android-static.mjs",
     "start": "next start -p 3001",
@@ -32,6 +32,7 @@
     "lucide-react": "^0.574.0",
     "next": "^15.5.15",
     "pusher-js": "^8.4.0",
+    "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
