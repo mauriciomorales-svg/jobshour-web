@@ -150,6 +150,25 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
     persistHiddenRequestIds([...hiddenRequestIds, requestId])
   }, [hiddenRequestIds, persistHiddenRequestIds])
 
+  const fetchSolicitudes = useCallback(async () => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (!token) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await apiFetch('/api/v1/requests/mine', {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setSolicitudes(Array.isArray(data.data) ? data.data : [])
+    } catch (e) {
+      setError('No se pudieron cargar tus solicitudes')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   const respondAsWorker = useCallback(async (requestId: number, action: 'accept' | 'reject') => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     if (!token) return
@@ -173,25 +192,6 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
       setActionLoading(null)
     }
   }, [fetchSolicitudes])
-
-  const fetchSolicitudes = useCallback(async () => {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-    if (!token) return
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await apiFetch('/api/v1/requests/mine', {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      setSolicitudes(Array.isArray(data.data) ? data.data : [])
-    } catch (e) {
-      setError('No se pudieron cargar tus solicitudes')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
 
   useEffect(() => {
     if (user) fetchSolicitudes()
