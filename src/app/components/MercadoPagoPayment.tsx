@@ -75,6 +75,14 @@ export default function MercadoPagoPayment({
               setProcessing(true)
               try {
                 const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
+                const resolvedPaymentMethodId =
+                  formData?.payment_method_id ||
+                  selectedPaymentMethod?.id ||
+                  selectedPaymentMethod?.payment_method_id ||
+                  ''
+                const resolvedInstallments = Number(formData?.installments ?? 1)
+                const resolvedIssuerId = formData?.issuer_id ?? selectedPaymentMethod?.issuer_id ?? null
+                const resolvedPayer = formData?.payer ?? {}
                 const res = await apiFetch('/api/v1/payments/mp/process', {
                   method: 'POST',
                   headers: {
@@ -83,11 +91,11 @@ export default function MercadoPagoPayment({
                   },
                   body: JSON.stringify({
                     service_request_id: serviceRequestId,
-                    token: formData.token,
-                    payment_method_id: formData.payment_method_id,
-                    installments: formData.installments,
-                    issuer_id: formData.issuer_id,
-                    payer: formData.payer,
+                    token: formData?.token,
+                    payment_method_id: resolvedPaymentMethodId,
+                    installments: Number.isFinite(resolvedInstallments) ? resolvedInstallments : 1,
+                    issuer_id: resolvedIssuerId,
+                    payer: resolvedPayer,
                   }),
                 })
                 const data = await res.json()
