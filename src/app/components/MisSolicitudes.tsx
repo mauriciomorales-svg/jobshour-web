@@ -374,12 +374,12 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                   const st = STATUS_CONFIG[s.status] ?? { label: s.status, color: 'text-gray-400', bg: 'bg-gray-500/20', icon: '📄' }
                   const imWorker = isMyWorkerRole(s)
                   const otherPerson = imWorker ? s.client : s.worker?.user
-                  const myRole = imWorker ? 'Trabajador' : 'Cliente'
+                  const relationshipLabel = imWorker ? 'Te contrató' : 'Contrataste a'
                   const categoryName = normalizeCategoryLabel(s)
                   const categoryColor = s.category?.color ?? '#6b7280'
                   const isPending = s.status === 'pending'
                   const isActive = ['pending', 'accepted', 'in_progress'].includes(s.status)
-                  const canOpenChatNow = ['accepted', 'in_progress'].includes(s.status)
+                  const canOpenChatNow = ['accepted', 'in_progress', 'completed'].includes(s.status)
                   const canCompleteAsWorker = imWorker && ['accepted', 'in_progress'].includes(s.status)
                   const isCompletedAsClient = !imWorker && s.status === 'completed'
                   const canPayNow = isCompletedAsClient && (!s.payment_status || s.payment_status === 'pending')
@@ -429,7 +429,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                                 </span>
                               )}
                               <span className="text-slate-600 text-xs">•</span>
-                              <span className="text-slate-500 text-xs">{myRole}</span>
+                              <span className="text-slate-500 text-xs">{relationshipLabel}</span>
                             </div>
                           </div>
 
