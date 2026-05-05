@@ -71,8 +71,11 @@ export function useActiveServiceRequests({
           completedList.forEach((sr: any) => {
             const storageKey = `rated_${sr.id}`
             const alreadyRated = localStorage.getItem(storageKey)
+            const reviewedByApi = Boolean(sr?.user_has_reviewed)
+            const isClient = Number(sr?.client_id) === Number(user?.id)
+            const canRate = sr?.can_rate === true || (isClient && !reviewedByApi)
 
-            if (!alreadyRated && sr.worker) {
+            if (!alreadyRated && canRate && sr.worker) {
               fetch(`${getPublicApiBase()}/api/v1/workers/${sr.worker.id}/reviews`, {
                 headers: {
                   Authorization: `Bearer ${token}`,

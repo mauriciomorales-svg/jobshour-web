@@ -9,6 +9,9 @@ const PaymentModal = dynamic(() => import('./PaymentModal'), { ssr: false })
 
 interface Solicitud {
   id: number
+  client_id?: number
+  can_rate?: boolean
+  user_has_reviewed?: boolean
   description?: string
   status: string
   offered_price: number
@@ -507,12 +510,14 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                                 ) : (
                                   <span className="flex-1 text-center py-2 text-amber-400 text-xs font-bold">✅ Pagado</span>
                                 )}
-                                <button
-                                  onClick={() => setRatingRequestId(s.id)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-xs font-bold transition active:scale-95 border border-amber-500/30"
-                                >
-                                  ⭐ Calificar
-                                </button>
+                                {s.can_rate && (
+                                  <button
+                                    onClick={() => setRatingRequestId(s.id)}
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-xs font-bold transition active:scale-95 border border-amber-500/30"
+                                  >
+                                    ⭐ Calificar
+                                  </button>
+                                )}
                               </>
                             )}
                             {isPending && (
@@ -573,6 +578,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
       {ratingRequestId && (() => {
         const s = solicitudes.find(x => x.id === ratingRequestId)
         if (!s) return null
+        if (!s.can_rate) return null
         const otherPerson = isMyWorkerRole(s) ? s.client : s.worker?.user
         return (
           <RatingModal

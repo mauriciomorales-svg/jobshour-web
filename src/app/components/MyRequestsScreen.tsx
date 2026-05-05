@@ -19,6 +19,9 @@ interface Props {
 
 interface ServiceRequest {
   id: number
+  client_id: number
+  can_rate?: boolean
+  user_has_reviewed?: boolean
   worker: {
     id: number
     name: string
@@ -332,14 +335,16 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
                         {request.payment_status === 'completed' && (
                           <span className="flex-1 text-center py-2 text-amber-400 text-sm font-bold">✅ Pagado</span>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => setRatingRequestId(request.id)}
-                          className="flex-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white py-2 rounded-xl text-sm font-bold hover:from-amber-500 hover:to-orange-600 transition shadow-lg shadow-amber-500/15 flex items-center justify-center gap-2"
-                        >
-                          <span>⭐</span>
-                          <span>Calificar</span>
-                        </button>
+                        {request.can_rate && (
+                          <button
+                            type="button"
+                            onClick={() => setRatingRequestId(request.id)}
+                            className="flex-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white py-2 rounded-xl text-sm font-bold hover:from-amber-500 hover:to-orange-600 transition shadow-lg shadow-amber-500/15 flex items-center justify-center gap-2"
+                          >
+                            <span>⭐</span>
+                            <span>Calificar</span>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
