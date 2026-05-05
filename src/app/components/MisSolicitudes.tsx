@@ -150,6 +150,30 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
     persistHiddenRequestIds([...hiddenRequestIds, requestId])
   }, [hiddenRequestIds, persistHiddenRequestIds])
 
+  const respondAsWorker = useCallback(async (requestId: number, action: 'accept' | 'reject') => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (!token) return
+    setActionLoading(requestId)
+    try {
+      const res = await apiFetch(`/api/v1/requests/${requestId}/respond`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      })
+      if (res.ok) {
+        await fetchSolicitudes()
+      }
+    } catch {
+      // no-op: la UI ya se refresca en polling
+    } finally {
+      setActionLoading(null)
+    }
+  }, [fetchSolicitudes])
+
   const fetchSolicitudes = useCallback(async () => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     if (!token) return
@@ -380,6 +404,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                   const isPending = s.status === 'pending'
                   const isActive = ['pending', 'accepted', 'in_progress'].includes(s.status)
                   const canOpenChatNow = ['accepted', 'in_progress', 'completed'].includes(s.status)
+                  const canRespondNow = imWorker && isPending
                   const canCompleteAsWorker = imWorker && ['accepted', 'in_progress'].includes(s.status)
                   const isCompletedAsClient = !imWorker && s.status === 'completed'
                   const canPayNow = isCompletedAsClient && (!s.payment_status || s.payment_status === 'pending')
@@ -537,10 +562,30 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                                 ⚡ Destacar en mapa
                               </button>
                             )}
-                          {isPending && (
+                            {isPending && !canRespondNow && (
                               <span className="flex-1 text-center py-2.5 text-slate-300 text-xs font-bold bg-slate-700/50 rounded-xl border border-slate-600/60">
                                 ⏳ Esperando que alguien confirme
                               </span>
+                            )}
+                            {canRespondNow && (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={actionLoading === s.id}
+                                  onClick={() => respondAsWorker(s.id, 'accept')}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 rounded-xl text-xs font-black transition active:scale-95 border border-teal-500/35 disabled:opacity-50"
+                                >
+                                  {actionLoading === s.id ? '...' : '✅ Confirmar'}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={actionLoading === s.id}
+                                  onClick={() => respondAsWorker(s.id, 'reject')}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-red-500/15 hover:bg-red-500/25 text-red-300 rounded-xl text-xs font-black transition active:scale-95 border border-red-500/35 disabled:opacity-50"
+                                >
+                                  {actionLoading === s.id ? '...' : '❌ Rechazar'}
+                                </button>
+                              </>
                             )}
                             {/* Secundario worker: completar */}
                             {canCompleteAsWorker && (
