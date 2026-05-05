@@ -1,9 +1,8 @@
 'use client'
-import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
 
 import { useEffect, useMemo, useState } from 'react'
-import { apiFetch } from '@/lib/api'
 import dynamic from 'next/dynamic'
 import {
   prefersMercadoPagoGateway,
@@ -54,38 +53,9 @@ export default function PaymentModal({
     }
   }, [isOpen, userToken, envMpKey])
 
-  const handlePay = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await apiFetch('/api/v1/payments/flow/init', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userToken}`,
-        },
-        body: JSON.stringify({
-          service_request_id: serviceRequestId,
-          amount: Math.round(amount),
-        }),
-      })
-      const data = await res.json()
-      if (data.success && data.url) {
-        // Redirigir a Flow
-        window.location.href = data.url + '?token=' + data.token
-      } else {
-        setError(data.message || 'Error al iniciar el pago')
-      }
-    } catch {
-      setError(feedbackCopy.networkErrorRetry)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   if (!isOpen) return null
 
-  // Mercado Pago por defecto; Flow si NEXT_PUBLIC_PAYMENT_GATEWAY=flow o sin clave MP (env ni API).
+  // Mercado Pago es la unica pasarela activa.
   if (prefersMercadoPagoGateway()) {
     const mpKey = envMpKey || (remoteMpKey ?? '')
     if (!envMpKey && remoteMpKey === undefined) {
@@ -150,13 +120,13 @@ export default function PaymentModal({
             <p className="text-slate-500 text-xs mt-1">{surfaceCopy.clpViaFlow}</p>
           </div>
 
-          {/* Métodos aceptados */}
-          <div className="flex items-center justify-center gap-3 text-slate-500 text-xs">
-            <span>💳 Tarjeta</span>
-            <span>•</span>
-            <span>🏦 Transferencia</span>
-            <span>•</span>
-            <span>📱 Webpay</span>
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center">
+            <p className="text-amber-300 text-sm font-semibold">
+              Mercado Pago no esta disponible en este momento.
+            </p>
+            <p className="text-amber-200/80 text-xs mt-1">
+              Intentalo de nuevo en unos segundos.
+            </p>
           </div>
 
           {error && (
@@ -176,23 +146,8 @@ export default function PaymentModal({
           >
             {surfaceCopy.cancel}
           </button>
-          <button
-            type="button"
-            onClick={handlePay}
-            disabled={loading}
-            className={uiTone.ctaPayFlow}
-          >
-            {loading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>{surfaceCopy.processing}</span>
-              </>
-            ) : (
-              <>
-                <span>💳</span>
-                <span>{surfaceCopy.payWithFlow}</span>
-              </>
-            )}
+          <button type="button" onClick={onClose} disabled={loading} className={uiTone.ctaPayFlow}>
+            <span>{surfaceCopy.close}</span>
           </button>
         </div>
       </div>

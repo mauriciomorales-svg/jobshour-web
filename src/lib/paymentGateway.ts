@@ -1,18 +1,16 @@
 /**
  * Pasarela de pago en el cliente (Next.js).
- * - Por defecto: Mercado Pago (alineado con producción actual).
- * - Flow solo si NEXT_PUBLIC_PAYMENT_GATEWAY=flow.
+ * En producción se usa SOLO Mercado Pago.
  *
  * La clave pública del brick puede venir de NEXT_PUBLIC_MP_PUBLIC_KEY o del API
  * GET /api/v1/payments/mp/brick-config (misma MP_PUBLIC_KEY que en Laravel).
  */
 import { apiFetch } from '@/lib/api'
 
-export type PublicPaymentGateway = 'mercadopago' | 'flow'
+export type PublicPaymentGateway = 'mercadopago'
 
 export function getPublicPaymentGateway(): PublicPaymentGateway {
-  const raw = (process.env.NEXT_PUBLIC_PAYMENT_GATEWAY || 'mercadopago').toLowerCase()
-  return raw === 'flow' ? 'flow' : 'mercadopago'
+  return 'mercadopago'
 }
 
 export function getMercadoPagoPublicKeyFromEnv(): string {

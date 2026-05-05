@@ -1,12 +1,11 @@
 'use client'
-import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
 import {
   prefersMercadoPagoGateway,
   getMercadoPagoPublicKeyFromEnv,
   fetchMercadoPagoBrickConfig,
 } from '@/lib/paymentGateway'
-import { JSON_REQUEST_HEADERS } from '@/lib/api'
 
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
@@ -56,50 +55,6 @@ export default function FlowPaymentModal({
       cancelled = true
     }
   }, [isOpen, envMpKey])
-
-  const handlePay = async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-      if (!token) {
-        setError(feedbackCopy.mustLoginToPay)
-        setLoading(false)
-        return
-      }
-
-      const signal =
-        typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
-          ? AbortSignal.timeout(60_000)
-          : undefined
-      const response = await fetch('/api/v1/payments/flow/init', {
-        method: 'POST',
-        headers: {
-          ...JSON_REQUEST_HEADERS,
-          Authorization: `Bearer ${token}`,
-        },
-        ...(signal ? { signal } : {}),
-        body: JSON.stringify({
-          service_request_id: serviceRequestId,
-          amount: amount,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success && data.url && data.token) {
-        // Redirigir a Flow
-        window.location.href = data.url + '?token=' + data.token
-      } else {
-        setError(data.message || 'Error al crear el pago')
-        setLoading(false)
-      }
-    } catch (err) {
-      setError(feedbackCopy.networkErrorPleaseRetry)
-      setLoading(false)
-    }
-  }
 
   if (!isOpen) return null
 
@@ -178,7 +133,9 @@ export default function FlowPaymentModal({
               <div className="text-2xl">🔒</div>
               <div>
                 <p className="font-bold text-amber-950 text-sm mb-1">{surfaceCopy.paymentSecureHeading}</p>
-                <p className="text-xs text-amber-900">{surfaceCopy.paymentSecureFlowDescription}</p>
+                <p className="text-xs text-amber-900">
+                  Mercado Pago no esta disponible en este momento. Intentalo nuevamente en unos segundos.
+                </p>
               </div>
             </div>
           </div>
@@ -199,23 +156,8 @@ export default function FlowPaymentModal({
           >
             {surfaceCopy.cancel}
           </button>
-          <button
-            type="button"
-            onClick={handlePay}
-            disabled={loading}
-            className={uiTone.ctaPayFlow}
-          >
-            {loading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>{surfaceCopy.processing}</span>
-              </>
-            ) : (
-              <>
-                <span>💳</span>
-                <span>{surfaceCopy.payWithFlow}</span>
-              </>
-            )}
+          <button type="button" onClick={onClose} disabled={loading} className={uiTone.ctaPayFlow}>
+            <span>{surfaceCopy.close}</span>
           </button>
         </div>
       </div>
