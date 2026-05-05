@@ -53,6 +53,7 @@ export default function RatingModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -65,6 +66,11 @@ export default function RatingModal({
       const data = await response.json()
 
       if (response.ok && data.status === 'success') {
+        onRated()
+        onClose()
+      } else if (response.status === 422 && typeof data?.message === 'string' && data.message.includes('Ya calificaste')) {
+        // Evita bucles cuando hay estado local desfasado.
+        localStorage.setItem(`rated_${serviceRequestId}`, 'true')
         onRated()
         onClose()
       } else {

@@ -74,7 +74,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
     }
     if (ratingRequestId) {
       const selected = requests.find((r) => r.id === ratingRequestId)
-      if (!selected || selected.status !== 'completed') {
+      if (!selected || selected.status !== 'completed' || !selected.can_rate) {
         setRatingRequestId(null)
       }
     }

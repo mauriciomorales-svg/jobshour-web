@@ -178,7 +178,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
   useEffect(() => {
     if (ratingRequestId) {
       const selected = solicitudes.find((x) => x.id === ratingRequestId)
-      if (!selected || selected.status !== 'completed') {
+      if (!selected || selected.status !== 'completed' || !selected.can_rate) {
         setRatingRequestId(null)
       }
     }

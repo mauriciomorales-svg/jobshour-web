@@ -71,41 +71,17 @@ export function useActiveServiceRequests({
           completedList.forEach((sr: any) => {
             const storageKey = `rated_${sr.id}`
             const alreadyRated = localStorage.getItem(storageKey)
-            const reviewedByApi = Boolean(sr?.user_has_reviewed)
-            const isClient = Number(sr?.client_id) === Number(user?.id)
-            const canRate = sr?.can_rate === true || (isClient && !reviewedByApi)
+            const canRate = sr?.can_rate === true
 
             if (!alreadyRated && canRate && sr.worker) {
-              fetch(`${getPublicApiBase()}/api/v1/workers/${sr.worker.id}/reviews`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              })
-                .then((r) => r.json())
-                .then((reviewsData) => {
-                  const hasReview = reviewsData.data?.some((r: any) => r.service_request_id === sr.id)
-
-                  if (!hasReview) {
-                    setTimeout(() => {
-                      setRatingRequestId(sr.id)
-                      setRatingWorkerInfo({
-                        name: sr.worker.name || 'Trabajador',
-                        avatar: sr.worker.avatar,
-                      })
-                      setShowRatingModal(true)
-                    }, 2000)
-                  }
+              setTimeout(() => {
+                setRatingRequestId(sr.id)
+                setRatingWorkerInfo({
+                  name: sr.worker.name || 'Trabajador',
+                  avatar: sr.worker.avatar,
                 })
-                .catch(() => {
-                  setTimeout(() => {
-                    setRatingRequestId(sr.id)
-                    setRatingWorkerInfo({
-                      name: sr.worker?.name || 'Trabajador',
-                      avatar: sr.worker?.avatar || null,
-                    })
-                    setShowRatingModal(true)
-                  }, 2000)
-                })
+                setShowRatingModal(true)
+              }, 1200)
             }
           })
         })
