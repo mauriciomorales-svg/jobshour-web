@@ -7,7 +7,6 @@ import { emptyStateCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
 
 const LiveTrackingModal = dynamic(() => import('./LiveTrackingModal'), { ssr: false })
-const RatingModal = dynamic(() => import('./RatingModal'), { ssr: false })
 const PaymentModal = dynamic(() => import('./PaymentModal'), { ssr: false })
 
 interface Props {
@@ -47,9 +46,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'completed' | 'cancelled'>('pending')
   const [trackingRequestId, setTrackingRequestId] = useState<number | null>(null)
-  const [ratingRequestId, setRatingRequestId] = useState<number | null>(null)
   const [paymentRequestId, setPaymentRequestId] = useState<number | null>(null)
-  const [completedRequests, setCompletedRequests] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (isOpen) {
@@ -72,12 +69,6 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
         setTrackingRequestId(null)
       }
     }
-    if (ratingRequestId) {
-      const selected = requests.find((r) => r.id === ratingRequestId)
-      if (!selected || selected.status !== 'completed' || !selected.can_rate) {
-        setRatingRequestId(null)
-      }
-    }
     if (paymentRequestId) {
       const selected = requests.find((r) => r.id === paymentRequestId)
       const paymentDone = selected?.payment_status === 'completed'
@@ -85,7 +76,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
         setPaymentRequestId(null)
       }
     }
-  }, [requests, trackingRequestId, ratingRequestId, paymentRequestId])
+  }, [requests, trackingRequestId, paymentRequestId])
 
   const fetchRequests = async () => {
     setLoading(true)
@@ -95,18 +86,6 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
       })
       const data = await res.json()
       const newRequests = data.data || []
-      
-      // Detectar servicios recién completados para mostrar modal de calificación
-      newRequests.forEach((req: ServiceRequest) => {
-        if (req.status === 'completed' && !completedRequests.has(req.id)) {
-          // Servicio recién completado, mostrar modal después de 2 segundos
-          setTimeout(() => {
-            setRatingRequestId(req.id)
-          }, 2000)
-          setCompletedRequests(prev => new Set(prev).add(req.id))
-        }
-      })
-      
       setRequests(newRequests)
     } catch (err) {
       console.error('Error fetching requests:', err)
@@ -335,16 +314,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
                         {request.payment_status === 'completed' && (
                           <span className="flex-1 text-center py-2 text-amber-400 text-sm font-bold">✅ Pagado</span>
                         )}
-                        {request.can_rate && (
-                          <button
-                            type="button"
-                            onClick={() => setRatingRequestId(request.id)}
-                            className="flex-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white py-2 rounded-xl text-sm font-bold hover:from-amber-500 hover:to-orange-600 transition shadow-lg shadow-amber-500/15 flex items-center justify-center gap-2"
-                          >
-                            <span>⭐</span>
-                            <span>Calificar</span>
-                          </button>
-                        )}
+                        {/* Reseñas desactivadas temporalmente para priorizar flujo simple */}
                       </div>
                     )}
                   </div>
@@ -391,23 +361,6 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
         )
       })()}
 
-      {/* Modal de Calificación */}
-      {ratingRequestId && (() => {
-        const request = requests.find(r => r.id === ratingRequestId)
-        if (!request) return null
-        return (
-          <RatingModal
-            isOpen={!!ratingRequestId}
-            onClose={() => setRatingRequestId(null)}
-            serviceRequestId={ratingRequestId}
-            workerName={request.worker.name}
-            workerAvatar={request.worker.avatar}
-            onRated={() => {
-              fetchRequests() // Recargar para actualizar estado
-            }}
-          />
-        )
-      })()}
     </div>
   )
 }

@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
-const RatingModal = dynamic(() => import('./RatingModal'), { ssr: false })
 const PaymentModal = dynamic(() => import('./PaymentModal'), { ssr: false })
 
 interface Solicitud {
@@ -41,15 +40,27 @@ interface Props {
   onLoginRequest: () => void
   onClose: () => void
   onOpenChat?: (requestId: number, otherName: string, otherAvatar: string | null, myRole: 'cliente' | 'trabajador', isSelf: boolean) => void
+  onHighlightOnMap?: (requestId: number) => void
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  pending:     { label: 'Esperando confirmación', color: 'text-yellow-300', bg: 'bg-yellow-500/20', icon: '⏳' },
-  accepted:    { label: 'Aceptada',               color: 'text-teal-300',   bg: 'bg-teal-500/20',   icon: '✅' },
-  in_progress: { label: 'En progreso',            color: 'text-teal-300', bg: 'bg-teal-500/20', icon: '🔧' },
-  completed:   { label: 'Completada',             color: 'text-teal-300',  bg: 'bg-teal-500/20',  icon: '🎉' },
-  cancelled:   { label: 'Cancelada',              color: 'text-gray-400',   bg: 'bg-gray-500/20',   icon: '❌' },
-  disputed:    { label: 'En disputa',             color: 'text-red-300',    bg: 'bg-red-500/20',    icon: '⚠️' },
+  pending:     { label: 'Esperando respuesta', color: 'text-yellow-300', bg: 'bg-yellow-500/20', icon: '⏳' },
+  accepted:    { label: 'Coordinado',          color: 'text-teal-300',   bg: 'bg-teal-500/20',   icon: '✅' },
+  in_progress: { label: 'En ejecución',        color: 'text-teal-300',   bg: 'bg-teal-500/20',   icon: '🚚' },
+  completed:   { label: 'Finalizado',          color: 'text-teal-300',   bg: 'bg-teal-500/20',   icon: '🎉' },
+  cancelled:   { label: 'Cancelado',           color: 'text-gray-400',   bg: 'bg-gray-500/20',   icon: '❌' },
+  disputed:    { label: 'Requiere revisión',   color: 'text-red-300',    bg: 'bg-red-500/20',    icon: '⚠️' },
+}
+
+function normalizeCategoryLabel(s: Solicitud): string {
+  const raw = (s.category?.display_name || s.category_type || s.type || '').toLowerCase()
+  if (!raw) return 'Servicio'
+  if (raw.includes('travel') || raw.includes('ride')) return 'Viaje'
+  if (raw.includes('errand') || raw.includes('recad')) return 'Compra/Recado'
+  if (raw.includes('fixed')) return 'Servicio'
+  return raw
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (m) => m.toUpperCase())
 }
 
 function timeAgo(dateStr: string): string {
@@ -103,15 +114,41 @@ function ExpirationTimer({ expiresAt }: { expiresAt: string }) {
   )
 }
 
-export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenChat }: Props) {
+export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenChat, onHighlightOnMap }: Props) {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cancelConfirmId, setCancelConfirmId] = useState<number | null>(null)
   const [cancelling, setCancelling] = useState(false)
-  const [ratingRequestId, setRatingRequestId] = useState<number | null>(null)
   const [paymentRequestId, setPaymentRequestId] = useState<number | null>(null)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
+  const [hiddenRequestIds, setHiddenRequestIds] = useState<number[]>([])
+  const [activeTab, setActiveTab] = useState<'active' | 'in_progress' | 'archived'>('active')
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user?.id) return
+    try {
+      const raw = localStorage.getItem(`jh_hidden_requests_${user.id}`)
+      const parsed = raw ? JSON.parse(raw) : []
+      if (Array.isArray(parsed)) {
+        setHiddenRequestIds(parsed.filter((x): x is number => typeof x === 'number'))
+      }
+    } catch {
+      setHiddenRequestIds([])
+    }
+  }, [user?.id])
+
+  const persistHiddenRequestIds = useCallback((next: number[]) => {
+    setHiddenRequestIds(next)
+    if (typeof window !== 'undefined' && user?.id) {
+      localStorage.setItem(`jh_hidden_requests_${user.id}`, JSON.stringify(next))
+    }
+  }, [user?.id])
+
+  const hideRequestFromList = useCallback((requestId: number) => {
+    if (hiddenRequestIds.includes(requestId)) return
+    persistHiddenRequestIds([...hiddenRequestIds, requestId])
+  }, [hiddenRequestIds, persistHiddenRequestIds])
 
   const fetchSolicitudes = useCallback(async () => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -132,35 +169,6 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
     }
   }, [])
 
-  const startBoostCheckout = useCallback(async (requestId: number) => {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-    if (!token) return
-    setActionLoading(requestId)
-    setError(null)
-    try {
-      const res = await apiFetch('/api/v1/payments/mp/demand-boost', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({ service_request_id: requestId }),
-      })
-      const data = (await res.json().catch(() => ({}))) as { link?: string; message?: string; amount_clp?: number }
-      if (!res.ok) {
-        throw new Error(data.message || `Error ${res.status}`)
-      }
-      if (data.link) {
-        window.location.href = data.link
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo iniciar el pago de destacado')
-    } finally {
-      setActionLoading(null)
-    }
-  }, [])
-
   useEffect(() => {
     if (user) fetchSolicitudes()
   }, [user, fetchSolicitudes])
@@ -173,16 +181,6 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
     }, 10000)
     return () => clearInterval(interval)
   }, [user, fetchSolicitudes])
-
-  // Evita modales "colgados" cuando la solicitud cambia estado o desaparece.
-  useEffect(() => {
-    if (ratingRequestId) {
-      const selected = solicitudes.find((x) => x.id === ratingRequestId)
-      if (!selected || selected.status !== 'completed' || !selected.can_rate) {
-        setRatingRequestId(null)
-      }
-    }
-  }, [ratingRequestId, solicitudes])
 
   useEffect(() => {
     if (paymentRequestId) {
@@ -198,6 +196,37 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
     return s.worker?.user?.id === user?.id
   }
 
+  const isOlderThanHours = (dateStr?: string, hours = 48) => {
+    if (!dateStr) return false
+    const createdAt = new Date(dateStr).getTime()
+    if (!Number.isFinite(createdAt)) return false
+    return Date.now() - createdAt > hours * 60 * 60 * 1000
+  }
+
+  const isPendingExpired = (s: Solicitud) => {
+    if (s.status !== 'pending' || !s.expires_at) return false
+    const exp = new Date(s.expires_at).getTime()
+    return Number.isFinite(exp) && exp <= Date.now()
+  }
+
+  const isStalePending = (s: Solicitud) => s.status === 'pending' && isOlderThanHours(s.created_at, 48)
+
+  const baseVisibleSolicitudes = solicitudes.filter((s) => !hiddenRequestIds.includes(s.id))
+
+  const listByTab = baseVisibleSolicitudes.filter((s) => {
+    if (activeTab === 'active') {
+      return s.status === 'pending' && !isPendingExpired(s) && !isStalePending(s)
+    }
+    if (activeTab === 'in_progress') {
+      return ['accepted', 'in_progress'].includes(s.status)
+    }
+    return (
+      ['completed', 'cancelled', 'rejected', 'disputed'].includes(s.status) ||
+      isPendingExpired(s) ||
+      isStalePending(s)
+    )
+  })
+
   return (
     <div className="fixed inset-0 z-[150] bg-slate-900 flex flex-col overflow-hidden">
 
@@ -207,14 +236,14 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
           <h2 className="text-white font-black text-xl">Mis Solicitudes</h2>
           <p className="text-slate-400 text-xs mt-0.5">
             {user
-              ? solicitudes.length > 0
-                ? `${solicitudes.length} solicitud${solicitudes.length > 1 ? 'es' : ''}`
+              ? baseVisibleSolicitudes.length > 0
+                ? `${baseVisibleSolicitudes.length} solicitud${baseVisibleSolicitudes.length > 1 ? 'es' : ''}`
                 : 'Trabajos que publicaste o tomaste'
               : 'Inicia sesión para ver tus solicitudes'}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {user && solicitudes.length > 0 && (
+          {user && baseVisibleSolicitudes.length > 0 && (
             <button
               onClick={fetchSolicitudes}
               className="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-lg flex items-center justify-center text-slate-300 transition active:scale-95"
@@ -237,6 +266,28 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-4">
+        {user && !loading && !error && (
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            {([
+              { id: 'active', label: 'Activas' },
+              { id: 'in_progress', label: 'En curso' },
+              { id: 'archived', label: 'Archivadas' },
+            ] as const).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id)}
+                className={`py-2 rounded-xl text-xs font-bold transition ${
+                  activeTab === t.id
+                    ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* No logueado */}
         {!user && (
@@ -297,29 +348,41 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
         {/* Lista */}
         {user && !loading && !error && (
           <AnimatePresence>
-            {solicitudes.length === 0 ? (
+            {listByTab.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-center py-16"
               >
                 <div className="text-5xl mb-3">📋</div>
-                <h3 className="text-white font-bold text-base mb-2">Aún sin solicitudes</h3>
+                <h3 className="text-white font-bold text-base mb-2">
+                  {activeTab === 'active'
+                    ? 'Sin solicitudes activas'
+                    : activeTab === 'in_progress'
+                      ? 'Sin servicios en curso'
+                      : 'Sin historial archivado'}
+                </h3>
                 <p className="text-slate-400 text-sm max-w-xs mx-auto leading-relaxed">
-                  Cuando publiques un trabajo o tomes una demanda del feed, aparecerá aquí
+                  {activeTab === 'archived'
+                    ? 'Aquí verás servicios finalizados, cancelados o pendientes vencidas.'
+                    : 'Cuando publiques un trabajo o tomes una demanda del feed, aparecerá aquí.'}
                 </p>
               </motion.div>
             ) : (
               <div className="space-y-3">
-                {solicitudes.map((s, i) => {
+                {listByTab.map((s, i) => {
                   const st = STATUS_CONFIG[s.status] ?? { label: s.status, color: 'text-gray-400', bg: 'bg-gray-500/20', icon: '📄' }
                   const imWorker = isMyWorkerRole(s)
                   const otherPerson = imWorker ? s.client : s.worker?.user
                   const myRole = imWorker ? 'Trabajador' : 'Cliente'
-                  const categoryName = s.category?.display_name ?? s.category_type ?? ''
+                  const categoryName = normalizeCategoryLabel(s)
                   const categoryColor = s.category?.color ?? '#6b7280'
                   const isPending = s.status === 'pending'
                   const isActive = ['pending', 'accepted', 'in_progress'].includes(s.status)
+                  const canOpenChatNow = ['accepted', 'in_progress'].includes(s.status)
+                  const canCompleteAsWorker = imWorker && ['accepted', 'in_progress'].includes(s.status)
+                  const isCompletedAsClient = !imWorker && s.status === 'completed'
+                  const canPayNow = isCompletedAsClient && (!s.payment_status || s.payment_status === 'pending')
                   if (s.status === 'cancelled') return null
 
                   return (
@@ -445,37 +508,42 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                           )}
                         </div>
 
-                        {/* Row 3: Action buttons */}
+                        {/* Row 3: Action buttons (1 CTA principal + secundarios puntuales) */}
                         {(isActive || s.status === 'completed') && (
                           <div className="flex gap-2 mt-3 flex-wrap">
-                            {isActive && (() => {
+                            {canOpenChatNow && (() => {
                               const otherPerson2 = imWorker ? s.client : s.worker?.user
                               const isSelf2 = otherPerson2?.id === user?.id
                               const myRole2: 'cliente' | 'trabajador' = imWorker ? 'trabajador' : 'cliente'
+                              if (!otherPerson2?.id || isSelf2) return null
                               return (
                                 <button
                                   onClick={() => onOpenChat?.(s.id, otherPerson2?.name ?? '', otherPerson2?.avatar ?? null, myRole2, isSelf2)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-teal-500/15 hover:bg-teal-500/25 text-teal-400 rounded-xl text-xs font-bold transition active:scale-95 border border-teal-500/25"
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 rounded-xl text-xs font-black transition active:scale-95 border border-teal-500/35"
                                 >
-                                  💬 Chat
+                                  💬 Abrir chat
                                 </button>
                               )
                             })()}
                             {!imWorker && isPending && (
                               <button
                                 type="button"
-                                disabled={actionLoading === s.id}
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  startBoostCheckout(s.id)
+                                  onHighlightOnMap?.(s.id)
                                 }}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl text-xs font-bold transition active:scale-95 border border-amber-500/35 disabled:opacity-50"
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl text-xs font-black transition active:scale-95 border border-amber-500/35"
                               >
-                                {actionLoading === s.id ? '…' : '⚡ Destacar en mapa'}
+                                ⚡ Destacar en mapa
                               </button>
                             )}
-                            {/* Worker: botón Completar */}
-                            {imWorker && ['accepted', 'in_progress'].includes(s.status) && (
+                          {isPending && (
+                              <span className="flex-1 text-center py-2.5 text-slate-300 text-xs font-bold bg-slate-700/50 rounded-xl border border-slate-600/60">
+                                ⏳ Esperando que alguien confirme
+                              </span>
+                            )}
+                            {/* Secundario worker: completar */}
+                            {canCompleteAsWorker && (
                               <button
                                 disabled={actionLoading === s.id}
                                 onClick={async () => {
@@ -497,26 +565,20 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                                 {actionLoading === s.id ? '...' : '✓ Completar'}
                               </button>
                             )}
-                            {/* Cliente: botones Pagar + Calificar en completed */}
-                            {!imWorker && s.status === 'completed' && (
+                            {/* CTA principal cliente en completado */}
+                            {isCompletedAsClient && (
                               <>
-                                {(!s.payment_status || s.payment_status === 'pending') ? (
+                                {canPayNow ? (
                                   <button
                                     onClick={() => setPaymentRequestId(s.id)}
-                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-xs font-bold transition active:scale-95 border border-amber-500/30"
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl text-xs font-black transition active:scale-95 border border-amber-500/35"
                                   >
                                     💳 Pagar
                                   </button>
                                 ) : (
-                                  <span className="flex-1 text-center py-2 text-amber-400 text-xs font-bold">✅ Pagado</span>
-                                )}
-                                {s.can_rate && (
-                                  <button
-                                    onClick={() => setRatingRequestId(s.id)}
-                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-xs font-bold transition active:scale-95 border border-amber-500/30"
-                                  >
-                                    ⭐ Calificar
-                                  </button>
+                                  <span className="flex-1 text-center py-2.5 text-amber-300 text-xs font-black bg-amber-500/15 rounded-xl border border-amber-500/30">
+                                    ✅ Pagado
+                                  </span>
                                 )}
                               </>
                             )}
@@ -562,6 +624,16 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                                 </button>
                               )
                             )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                hideRequestFromList(s.id)
+                              }}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-700/60 hover:bg-slate-600/70 text-slate-300 rounded-xl text-xs font-bold transition active:scale-95 border border-slate-600/60"
+                            >
+                              🗂 Ocultar
+                            </button>
                           </div>
                         )}
                       </div>
@@ -574,27 +646,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
         )}
       </div>
 
-      {/* Modal Calificación */}
-      {ratingRequestId && (() => {
-        const s = solicitudes.find(x => x.id === ratingRequestId)
-        if (!s) return null
-        if (!s.can_rate) return null
-        const otherPerson = isMyWorkerRole(s) ? s.client : s.worker?.user
-        return (
-          <RatingModal
-            isOpen
-            onClose={() => setRatingRequestId(null)}
-            serviceRequestId={ratingRequestId}
-            workerName={otherPerson?.name ?? 'Trabajador'}
-            workerAvatar={otherPerson?.avatar ?? null}
-            onRated={() => {
-              localStorage.setItem(`rated_${ratingRequestId}`, 'true')
-              setRatingRequestId(null)
-              fetchSolicitudes()
-            }}
-          />
-        )
-      })()}
+      {/* Reseñas desactivadas temporalmente para evitar fricción en UX. */}
 
       {/* Modal Pago */}
       {paymentRequestId && (() => {
