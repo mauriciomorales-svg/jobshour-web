@@ -21,18 +21,15 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [recovering, setRecovering] = useState(false)
 
   // Cargar credenciales guardadas al abrir
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedEmail = localStorage.getItem('saved_email')
-      const savedPassword = localStorage.getItem('saved_password')
       if (savedEmail) {
         setEmail(savedEmail)
         setRememberMe(true)
-      }
-      if (savedPassword) {
-        setPassword(savedPassword)
       }
     }
   }, [])
@@ -60,10 +57,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
       // Guardar credenciales si "Recordarme" está activo
       if (rememberMe) {
         localStorage.setItem('saved_email', email)
-        localStorage.setItem('saved_password', password)
       } else {
         localStorage.removeItem('saved_email')
-        localStorage.removeItem('saved_password')
       }
 
       onSuccess(data.user, data.token)
@@ -74,7 +69,48 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
     }
   }
 
-  const handleOAuth = async (e: React.MouseEvent, provider: 'google' | 'facebook') => {
+  const handleForgotPassword = async () => {
+    const targetEmail = (email || '').trim() || window.prompt('Ingresa tu correo para recuperar contrasena:', '') || ''
+    if (!targetEmail) return
+    setRecovering(true)
+    try {
+      const r = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: JSON_REQUEST_HEADERS,
+        body: JSON.stringify({ email: targetEmail }),
+      })
+      const d = await r.json().catch(() => ({}))
+      alert(d.message || 'Si el correo existe, te enviamos un codigo.')
+
+      const code = window.prompt('Ingresa el codigo de 6 digitos que recibiste:')
+      if (!code) return
+      const newPassword = window.prompt('Ingresa tu nueva contrasena (min 8 caracteres):')
+      if (!newPassword || newPassword.length < 8) {
+        alert('La contrasena debe tener al menos 8 caracteres.')
+        return
+      }
+
+      const rr = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: JSON_REQUEST_HEADERS,
+        body: JSON.stringify({ email: targetEmail, code: code.trim(), password: newPassword }),
+      })
+      const rd = await rr.json().catch(() => ({}))
+      if (!rr.ok) {
+        alert(rd.message || 'No se pudo restablecer la contrasena')
+        return
+      }
+      alert(rd.message || 'Contrasena actualizada')
+      setEmail(targetEmail)
+      setPassword('')
+    } catch {
+      alert(feedbackCopy.networkError)
+    } finally {
+      setRecovering(false)
+    }
+  }
+
+  const handleOAuth = async (e: React.MouseEvent, provider: 'google') => {
     e.preventDefault()
     e.stopPropagation()
     const authUrl = apiUrl(`/api/auth/${provider}?mobile=true`)
@@ -236,10 +272,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
             <div className="text-right">
               <button
                 type="button"
-                onClick={onForgotPassword}
+                onClick={handleForgotPassword}
+                disabled={recovering}
                 className="text-sm text-amber-400 hover:text-amber-300 font-semibold transition"
               >
-                {surfaceCopy.forgotPassword}
+                {recovering ? 'Recuperando...' : surfaceCopy.forgotPassword}
               </button>
             </div>
 
@@ -286,16 +323,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
               <span>Google</span>
             </button>
 
-            <button
-              type="button"
-              onClick={(e) => handleOAuth(e, 'facebook')}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 hover:bg-slate-700 text-sm text-slate-200 font-semibold transition"
-            >
-              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="#1877F2">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              <span>Facebook</span>
-            </button>
           </div>
 
           {/* Register Link */}
