@@ -89,6 +89,13 @@ function buildPublicProductUrl(workerId: number, productId: number, productName?
   return `${origin}/p/${workerId}-${productId}-${safeName}`
 }
 
+function suggestProductTemplate(p: Producto): 'premium' | 'oferta' | 'usado' {
+  const raw = `${p.nombre || ''} ${p.descripcion || ''}`.toLowerCase()
+  if (/(usado|segunda mano|semi nuevo|seminuevo)/.test(raw)) return 'usado'
+  if (/(oferta|promo|descuento|liquidacion|liquidación|rebaja)/.test(raw)) return 'oferta'
+  return 'premium'
+}
+
 // ─── Hook reconocimiento de voz ───────────────────────────────────────────────
 function useSpeech(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false)
@@ -803,8 +810,13 @@ export default function TiendaPage() {
   }
 
   const shareSingleProduct = useCallback((p: Producto) => {
-    const url = withShareUtm(buildPublicProductUrl(workerId, p.idproducto, p.nombre), 'product_card')
-    const text = `🛍️ ${p.nombre} — ${formatPrice(p.precio_venta ?? p.precio)}\n${url}`
+    const tpl = suggestProductTemplate(p)
+    const base = buildPublicProductUrl(workerId, p.idproducto, p.nombre)
+    const urlObj = new URL(base)
+    urlObj.searchParams.set('tpl', tpl)
+    const url = withShareUtm(urlObj.toString(), 'product_card')
+    const store = worker?.store_name || worker?.name || 'Tienda'
+    const text = `🛍️ ${p.nombre}\n💵 ${formatPrice(p.precio_venta ?? p.precio)}\n📍 Publicado con JobsHours en ${store}\n👉 Ver tarjeta y comprar:\n${url}`
     const canNative =
       typeof navigator !== 'undefined' &&
       'share' in navigator &&
@@ -823,7 +835,7 @@ export default function TiendaPage() {
 
     navigator.clipboard.writeText(text)
     alert('Link del producto copiado')
-  }, [workerId])
+  }, [worker?.name, worker?.store_name, workerId])
   const eliminarProducto = async (idproducto: number, nombre: string) => {
     if (!confirm(`¿Eliminar "${nombre}" de la tienda?`)) return
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -1451,14 +1463,28 @@ export default function TiendaPage() {
                       )
                     )}
 
-                    <button
-                      type="button"
-                      onClick={() => shareSingleProduct(p)}
-                      className="w-full mt-2 border border-orange-200 text-orange-600 hover:bg-orange-50 text-xs font-bold py-2 rounded-lg transition inline-flex items-center justify-center gap-1.5"
-                    >
-                      <Link2 className="w-3.5 h-3.5" />
-                      Compartir producto
-                    </button>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const tpl = suggestProductTemplate(p)
+                          const cardUrl = `${buildPublicProductUrl(workerId, p.idproducto, p.nombre)}?tpl=${tpl}`
+                          window.open(cardUrl, '_blank', 'noopener,noreferrer')
+                        }}
+                        className="border border-slate-200 text-slate-700 hover:bg-slate-50 text-[11px] font-bold py-2 rounded-lg transition inline-flex items-center justify-center gap-1"
+                      >
+                        <Link2 className="w-3.5 h-3.5" />
+                        Tarjeta
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => shareSingleProduct(p)}
+                        className="border border-orange-200 text-orange-600 hover:bg-orange-50 text-[11px] font-bold py-2 rounded-lg transition inline-flex items-center justify-center gap-1"
+                      >
+                        <Link2 className="w-3.5 h-3.5" />
+                        Compartir
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
