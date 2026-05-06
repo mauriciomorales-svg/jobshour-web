@@ -8,7 +8,7 @@ import { ArrowLeft, Share2, MessageCircle, FileDown, Package, ShoppingCart, Badg
 import { trackEvent } from '@/lib/analytics'
 import { downloadBrandedProductPdf } from '@/lib/brandedProductPdf'
 import { conditionLabel, inferProductCondition, marketingCopyByCategory, ProductShareTemplate } from '@/lib/productShare'
-import { openWhatsAppWithText, publicProductUrl, whatsAppProductShareText, withShareUtm } from '@/lib/marketingShare'
+import { openWhatsAppWithText, withShareUtm } from '@/lib/marketingShare'
 
 const INVENTARIO_API = '/inventario'
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
@@ -34,6 +34,34 @@ function formatPrice(n: number) {
   return '$' + Math.round(n).toLocaleString('es-CL')
 }
 
+function getSiteOriginSafe(): string {
+  if (typeof window !== 'undefined') return window.location.origin
+  return 'https://jobshours.com'
+}
+
+function buildPublicProductUrl(workerId: number, productId: number, productName?: string | null): string {
+  const safeName = (productName || 'producto')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48) || 'producto'
+  return `${getSiteOriginSafe()}/p/${workerId}-${productId}-${safeName}`
+}
+
+function buildWhatsAppProductShareText(opts: {
+  productName: string
+  storeName?: string | null
+  priceFormatted?: string
+  productUrl: string
+}): string {
+  const store = opts.storeName?.trim() || 'mi tienda'
+  const price = opts.priceFormatted ? `\nPrecio: ${opts.priceFormatted}` : ''
+  const url = withShareUtm(opts.productUrl, 'product_share')
+  return `Te comparto este producto de ${store} en JobsHours:\n${opts.productName}${price}\nVer ficha:\n${url}`
+}
+
 export default function ProductShareView({ workerId, productId }: { workerId: number; productId: number }) {
   const [loading, setLoading] = useState(true)
   const [product, setProduct] = useState<Product | null>(null)
@@ -44,7 +72,7 @@ export default function ProductShareView({ workerId, productId }: { workerId: nu
   const cardRef = useRef<HTMLDivElement | null>(null)
 
   const publicUrl = useMemo(
-    () => publicProductUrl(workerId, productId, product?.nombre),
+    () => buildPublicProductUrl(workerId, productId, product?.nombre),
     [workerId, productId, product?.nombre]
   )
   const price = product ? (product.precio_venta ?? product.precio) : 0
@@ -107,7 +135,7 @@ export default function ProductShareView({ workerId, productId }: { workerId: nu
   const handleWhatsApp = () => {
     if (!product) return
     trackEvent('whatsapp_share', { workerId, productId })
-    openWhatsAppWithText(whatsAppProductShareText({
+    openWhatsAppWithText(buildWhatsAppProductShareText({
       productName: product.nombre,
       storeName,
       priceFormatted: formatPrice(price),
