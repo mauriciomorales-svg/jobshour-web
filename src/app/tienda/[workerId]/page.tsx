@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { trackEvent } from '@/lib/analytics'
+import { getLocalAnalyticsEvents, trackEvent } from '@/lib/analytics'
 import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info, FileDown } from 'lucide-react'
 import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
-import { displayPublicUrl, publicTiendaUrl, withShareUtm } from '@/lib/marketingShare'
+import { displayPublicUrl, publicProductUrl, publicTiendaUrl, withShareUtm } from '@/lib/marketingShare'
 
 // Misma lógica que page.tsx: base sin /api para llamadas a jobshours API
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
@@ -116,7 +116,7 @@ function MicBtn({ onResult, className = '' }: { onResult: (t: string) => void; c
 function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
   isOpen: boolean; onClose: () => void; workerId: number; onSuccess: () => void
 }) {
-  const [form, setForm] = useState({ nombre: '', precio: '', precioVenta: '', stock: '1', codigo: '', descripcion: '' })
+  const [form, setForm] = useState({ nombre: '', precio: '', precioVenta: '', stock: '1', codigo: '', descripcion: '', condition: 'nuevo' })
   const [imagen, setImagen] = useState<File | null>(null)
   const [preview, setPreview] = useState('')
   const [saving, setSaving] = useState(false)
@@ -131,7 +131,7 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
 
   useEffect(() => {
     if (!isOpen) return
-    setForm({ nombre: '', precio: '', precioVenta: '', stock: '1', codigo: '', descripcion: '' })
+    setForm({ nombre: '', precio: '', precioVenta: '', stock: '1', codigo: '', descripcion: '', condition: 'nuevo' })
     setImagen(null); setPreview(''); setError(''); setCategoria('')
     fetch(`${INVENTARIO_API}/categorias?worker_id=${workerId}`)
       .then(r => r.json()).then(d => setCategorias(d.data ?? [])).catch(() => {})
@@ -152,7 +152,8 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
     try {
       const fd = new FormData()
       fd.append('nombre', form.nombre.trim())
-      fd.append('descripcion', form.descripcion.trim())
+      const descWithCondition = `[estado:${form.condition}] ${form.descripcion.trim()}`.trim()
+      fd.append('descripcion', descWithCondition)
       fd.append('precio', form.precio)
       fd.append('precio_venta', String(precioVentaFinal))
       fd.append('stock_actual', form.stock || '1')
@@ -264,6 +265,20 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
             <select value={categoria} onChange={e => setCategoria(e.target.value)} className={inp}>
               <option value="">Sin categoría</option>
               {categorias.map(c => <option key={c.idcategoria} value={c.idcategoria}>{c.nombre}</option>)}
+            </select>
+          </div>
+
+          {/* Estado del producto */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 mb-1 ml-1">Estado</label>
+            <select
+              value={form.condition}
+              onChange={e => setForm(f => ({ ...f, condition: e.target.value }))}
+              className={inp}
+            >
+              <option value="nuevo">Nuevo</option>
+              <option value="seminuevo">Seminuevo</option>
+              <option value="usado">Usado</option>
             </select>
           </div>
 
@@ -526,6 +541,24 @@ export default function TiendaPage() {
   const [tab, setTab] = useState<'catalogo' | 'stats'>('catalogo')
   const [stats, setStats] = useState<any>(null)
   const [loadingStats, setLoadingStats] = useState(false)
+  const [marketingStats, setMarketingStats] = useState<{
+    views: number
+    shares: number
+    whatsapp: number
+    pdf: number
+    checkouts: number
+    topProducts: Array<{ productId: number; name: string; touches: number }>
+    lastUpdate: number | null
+  } | null>(null)
+  const [marketingDaily, setMarketingDaily] = useState<Array<{
+    day: string
+    views: number
+    shares: number
+    whatsapp: number
+    pdf: number
+    checkouts: number
+  }>>([])
+  const [marketingConversion, setMarketingConversion] = useState<{ share_to_checkout_rate: number; view_to_checkout_rate: number } | null>(null)
   const [checkoutMode, setCheckoutMode] = useState<'purchase' | 'quote'>('purchase')
   const [quoteExpiryHours, setQuoteExpiryHours] = useState('72')
   const [quotePublicUrl, setQuotePublicUrl] = useState<string | null>(null)
@@ -606,6 +639,91 @@ export default function TiendaPage() {
 
   useEffect(() => { if (isOwner && tab === 'stats') fetchStats() }, [isOwner, tab])
 
+  const fetchMarketingStats = useCallback(async () => {
+    if (!isOwner || typeof window === 'undefined') return
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (token) {
+      try {
+        const r = await fetch(`${API_BASE}/api/v1/analytics/worker/${workerId}/summary?days=30`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        })
+        const d = await r.json()
+        if (r.ok && d?.status === 'success' && d?.data) {
+          const totals = d.data.totals ?? {}
+          setMarketingStats({
+            views: Number(totals.views ?? 0),
+            shares: Number(totals.shares ?? 0),
+            whatsapp: Number(totals.whatsapp ?? 0),
+            pdf: Number(totals.pdf ?? 0),
+            checkouts: Number(totals.checkouts ?? 0),
+            topProducts: (d.data.top_products ?? []).map((p: any) => ({
+              productId: Number(p.product_id ?? 0),
+              name: (productos.find((x) => x.idproducto === Number(p.product_id))?.nombre) ?? `Producto #${p.product_id}`,
+              touches: Number(p.touches ?? 0),
+            })),
+            lastUpdate: Date.now(),
+          })
+          setMarketingDaily((d.data.daily ?? []).map((row: any) => ({
+            day: String(row.day),
+            views: Number(row.views ?? 0),
+            shares: Number(row.shares ?? 0),
+            whatsapp: Number(row.whatsapp ?? 0),
+            pdf: Number(row.pdf ?? 0),
+            checkouts: Number(row.checkouts ?? 0),
+          })))
+          setMarketingConversion({
+            share_to_checkout_rate: Number(d.data.conversion?.share_to_checkout_rate ?? 0),
+            view_to_checkout_rate: Number(d.data.conversion?.view_to_checkout_rate ?? 0),
+          })
+          return
+        }
+      } catch {
+        // fallback local below
+      }
+    }
+
+    const events = getLocalAnalyticsEvents()
+    const filtered = events.filter((ev) => {
+      const payload = ev.payload ?? {}
+      const wid = Number(payload.workerId ?? payload.worker_id ?? 0)
+      return wid === workerId
+    })
+
+    const views = filtered.filter((e) => e.name === 'product_view_shared').length
+    const shares = filtered.filter((e) => e.name === 'share_click').length
+    const whatsapp = filtered.filter((e) => e.name === 'whatsapp_share').length
+    const pdf = filtered.filter((e) => e.name === 'pdf_download').length
+    const checkouts = filtered.filter((e) => e.name === 'checkout_from_share').length
+
+    const touchesByProduct = new Map<number, number>()
+    for (const ev of filtered) {
+      const pid = Number(ev.payload?.productId ?? ev.payload?.product_id ?? 0)
+      if (!pid) continue
+      touchesByProduct.set(pid, (touchesByProduct.get(pid) ?? 0) + 1)
+    }
+    const productNames = new Map(productos.map((p) => [p.idproducto, p.nombre] as const))
+    const topProducts = Array.from(touchesByProduct.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([productId, touches]) => ({
+        productId,
+        name: productNames.get(productId) ?? `Producto #${productId}`,
+        touches,
+      }))
+
+    const lastUpdate = filtered.length > 0 ? Math.max(...filtered.map((e) => e.t)) : null
+    setMarketingStats({ views, shares, whatsapp, pdf, checkouts, topProducts, lastUpdate })
+    setMarketingDaily([])
+    setMarketingConversion({
+      share_to_checkout_rate: shares > 0 ? Number((checkouts / shares).toFixed(4)) : 0,
+      view_to_checkout_rate: views > 0 ? Number((checkouts / views).toFixed(4)) : 0,
+    })
+  }, [isOwner, workerId, productos])
+
+  useEffect(() => {
+    if (isOwner && tab === 'stats') fetchMarketingStats()
+  }, [isOwner, tab, fetchMarketingStats])
+
   // Worker info (mismo origen vía origin)
   useEffect(() => {
     if (!workerId || typeof window === 'undefined') return
@@ -660,6 +778,29 @@ export default function TiendaPage() {
     if (qty <= 0) { removeFromCart(id); return }
     setCart(prev => prev.map(i => i.idproducto === id ? { ...i, cantidad: Math.min(qty, i.stock_actual) } : i))
   }
+
+  const shareSingleProduct = useCallback((p: Producto) => {
+    const url = withShareUtm(publicProductUrl(workerId, p.idproducto, p.nombre), 'product_card')
+    const text = `🛍️ ${p.nombre} — ${formatPrice(p.precio_venta ?? p.precio)}\n${url}`
+    const canNative =
+      typeof navigator !== 'undefined' &&
+      'share' in navigator &&
+      typeof (navigator as Navigator & { share?: (data: ShareData) => Promise<void> }).share === 'function'
+
+    trackEvent('marketing_share_producto', {
+      worker_id: workerId,
+      product_id: p.idproducto,
+      via: canNative ? 'native' : 'clipboard',
+    })
+
+    if (canNative && navigator.share) {
+      navigator.share({ title: p.nombre, text, url }).catch(() => {})
+      return
+    }
+
+    navigator.clipboard.writeText(text)
+    alert('Link del producto copiado')
+  }, [workerId])
   const eliminarProducto = async (idproducto: number, nombre: string) => {
     if (!confirm(`¿Eliminar "${nombre}" de la tienda?`)) return
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -1074,6 +1215,76 @@ export default function TiendaPage() {
                 </div>
               </div>
 
+              {/* Embudo marketing de producto */}
+              {marketingStats && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-gray-900">📣 Embudo marketing (shares)</h3>
+                    <button
+                      type="button"
+                      onClick={fetchMarketingStats}
+                      className="text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-lg hover:bg-orange-100 transition"
+                    >
+                      Actualizar
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <div className="rounded-xl bg-slate-50 border border-slate-100 p-3"><p className="text-[11px] text-slate-500">Vistas ficha</p><p className="text-xl font-black text-slate-900">{marketingStats.views}</p></div>
+                    <div className="rounded-xl bg-slate-50 border border-slate-100 p-3"><p className="text-[11px] text-slate-500">Clicks compartir</p><p className="text-xl font-black text-slate-900">{marketingStats.shares}</p></div>
+                    <div className="rounded-xl bg-slate-50 border border-slate-100 p-3"><p className="text-[11px] text-slate-500">WhatsApp</p><p className="text-xl font-black text-emerald-700">{marketingStats.whatsapp}</p></div>
+                    <div className="rounded-xl bg-slate-50 border border-slate-100 p-3"><p className="text-[11px] text-slate-500">PDF/Story</p><p className="text-xl font-black text-violet-700">{marketingStats.pdf}</p></div>
+                    <div className="rounded-xl bg-amber-50 border border-amber-100 p-3"><p className="text-[11px] text-amber-700">Checkout desde share</p><p className="text-xl font-black text-amber-700">{marketingStats.checkouts}</p></div>
+                  </div>
+                  {marketingStats.topProducts.length > 0 && (
+                    <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                      <p className="text-xs font-bold text-slate-700 mb-2">Top productos con más interacción</p>
+                      <div className="space-y-1.5">
+                        {marketingStats.topProducts.map((item) => (
+                          <div key={item.productId} className="flex items-center justify-between text-xs">
+                            <span className="text-slate-700 truncate pr-2">{item.name}</span>
+                            <span className="font-black text-slate-900">{item.touches}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-400">
+                    {marketingStats.lastUpdate
+                      ? `Actualizado: ${new Date(marketingStats.lastUpdate).toLocaleString('es-CL')}`
+                      : 'Sin eventos de marketing todavia'}
+                  </p>
+                  {marketingConversion && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
+                        <p className="text-[11px] text-emerald-700">Conversion share → checkout</p>
+                        <p className="text-lg font-black text-emerald-700">{(marketingConversion.share_to_checkout_rate * 100).toFixed(1)}%</p>
+                      </div>
+                      <div className="rounded-xl bg-cyan-50 border border-cyan-100 p-3">
+                        <p className="text-[11px] text-cyan-700">Conversion vista → checkout</p>
+                        <p className="text-lg font-black text-cyan-700">{(marketingConversion.view_to_checkout_rate * 100).toFixed(1)}%</p>
+                      </div>
+                    </div>
+                  )}
+                  {marketingDaily.length > 0 && (
+                    <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                      <p className="text-xs font-bold text-slate-700 mb-2">Serie diaria (ultimos 30 dias)</p>
+                      <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                        {marketingDaily.map((row) => (
+                          <div key={row.day} className="grid grid-cols-6 gap-2 text-[11px]">
+                            <span className="text-slate-500">{row.day.slice(5)}</span>
+                            <span className="font-bold text-slate-700">{row.views}</span>
+                            <span className="font-bold text-slate-700">{row.shares}</span>
+                            <span className="font-bold text-emerald-700">{row.whatsapp}</span>
+                            <span className="font-bold text-violet-700">{row.pdf}</span>
+                            <span className="font-black text-amber-700">{row.checkouts}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Motivación ganancia */}
               {stats.ganancia_estimada > 0 && (
                 <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl p-5 text-white shadow-lg shadow-amber-500/25">
@@ -1216,6 +1427,15 @@ export default function TiendaPage() {
                         </button>
                       )
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => shareSingleProduct(p)}
+                      className="w-full mt-2 border border-orange-200 text-orange-600 hover:bg-orange-50 text-xs font-bold py-2 rounded-lg transition inline-flex items-center justify-center gap-1.5"
+                    >
+                      <Link2 className="w-3.5 h-3.5" />
+                      Compartir producto
+                    </button>
                   </div>
                 </div>
               )
@@ -1454,41 +1674,42 @@ export default function TiendaPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    try {
-                      trackEvent('quote_pdf_download', {
-                        source: 'tienda_worker_modal',
-                        quote_id: quotePdfSnapshot.quoteId,
-                      })
-                      downloadBrandedQuotePdf({
-                        storeName: quotePdfSnapshot.worker.store_name || 'Tienda JobsHours',
-                        workerName: quotePdfSnapshot.worker.name || '—',
-                        buyerName: quotePdfSnapshot.buyer.name,
-                        buyerEmail: quotePdfSnapshot.buyer.email,
-                        buyerPhone: quotePdfSnapshot.buyer.phone,
-                        rows: quotePdfSnapshot.lines.map((l) => ({
-                          title: l.nombre,
-                          quantity: l.cantidad,
-                          amount: l.subtotal,
-                        })),
-                        extras: [
-                          { label: 'Servicio plataforma JobsHours (8%)', amount: quotePdfSnapshot.commission },
-                          ...(quotePdfSnapshot.laborEnabled && quotePdfSnapshot.laborAmountNum > 0
-                            ? [
-                                {
-                                  label: quotePdfSnapshot.laborDesc || 'Mano de obra / servicio',
-                                  amount: quotePdfSnapshot.laborAmountNum,
-                                },
-                              ]
-                            : []),
-                        ],
-                        total: quotePdfSnapshot.total,
-                        expiresAt: quotePdfSnapshot.expiresAt,
-                        publicUrl: quotePdfSnapshot.publicUrl,
-                        quoteId: quotePdfSnapshot.quoteId,
-                      })
-                    } catch {
+                    trackEvent('quote_pdf_download', {
+                      source: 'tienda_worker_modal',
+                      quote_id: quotePdfSnapshot.quoteId,
+                    })
+                    void downloadBrandedQuotePdf({
+                      storeName: quotePdfSnapshot.worker.store_name || 'Tienda JobsHours',
+                      workerName: quotePdfSnapshot.worker.name || '—',
+                      buyerName: quotePdfSnapshot.buyer.name,
+                      buyerEmail: quotePdfSnapshot.buyer.email,
+                      buyerPhone: quotePdfSnapshot.buyer.phone,
+                      rows: quotePdfSnapshot.lines.map((l) => ({
+                        title: l.nombre,
+                        quantity: l.cantidad,
+                        amount: l.subtotal,
+                      })),
+                      extras: [
+                        { label: 'Servicio plataforma JobsHours (8%)', amount: quotePdfSnapshot.commission },
+                        ...(quotePdfSnapshot.laborEnabled && quotePdfSnapshot.laborAmountNum > 0
+                          ? [
+                              {
+                                label: quotePdfSnapshot.laborDesc || 'Mano de obra / servicio',
+                                amount: quotePdfSnapshot.laborAmountNum,
+                              },
+                            ]
+                          : []),
+                      ],
+                      total: quotePdfSnapshot.total,
+                      expiresAt: quotePdfSnapshot.expiresAt,
+                      publicUrl: quotePdfSnapshot.publicUrl,
+                      quoteId: quotePdfSnapshot.quoteId,
+                      brandName: quotePdfSnapshot.worker.store_name || 'Tienda JobsHours',
+                      brandTagline: 'Tu vitrina digital para vender productos, lotes y oportunidades',
+                      campaignCta: 'Escanea el QR y revisa esta tarjeta de producto',
+                    }).catch(() => {
                       alert(feedbackCopy.pdfGenerateError)
-                    }
+                    })
                   }}
                   className="w-full bg-white border-2 border-orange-400 text-orange-600 hover:bg-orange-50 font-black py-3 rounded-xl transition flex items-center justify-center gap-2"
                 >
