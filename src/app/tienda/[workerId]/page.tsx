@@ -1701,35 +1701,37 @@ export default function TiendaPage() {
                       source: 'tienda_worker_modal',
                       quote_id: quotePdfSnapshot.quoteId,
                     })
-                    void downloadBrandedQuotePdf({
-                      storeName: quotePdfSnapshot.worker.store_name || 'Tienda JobsHours',
-                      workerName: quotePdfSnapshot.worker.name || '—',
-                      buyerName: quotePdfSnapshot.buyer.name,
-                      buyerEmail: quotePdfSnapshot.buyer.email,
-                      buyerPhone: quotePdfSnapshot.buyer.phone,
-                      rows: quotePdfSnapshot.lines.map((l) => ({
-                        title: l.nombre,
-                        quantity: l.cantidad,
-                        amount: l.subtotal,
-                      })),
-                      extras: [
-                        { label: 'Servicio plataforma JobsHours (8%)', amount: quotePdfSnapshot.commission },
-                        ...(quotePdfSnapshot.laborEnabled && quotePdfSnapshot.laborAmountNum > 0
-                          ? [
-                              {
-                                label: quotePdfSnapshot.laborDesc || 'Mano de obra / servicio',
-                                amount: quotePdfSnapshot.laborAmountNum,
-                              },
-                            ]
-                          : []),
-                      ],
-                      total: quotePdfSnapshot.total,
-                      expiresAt: quotePdfSnapshot.expiresAt,
-                      publicUrl: quotePdfSnapshot.publicUrl,
-                      quoteId: quotePdfSnapshot.quoteId,
-                    }).catch(() => {
+                    try {
+                      void downloadBrandedQuotePdf({
+                        storeName: quotePdfSnapshot.worker.store_name || 'Tienda JobsHours',
+                        workerName: quotePdfSnapshot.worker.name || '—',
+                        buyerName: quotePdfSnapshot.buyer.name,
+                        buyerEmail: quotePdfSnapshot.buyer.email,
+                        buyerPhone: quotePdfSnapshot.buyer.phone,
+                        rows: quotePdfSnapshot.lines.map((l) => ({
+                          title: l.nombre,
+                          quantity: l.cantidad,
+                          amount: l.subtotal,
+                        })),
+                        extras: [
+                          { label: 'Servicio plataforma JobsHours (8%)', amount: quotePdfSnapshot.commission },
+                          ...(quotePdfSnapshot.laborEnabled && quotePdfSnapshot.laborAmountNum > 0
+                            ? [
+                                {
+                                  label: quotePdfSnapshot.laborDesc || 'Mano de obra / servicio',
+                                  amount: quotePdfSnapshot.laborAmountNum,
+                                },
+                              ]
+                            : []),
+                        ],
+                        total: quotePdfSnapshot.total,
+                        expiresAt: quotePdfSnapshot.expiresAt,
+                        publicUrl: quotePdfSnapshot.publicUrl,
+                        quoteId: quotePdfSnapshot.quoteId,
+                      })
+                    } catch {
                       alert(feedbackCopy.pdfGenerateError)
-                    })
+                    }
                   }}
                   className="w-full bg-white border-2 border-orange-400 text-orange-600 hover:bg-orange-50 font-black py-3 rounded-xl transition flex items-center justify-center gap-2"
                 >
