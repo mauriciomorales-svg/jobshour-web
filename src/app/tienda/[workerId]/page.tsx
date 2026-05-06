@@ -1727,9 +1727,6 @@ export default function TiendaPage() {
                       expiresAt: quotePdfSnapshot.expiresAt,
                       publicUrl: quotePdfSnapshot.publicUrl,
                       quoteId: quotePdfSnapshot.quoteId,
-                      brandName: quotePdfSnapshot.worker.store_name || 'Tienda JobsHours',
-                      brandTagline: 'Tu vitrina digital para vender productos, lotes y oportunidades',
-                      campaignCta: 'Escanea el QR y revisa esta tarjeta de producto',
                     }).catch(() => {
                       alert(feedbackCopy.pdfGenerateError)
                     })
