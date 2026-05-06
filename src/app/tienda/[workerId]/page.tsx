@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { getLocalAnalyticsEvents, trackEvent } from '@/lib/analytics'
+import { trackEvent } from '@/lib/analytics'
 import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info, FileDown } from 'lucide-react'
 import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
-import { displayPublicUrl, publicProductUrl, publicTiendaUrl, withShareUtm } from '@/lib/marketingShare'
+import { displayPublicUrl, publicTiendaUrl, withShareUtm } from '@/lib/marketingShare'
 
 // Misma lógica que page.tsx: base sin /api para llamadas a jobshours API
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
@@ -64,6 +64,29 @@ interface WorkerInfo {
 
 function formatPrice(n: number) {
   return '$' + Math.round(n).toLocaleString('es-CL')
+}
+
+function getLocalAnalyticsEventsFallback(): Array<{ name: string; payload?: Record<string, unknown>; t: number }> {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem('jh_analytics_events')
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function buildPublicProductUrl(workerId: number, productId: number, productName?: string | null): string {
+  const safeName = (productName || 'producto')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48) || 'producto'
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://jobshours.com'
+  return `${origin}/p/${workerId}-${productId}-${safeName}`
 }
 
 // ─── Hook reconocimiento de voz ───────────────────────────────────────────────
@@ -682,7 +705,7 @@ export default function TiendaPage() {
       }
     }
 
-    const events = getLocalAnalyticsEvents()
+    const events = getLocalAnalyticsEventsFallback()
     const filtered = events.filter((ev) => {
       const payload = ev.payload ?? {}
       const wid = Number(payload.workerId ?? payload.worker_id ?? 0)
@@ -780,7 +803,7 @@ export default function TiendaPage() {
   }
 
   const shareSingleProduct = useCallback((p: Producto) => {
-    const url = withShareUtm(publicProductUrl(workerId, p.idproducto, p.nombre), 'product_card')
+    const url = withShareUtm(buildPublicProductUrl(workerId, p.idproducto, p.nombre), 'product_card')
     const text = `🛍️ ${p.nombre} — ${formatPrice(p.precio_venta ?? p.precio)}\n${url}`
     const canNative =
       typeof navigator !== 'undefined' &&
