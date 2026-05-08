@@ -13,6 +13,8 @@ type ChatCtx = {
   description?: string
   name?: string
   avatar?: string | null
+  /** Correo del interlocutor (único); ayuda si hay homónimos. */
+  email?: string | null
   myRole?: 'cliente' | 'trabajador'
   isSelf?: boolean
 }
@@ -41,6 +43,7 @@ interface HomeChatPanelsProps {
   showChatHistory: boolean
   onCloseChatHistory: () => void
   onOpenChatFromHistory: (requestId: number, ctx: ChatCtx) => void
+  onHighlightRequestFromSolicitudes: (requestId: number) => void
 }
 
 export function HomeChatPanels({
@@ -61,6 +64,7 @@ export function HomeChatPanels({
   showChatHistory,
   onCloseChatHistory,
   onOpenChatFromHistory,
+  onHighlightRequestFromSolicitudes,
 }: HomeChatPanelsProps) {
   return (
     <>
@@ -71,6 +75,7 @@ export function HomeChatPanels({
             onLoginRequest={onLoginRequest}
             onClose={onCloseSolicitudes}
             onOpenChat={onOpenChatFromSolicitudes}
+            onHighlightOnMap={onHighlightRequestFromSolicitudes}
           />
         </div>
       )}
@@ -104,6 +109,7 @@ export function HomeChatPanels({
           requestDescription={chatContext.description}
           otherPersonName={chatContext.name}
           otherPersonAvatar={chatContext.avatar}
+          otherPersonEmail={chatContext.email}
         />
       )}
 

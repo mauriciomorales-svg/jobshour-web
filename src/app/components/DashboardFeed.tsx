@@ -244,7 +244,7 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
             <h2 className="text-lg font-black text-white leading-tight">Oportunidades cerca</h2>
           </div>
           <p className="text-xs text-slate-400 mt-0.5 leading-snug">
-            Solicitudes reales de personas que necesitan ayuda ahora — tócala para aceptarla
+            Solicitudes reales de personas que necesitan ayuda ahora. Toca una para ver detalles.
           </p>
         </div>
         <button
@@ -324,7 +324,7 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
           <div className="text-6xl mb-4" aria-hidden>🔍</div>
           <p className="text-white font-black text-lg mb-2">{emptyStateCopy.noOpportunitiesNearby}</p>
           <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-            No hay solicitudes activas en tu zona ahora mismo.<br />¿Por qué no publicas la tuya?
+            No hay solicitudes activas en tu zona ahora mismo.<br />También puedes publicar una solicitud.
           </p>
           <div className="flex flex-col gap-3 max-w-xs mx-auto">
             <button

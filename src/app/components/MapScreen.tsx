@@ -40,11 +40,11 @@ interface MapScreenProps {
   onCloseDetail: () => void
   user: AuthUser | null
   workerProfile: { id?: number } | null
-  activeRequestId: number | null
+  chatRequestIdForDetail: number | null
   onTravelJoin: () => void
   onOpenProfileSection: () => void
   onVerWorkerProfile: () => void
-  onDetailChat: () => void
+  onDetailChat: (requestId?: number) => void
   onDetailRequest: () => void
   onCallPhone: () => void
   dashHidden: boolean
@@ -80,7 +80,7 @@ export function MapScreen(props: MapScreenProps) {
     showEmptyOverlay, onDismissEmptyMap, onPublishFromEmpty,
     notifBadge, onMenuToggle, headerUser, onLoginClick, onProfileClick,
     searchQuery, onSearchChange, workerCount, categories, activeCategory, onCategoryClick,
-    selectedDetail, loadingDetail, onCloseDetail, user, workerProfile, activeRequestId,
+    selectedDetail, loadingDetail, onCloseDetail, user, workerProfile, chatRequestIdForDetail,
     onTravelJoin, onOpenProfileSection, onVerWorkerProfile, onDetailChat, onDetailRequest, onCallPhone,
     dashHidden, userLat, userLng, currentUserId, onDashboardClose, onDashboardRefresh,
     setHighlightedRequestId, setSelectedDetail, setShowRequestModal, setDashHidden,
@@ -127,7 +127,7 @@ export function MapScreen(props: MapScreenProps) {
           onClose={onCloseDetail}
           user={user}
           workerProfile={workerProfile}
-          activeRequestId={activeRequestId}
+          chatRequestIdForDetail={chatRequestIdForDetail}
           onTravelJoin={onTravelJoin}
           onOpenProfileSection={onOpenProfileSection}
           onVerWorkerProfile={onVerWorkerProfile}

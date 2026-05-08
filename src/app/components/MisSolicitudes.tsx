@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
+import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog, jhFlowSummarizeRequest } from '@/lib/jhFlowLog'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 const PaymentModal = dynamic(() => import('./PaymentModal'), { ssr: false })
@@ -13,7 +14,10 @@ interface Solicitud {
   user_has_reviewed?: boolean
   description?: string
   status: string
-  offered_price: number
+  offered_price: number | null
+  adjusted_price?: number | null
+  client_approved_adjustment?: boolean
+  price_adjustment_reason?: string | null
   created_at: string
   expires_at?: string
   pickup_address?: string
@@ -81,6 +85,13 @@ function formatCLP(amount: number): string {
   return '$' + Math.round(amount).toLocaleString('es-CL')
 }
 
+function getEffectivePrice(s: Solicitud): number | null {
+  if (typeof s.final_price === 'number' && s.final_price > 0) return s.final_price
+  if (s.client_approved_adjustment && typeof s.adjusted_price === 'number' && s.adjusted_price > 0) return s.adjusted_price
+  if (typeof s.offered_price === 'number' && s.offered_price > 0) return s.offered_price
+  return null
+}
+
 function ExpirationTimer({ expiresAt }: { expiresAt: string }) {
   const [remaining, setRemaining] = useState('')
   const [urgent, setUrgent] = useState(false)
@@ -138,6 +149,10 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
     }
   }, [user?.id])
 
+  useEffect(() => {
+    jhFlowHintOnce()
+  }, [])
+
   const persistHiddenRequestIds = useCallback((next: number[]) => {
     setHiddenRequestIds(next)
     if (typeof window !== 'undefined' && user?.id) {
@@ -161,17 +176,29 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
-      setSolicitudes(Array.isArray(data.data) ? data.data : [])
+      const list: Solicitud[] = Array.isArray(data.data) ? data.data : []
+      if (isJhFlowDebugEnabled()) {
+        jhFlowLog('GET /api/v1/requests/mine → lista', {
+          count: list.length,
+          solicitudes: list.map((x) => ({
+            ...jhFlowSummarizeRequest(x as unknown as Record<string, unknown>),
+            ui_effective_clp: getEffectivePrice(x),
+            rol_en_tarjeta: x.worker?.user?.id === user?.id ? 'trabajador' : 'cliente',
+          })),
+        })
+      }
+      setSolicitudes(list)
     } catch (e) {
       setError('No se pudieron cargar tus solicitudes')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user?.id])
 
   const respondAsWorker = useCallback(async (requestId: number, action: 'accept' | 'reject') => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     if (!token) return
+    jhFlowLog('POST /requests/:id/respond', { requestId, action })
     setActionLoading(requestId)
     try {
       const res = await apiFetch(`/api/v1/requests/${requestId}/respond`, {
@@ -183,11 +210,81 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
         },
         body: JSON.stringify({ action }),
       })
+      const data = await res.json().catch(() => ({}))
+      jhFlowLog('POST respond → resultado', { requestId, ok: res.ok, http: res.status, body: data })
       if (res.ok) {
         await fetchSolicitudes()
       }
     } catch {
       // no-op: la UI ya se refresca en polling
+    } finally {
+      setActionLoading(null)
+    }
+  }, [fetchSolicitudes])
+
+  const proposePrice = useCallback(async (requestId: number) => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (!token) return
+    const raw = window.prompt('Propón monto final en CLP (ej: 15000)')
+    if (!raw) return
+    const amount = Math.max(0, parseInt(raw.replace(/[^\d]/g, ''), 10) || 0)
+    if (!amount) {
+      alert('Ingresa un monto válido mayor a 0')
+      return
+    }
+    jhFlowLog('POST /requests/:id/adjust-price', { requestId, adjusted_price: amount })
+    setActionLoading(requestId)
+    try {
+      const res = await apiFetch(`/api/v1/requests/${requestId}/adjust-price`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          adjusted_price: amount,
+          reason: 'Ajuste acordado por negociación en chat',
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      jhFlowLog('adjust-price → resultado', { requestId, ok: res.ok, http: res.status, body: data })
+      if (!res.ok) {
+        alert(data?.message || 'No se pudo proponer el monto')
+      } else {
+        await fetchSolicitudes()
+      }
+    } catch {
+      alert('Error de red al proponer monto')
+    } finally {
+      setActionLoading(null)
+    }
+  }, [fetchSolicitudes])
+
+  const approveProposedPrice = useCallback(async (requestId: number) => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (!token) return
+    jhFlowLog('POST /requests/:id/approve-adjustment', { requestId })
+    setActionLoading(requestId)
+    try {
+      const res = await apiFetch(`/api/v1/requests/${requestId}/approve-adjustment`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json().catch(() => ({}))
+      jhFlowLog('approve-adjustment → resultado', { requestId, ok: res.ok, http: res.status, body: data })
+      if (!res.ok) {
+        alert(data?.message || 'No se pudo aprobar el ajuste')
+      } else {
+        await fetchSolicitudes()
+      }
+    } catch {
+      alert('Error de red al aprobar ajuste')
     } finally {
       setActionLoading(null)
     }
@@ -408,6 +505,8 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                   const canCompleteAsWorker = imWorker && ['accepted', 'in_progress'].includes(s.status)
                   const isCompletedAsClient = !imWorker && s.status === 'completed'
                   const canPayNow = isCompletedAsClient && (!s.payment_status || s.payment_status === 'pending')
+                  const effectivePrice = getEffectivePrice(s)
+                  const hasPendingAdjustment = typeof s.adjusted_price === 'number' && s.adjusted_price > 0 && !s.client_approved_adjustment
                   if (s.status === 'cancelled') return null
 
                   return (
@@ -460,9 +559,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
 
                           {/* Price */}
                           <div className="text-right shrink-0">
-                            <p className="text-orange-400 font-black text-base">
-                              {formatCLP(s.offered_price)}
-                            </p>
+                            <p className="text-orange-400 font-black text-base">{effectivePrice ? formatCLP(effectivePrice) : 'A convenir'}</p>
                             <p className="text-slate-500 text-[10px] mt-0.5">
                               {timeAgo(s.created_at)}
                             </p>
@@ -470,7 +567,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                         </div>
 
                         {/* Row 2: Address + Cómo llegar */}
-                        {(s.pickup_address || s.delivery_address || (s.fuzzed_latitude && s.fuzzed_longitude)) && (
+                        {(s.pickup_address || s.delivery_address || (s.fuzzed_latitude != null && s.fuzzed_longitude != null)) && (
                           <div className="mt-2.5 space-y-1.5">
                             {/* Origen → Destino */}
                             {s.pickup_address && s.delivery_address ? (
@@ -501,7 +598,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                               {s.recurrence && s.recurrence !== 'once' && <span className="text-[10px] bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded-full font-bold">🔄 {s.recurrence === 'daily' ? 'Diario' : s.recurrence === 'weekly' ? 'Semanal' : 'Personalizado'}</span>}
                             </div>
                             {/* Cómo llegar */}
-                            {s.fuzzed_latitude && s.fuzzed_longitude && (
+                            {s.fuzzed_latitude != null && s.fuzzed_longitude != null && (
                               <a
                                 href={`https://www.google.com/maps/dir/?api=1&destination=${s.fuzzed_latitude},${s.fuzzed_longitude}`}
                                 target="_blank"
@@ -517,6 +614,17 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
 
                         {/* Row 3: Category + Status + Timer */}
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-200">
+                            {typeof s.final_price === 'number' && s.final_price > 0
+                              ? 'Monto final'
+                              : s.client_approved_adjustment && typeof s.adjusted_price === 'number' && s.adjusted_price > 0
+                                ? 'Ajuste aprobado'
+                                : hasPendingAdjustment
+                                  ? 'Ajuste pendiente'
+                                  : effectivePrice
+                                    ? 'Oferta inicial'
+                                    : 'A convenir'}
+                          </span>
                           {categoryName && (
                             <span
                               className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
@@ -589,25 +697,51 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                             )}
                             {/* Secundario worker: completar */}
                             {canCompleteAsWorker && (
+                              <>
+                                <button
+                                  disabled={actionLoading === s.id}
+                                  onClick={() => proposePrice(s.id)}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl text-xs font-bold transition active:scale-95 disabled:opacity-50 border border-amber-500/25"
+                                >
+                                  {actionLoading === s.id ? '...' : '💬 Proponer monto'}
+                                </button>
+                                <button
+                                  disabled={actionLoading === s.id || !effectivePrice || hasPendingAdjustment}
+                                  onClick={async () => {
+                                    jhFlowLog('POST /requests/:id/complete (click)', {
+                                      requestId: s.id,
+                                      effective_clp_ui: effectivePrice,
+                                      has_pending_adjustment: hasPendingAdjustment,
+                                    })
+                                    setActionLoading(s.id)
+                                    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+                                    if (!token) { setActionLoading(null); return }
+                                    try {
+                                      const res = await apiFetch(`/api/v1/requests/${s.id}/complete`, {
+                                        method: 'POST',
+                                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({}),
+                                      })
+                                      const data = await res.json().catch(() => ({}))
+                                      jhFlowLog('complete → resultado', { requestId: s.id, ok: res.ok, http: res.status, body: data })
+                                      if (!res.ok) alert(data?.message || 'No se pudo completar')
+                                      else fetchSolicitudes()
+                                    } catch {}
+                                    setActionLoading(null)
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-teal-500/20 hover:bg-teal-500/30 text-teal-400 rounded-xl text-xs font-bold transition active:scale-95 disabled:opacity-50 border border-teal-500/25"
+                                >
+                                  {actionLoading === s.id ? '...' : '✓ Completar'}
+                                </button>
+                              </>
+                            )}
+                            {!imWorker && hasPendingAdjustment && ['accepted', 'in_progress'].includes(s.status) && (
                               <button
                                 disabled={actionLoading === s.id}
-                                onClick={async () => {
-                                  setActionLoading(s.id)
-                                  const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-                                  if (!token) { setActionLoading(null); return }
-                                  try {
-                                    const res = await apiFetch(`/api/v1/requests/${s.id}/complete`, {
-                                      method: 'POST',
-                                      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({}),
-                                    })
-                                    if (res.ok) fetchSolicitudes()
-                                  } catch {}
-                                  setActionLoading(null)
-                                }}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-teal-500/20 hover:bg-teal-500/30 text-teal-400 rounded-xl text-xs font-bold transition active:scale-95 disabled:opacity-50 border border-teal-500/25"
+                                onClick={() => approveProposedPrice(s.id)}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 rounded-xl text-xs font-black transition active:scale-95 border border-teal-500/35 disabled:opacity-50"
                               >
-                                {actionLoading === s.id ? '...' : '✓ Completar'}
+                                {actionLoading === s.id ? '...' : `✅ Aceptar monto ${formatCLP(s.adjusted_price || 0)}`}
                               </button>
                             )}
                             {/* CTA principal cliente en completado */}

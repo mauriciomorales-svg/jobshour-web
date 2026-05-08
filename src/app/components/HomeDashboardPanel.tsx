@@ -6,6 +6,7 @@ import { getPublicApiBase } from '@/lib/api'
 import { feedbackCopy } from '@/lib/userFacingCopy'
 import type { ExpertDetail } from './HomeWorkerDetailSheet'
 import type { MapPoint } from './MapSection'
+import { jhFlowLog } from '@/lib/jhFlowLog'
 
 const DashboardFeed = dynamic(() => import('./DashboardFeed'), { ssr: false })
 
@@ -191,9 +192,35 @@ export function HomeDashboardPanel({
                     Accept: 'application/json',
                   },
                 })
-                  .then((r) => r.json())
-                  .then((data) => {
+                  .then(async (r) => {
+                    let data: Record<string, unknown> = {}
+                    try {
+                      data = (await r.json()) as Record<string, unknown>
+                    } catch {
+                      data = {}
+                    }
+                    if (!r.ok) {
+                      jhFlowLog('take_demand.http_error', {
+                        demandId: request.id,
+                        httpStatus: r.status,
+                        ...data,
+                      })
+                      const raw = typeof data.message === 'string' ? data.message : ''
+                      const friendly =
+                        raw.includes('Ya tomada') || data._worker
+                          ? 'Esta demanda ya fue tomada por otro trabajador.'
+                          : typeof data._status === 'string' && data._status !== 'pending'
+                            ? 'Esta demanda ya no está disponible.'
+                            : raw.includes('propia')
+                              ? 'No puedes tomar tu propia demanda.'
+                              : raw.includes('Sin perfil worker')
+                                ? 'Necesitas perfil de trabajador para tomar demandas.'
+                                : raw || 'No se pudo tomar la demanda.'
+                      toast(friendly, 'error')
+                      return
+                    }
                     if (data.status === 'success') {
+                      jhFlowLog('take_demand.ok', { demandId: request.id })
                       toast('Demanda tomada', 'success', 'El cliente será notificado.')
                       const removeEvent = new CustomEvent('remove-feed-item', { detail: { id: request.id } })
                       window.dispatchEvent(removeEvent)
@@ -205,10 +232,12 @@ export function HomeDashboardPanel({
                       }, 1500)
                       setDashHidden(true)
                     } else {
-                      toast(data.message || 'Error al tomar demanda', 'error')
+                      const raw = typeof data.message === 'string' ? data.message : ''
+                      toast(raw || 'Error al tomar demanda', 'error')
                     }
                   })
                   .catch(() => {
+                    jhFlowLog('take_demand.network_error', { demandId: request.id })
                     toast(feedbackCopy.networkErrorTakingDemand, 'error')
                   })
               }

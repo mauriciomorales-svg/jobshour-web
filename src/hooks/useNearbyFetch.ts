@@ -34,11 +34,13 @@ export function useNearbyFetch({
   const [meta, setMeta] = useState<SearchMeta | null>(null)
   const [loading, setLoading] = useState(true)
   const hasLoadedOnceRef = useRef(false)
+  const fetchSeqRef = useRef(0)
   const fetchNearbyRef = useRef<{
     lastCall: number
     timeoutId: ReturnType<typeof setTimeout> | null
     abortController: AbortController | null
-  }>({ lastCall: 0, timeoutId: null, abortController: null })
+    networkTimeoutId: ReturnType<typeof setTimeout> | null
+  }>({ lastCall: 0, timeoutId: null, abortController: null, networkTimeoutId: null })
 
   const fetchNearby = useCallback(
     (categoryId?: number | null, overrideLat?: number, overrideLng?: number) => {
@@ -65,14 +67,34 @@ export function useNearbyFetch({
 
       fetchNearbyRef.current.lastCall = now
 
+      if (fetchNearbyRef.current.networkTimeoutId) {
+        clearTimeout(fetchNearbyRef.current.networkTimeoutId)
+        fetchNearbyRef.current.networkTimeoutId = null
+      }
       if (fetchNearbyRef.current.abortController) {
         fetchNearbyRef.current.abortController.abort()
       }
       const abortController = new AbortController()
       fetchNearbyRef.current.abortController = abortController
 
+      const seq = ++fetchSeqRef.current
+      /** Evita que en móvil/red lenta el fetch cuelgue sin fin y la app quede en la pantalla de carga. */
+      const NETWORK_MS = 30_000
+      const myNetworkTimeoutId = setTimeout(() => {
+        if (fetchNearbyRef.current.networkTimeoutId === myNetworkTimeoutId) {
+          fetchNearbyRef.current.networkTimeoutId = null
+        }
+        abortController.abort()
+      }, NETWORK_MS)
+      fetchNearbyRef.current.networkTimeoutId = myNetworkTimeoutId
+
       if (!overrideLat && !hasLoadedOnceRef.current) setLoading(true)
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      let token: string | null = null
+      try {
+        token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      } catch {
+        token = null
+      }
 
       const lat = overrideLat ?? userLatRef.current ?? DEFAULT_MAP_LAT
       const lng = overrideLng ?? userLngRef.current ?? DEFAULT_MAP_LNG
@@ -137,14 +159,24 @@ export function useNearbyFetch({
           setPoints([...workers, ...demands])
           setMeta(expertsData.meta ?? null)
           hasLoadedOnceRef.current = true
-          setLoading(false)
         })
         .catch((err) => {
           if (err?.name === 'AbortError') return
           console.error('Error fetching experts/demands:', err)
           toast('No se pudieron cargar los expertos. Revisa tu conexión e intenta de nuevo.', 'error')
           hasLoadedOnceRef.current = true
+        })
+        .finally(() => {
+          clearTimeout(myNetworkTimeoutId)
+          if (fetchNearbyRef.current.networkTimeoutId === myNetworkTimeoutId) {
+            fetchNearbyRef.current.networkTimeoutId = null
+          }
+          if (seq !== fetchSeqRef.current) return
           setLoading(false)
+          if (!hasLoadedOnceRef.current) {
+            hasLoadedOnceRef.current = true
+            toast('La red tardó demasiado. Revisa tu conexión o intenta de nuevo.', 'warning')
+          }
         })
     },
     // userLatRef / userLngRef: refs estables; leer .current dentro del callback

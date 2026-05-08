@@ -12,12 +12,12 @@ interface ChatThread {
   last_message?: string
   last_message_at?: string
   unread_count?: number
-  other_person?: { name: string; avatar?: string | null }
+  other_person?: { name: string; avatar?: string | null; email?: string | null }
 }
 
 interface Props {
   onClose: () => void
-  onOpenChat: (requestId: number, ctx: { description?: string; name?: string; avatar?: string | null }) => void
+  onOpenChat: (requestId: number, ctx: { description?: string; name?: string; avatar?: string | null; email?: string | null }) => void
 }
 
 function timeAgo(dateStr?: string) {
@@ -114,6 +114,7 @@ export default function ChatHistory({ onClose, onOpenChat }: Props) {
                     description: t.description,
                     name: t.other_person?.name,
                     avatar: t.other_person?.avatar,
+                    email: t.other_person?.email ?? null,
                   })}
                   className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-800 transition text-left active:bg-slate-700"
                 >
@@ -135,6 +136,9 @@ export default function ChatHistory({ onClose, onOpenChat }: Props) {
                       <p className="text-white font-bold text-sm truncate">{t.other_person?.name ?? 'Usuario'}</p>
                       <span className="text-slate-500 text-xs shrink-0 ml-2">{timeAgo(t.last_message_at)}</span>
                     </div>
+                    {t.other_person?.email ? (
+                      <p className="text-slate-500 text-[10px] truncate mb-0.5" title={t.other_person.email}>{t.other_person.email}</p>
+                    ) : null}
                     <p className="text-slate-400 text-xs truncate">{t.last_message ?? t.description ?? emptyStateCopy.noMessagesYet}</p>
                   </div>
 

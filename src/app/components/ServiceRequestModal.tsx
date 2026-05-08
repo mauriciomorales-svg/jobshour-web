@@ -1,5 +1,6 @@
 'use client'
 import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { isJhFlowDebugEnabled, jhFlowLog } from '@/lib/jhFlowLog'
 import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect } from 'react'
@@ -52,12 +53,14 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
   const [departureTime, setDepartureTime] = useState('')
   const [seats, setSeats] = useState(1)
   const [distanceKm, setDistanceKm] = useState<number | null>(null)
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   // Calcular distancia aproximada al worker usando GPS del usuario
   useEffect(() => {
     if (!expert?.pos?.lat || !expert?.pos?.lng) return
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition((pos) => {
+      setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
       const R = 6371
       const dLat = (expert.pos!.lat - pos.coords.latitude) * Math.PI / 180
       const dLng = (expert.pos!.lng - pos.coords.longitude) * Math.PI / 180
@@ -81,12 +84,23 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
         const dt = new Date(expert.active_route.departure_time)
         const localDateTime = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
         setDepartureTime(localDateTime)
+      } else {
+        // Default UX: salida sugerida en +15 min para evitar horarios pasados.
+        const dt = new Date(Date.now() + 15 * 60 * 1000)
+        const localDateTime = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+        setDepartureTime(localDateTime)
       }
       setSeats(expert.active_route.available_seats || 1)
     } else if (isRecados) {
       setRequestType('express_errand')
     }
   }, [hasActiveRoute, isRecados, expert?.active_route, expert?.id])
+
+  useEffect(() => {
+    if (requestType !== 'ride_share') return
+    if (pickupAddress.trim()) return
+    setPickupAddress('Mi ubicación actual')
+  }, [requestType, pickupAddress])
 
   if (!expert || !expert.id) {
     console.error('❌ ServiceRequestModal: expert no válido', expert)
@@ -206,8 +220,8 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
         
         payload.pickup_address = pickupAddress.trim()
         payload.delivery_address = rideDeliveryAddress.trim()
-        payload.pickup_lat = expert.active_route?.origin?.lat || expert.pos?.lat || null
-        payload.pickup_lng = expert.active_route?.origin?.lng || expert.pos?.lng || null
+        payload.pickup_lat = userCoords?.lat || expert.active_route?.origin?.lat || expert.pos?.lat || null
+        payload.pickup_lng = userCoords?.lng || expert.active_route?.origin?.lng || expert.pos?.lng || null
         payload.delivery_lat = expert.active_route?.destination?.lat || null
         payload.delivery_lng = expert.active_route?.destination?.lng || null
         payload.departure_time = new Date(departureTime).toISOString()
@@ -241,6 +255,16 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
         }
       }
       
+      if (isJhFlowDebugEnabled()) {
+        jhFlowLog('POST /api/v1/requests (solicitud directa)', {
+          worker_id: payload.worker_id,
+          offered_price: payload.offered_price,
+          expert_hourly_rate: expert.hourly_rate,
+          type: requestType,
+          has_image: Boolean(imageFile),
+        })
+      }
+
       let r: Response
       if (imageFile) {
         const formData = new FormData()
@@ -261,6 +285,9 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
         })
       }
       const data = await r.json()
+      if (isJhFlowDebugEnabled()) {
+        jhFlowLog('solicitud directa → resultado', { ok: r.ok, http: r.status, body: data })
+      }
       if (r.ok) {
         setSent(true)
         setTimeout(() => onSent(data.data.id), 2000)
@@ -312,8 +339,8 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
         {!sent && <>
         <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-slate-800">
           <div>
-            <h3 className="text-lg font-black text-white">Solicitar servicio</h3>
-            <p className="text-xs text-slate-400 mt-0.5">El trabajador responderá en minutos</p>
+            <h3 className="text-lg font-black text-white">Coordinar servicio</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Completa estos datos y te responderán por chat</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center transition">
             <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -344,12 +371,17 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             </div>
           </div>
 
+          <div className="flex items-center justify-between bg-teal-500/10 border border-teal-500/25 rounded-xl px-3 py-2">
+            <span className="text-xs font-black text-teal-300 uppercase tracking-wide">Esencial</span>
+            <span className="text-[10px] text-slate-400">Completa primero lo minimo</span>
+          </div>
+
           {/* Selector de tipo */}
           {!hasActiveRoute && (
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tipo de servicio</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">¿Qué necesitas?</label>
               <div className="grid grid-cols-3 gap-2">
-                {([['fixed_job','🔧','Trabajo','teal'],['ride_share','🚗','Viaje','amber'],['express_errand','📦','Compra','orange']] as const).map(([val, icon, label, color]) => (
+                {([['fixed_job','🔧','Servicio','teal'],['ride_share','🚗','Viaje','amber'],['express_errand','📦','Compra','orange']] as const).map(([val, icon, label, color]) => (
                   <button key={val} onClick={() => setRequestType(val)}
                     className={`py-3 rounded-2xl text-xs font-black transition flex flex-col items-center gap-1 ${
                       requestType === val
@@ -466,6 +498,11 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
               </div>
             </div>
           )}
+
+          <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2">
+            <span className="text-xs font-black text-amber-300 uppercase tracking-wide">Sugerido</span>
+            <span className="text-[10px] text-slate-400">Ayuda a coordinar mejor</span>
+          </div>
 
           {/* Descripción */}
           <div>

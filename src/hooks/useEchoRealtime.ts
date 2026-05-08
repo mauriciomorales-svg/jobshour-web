@@ -131,6 +131,21 @@ export function useEchoRealtime({
         }
         notify('Actualización de solicitud', statusMap[e?.status] || `Estado: ${e?.status ?? 'actualizado'}`)
       })
+
+      userChannel.listen('.chat.message', (e: any) => {
+        const senderName = e?.sender_name ? String(e.sender_name) : ''
+        const senderEmail = e?.sender_email ? String(e.sender_email) : ''
+        const senderLabel =
+          senderEmail && senderName
+            ? `${senderName} (${senderEmail})`
+            : senderEmail || senderName || 'Nuevo mensaje'
+        const preview = e?.preview ? String(e.preview).slice(0, 80) : 'Revisa tu chat'
+        const requestId = Number(e?.request_id ?? 0)
+        setChatBadge((prev) => prev + 1)
+        if (requestId > 0) setActiveRequestId(requestId)
+        notify(`💬 ${senderLabel}`, preview)
+        playNotifSound()
+      })
     })
 
     return () => {
@@ -218,14 +233,19 @@ export function useEchoRealtime({
         const shouldNotify = !showChat || (typeof document !== 'undefined' && document.hidden)
 
         const senderName = msg?.sender_name ? String(msg.sender_name) : ''
+        const senderEmail = msg?.sender_email ? String(msg.sender_email) : ''
+        const senderLabel =
+          senderEmail && senderName
+            ? `${senderName} (${senderEmail})`
+            : senderEmail || senderName || ''
         const text = msg?.body ? String(msg.body).slice(0, 80) : 'Nuevo mensaje'
-        const title = senderName ? `💬 ${senderName}` : '💬 Nuevo mensaje'
+        const title = senderLabel ? `💬 ${senderLabel}` : '💬 Nuevo mensaje'
 
         setChatBadge((prev) => prev + 1)
 
         if (!shouldNotify) return
 
-        console.log('[ChatNotify] message.new', { id: msgId, sender: senderName })
+        console.log('[ChatNotify] message.new', { id: msgId, sender: senderName, sender_email: senderEmail || undefined })
         toast(title, 'info', text, 5000)
         playNotifSound()
 

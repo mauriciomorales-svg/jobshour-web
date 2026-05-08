@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useState, useRef, type Dispatch, type SetStateAction } from 'react'
 
 import { getPublicApiBase } from '@/lib/api'
 
@@ -15,7 +15,9 @@ export interface UseActiveServiceRequestsParams {
 }
 
 /**
- * Polling de `/api/v1/requests/mine`: IDs activos para Echo chat, solicitud más reciente, modal de calificación post-servicio.
+ * Polling de `/api/v1/requests/mine`: IDs activos para Echo chat y solicitud más reciente.
+ * Nota UX: la calificación NO se abre automática para evitar forzar al usuario
+ * en casos ambiguos; se mantiene desde "Mis Solicitudes".
  */
 export function useActiveServiceRequests({
   user,
@@ -27,13 +29,22 @@ export function useActiveServiceRequests({
   setShowRatingModal,
 }: UseActiveServiceRequestsParams) {
   const [openActiveRequestsCount, setOpenActiveRequestsCount] = useState(0)
+  const [chatRequestByWorkerId, setChatRequestByWorkerId] = useState<Record<number, number>>({})
+  const activeRequestIdRef = useRef<number | null>(null)
+  const lastLoggedIdsKeyRef = useRef<string>('')
+
+  useEffect(() => {
+    activeRequestIdRef.current = activeRequestId
+  }, [activeRequestId])
 
   useEffect(() => {
     if (!user) setOpenActiveRequestsCount(0)
   }, [user])
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+    const token = typeof window !== 'undefined'
+      ? (localStorage.getItem('auth_token') || localStorage.getItem('token'))
+      : null
     if (!user || !token) return
 
     const sameIds = (a: number[], b: number[]) => {
@@ -46,6 +57,7 @@ export function useActiveServiceRequests({
       fetch(`${getPublicApiBase()}/api/v1/requests/mine`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
         },
       })
         .then((r) => r.json())
@@ -53,6 +65,19 @@ export function useActiveServiceRequests({
           const list = data?.data ?? []
           const activeList = list.filter((sr: any) => ['pending', 'accepted', 'in_progress'].includes(sr.status))
           setOpenActiveRequestsCount(activeList.length)
+
+          const byWorker: Record<number, number> = {}
+          for (const sr of activeList) {
+            const wid = sr.worker?.id
+            if (typeof wid === 'number' && byWorker[wid] === undefined) {
+              byWorker[wid] = sr.id
+            }
+          }
+          setChatRequestByWorkerId((prev) => {
+            const a = JSON.stringify(prev)
+            const b = JSON.stringify(byWorker)
+            return a === b ? prev : byWorker
+          })
 
           const ids = activeList
             .map((sr: any) => sr.id)
@@ -62,28 +87,17 @@ export function useActiveServiceRequests({
 
           setActiveChatRequestIds((prev) => (sameIds(prev, ids) ? prev : ids))
 
-          console.log('[ChatNotify] sync active request ids', ids)
+          const idsKey = ids.join(',')
+          if (lastLoggedIdsKeyRef.current !== idsKey) {
+            lastLoggedIdsKeyRef.current = idsKey
+            console.log('[ChatNotify] sync active request ids', ids)
+          }
 
           const mostRecentId = ids[0]
-          if (typeof mostRecentId === 'number' && mostRecentId !== activeRequestId) setActiveRequestId(mostRecentId)
+          if (typeof mostRecentId === 'number' && mostRecentId !== activeRequestIdRef.current) {
+            setActiveRequestId(mostRecentId)
+          }
 
-          const completedList = list.filter((sr: any) => sr.status === 'completed')
-          completedList.forEach((sr: any) => {
-            const storageKey = `rated_${sr.id}`
-            const alreadyRated = localStorage.getItem(storageKey)
-            const canRate = sr?.can_rate === true
-
-            if (!alreadyRated && canRate && sr.worker) {
-              setTimeout(() => {
-                setRatingRequestId(sr.id)
-                setRatingWorkerInfo({
-                  name: sr.worker.name || 'Trabajador',
-                  avatar: sr.worker.avatar,
-                })
-                setShowRatingModal(true)
-              }, 1200)
-            }
-          })
         })
         .catch((e) => {
           console.error('[ChatNotify] sync failed', e)
@@ -95,7 +109,6 @@ export function useActiveServiceRequests({
     return () => clearInterval(interval)
   }, [
     user,
-    activeRequestId,
     setActiveChatRequestIds,
     setActiveRequestId,
     setRatingRequestId,
@@ -103,5 +116,5 @@ export function useActiveServiceRequests({
     setShowRatingModal,
   ])
 
-  return { openActiveRequestsCount }
+  return { openActiveRequestsCount, chatRequestByWorkerId }
 }

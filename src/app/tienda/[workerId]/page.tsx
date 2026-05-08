@@ -46,6 +46,8 @@ interface QuotePdfSnapshot {
   laborEnabled: boolean
   laborAmountNum: number
   laborDesc: string
+  deliveryBySeller: boolean
+  deliveryFee: number
   publicUrl: string
   expiresAt: string | null
   quoteId?: number
@@ -96,6 +98,14 @@ function suggestProductTemplate(p: Producto): 'premium' | 'oferta' | 'usado' {
   return 'premium'
 }
 
+function extractDeliveryBadge(descripcion?: string | null): { enabled: boolean; fee: number } {
+  const raw = (descripcion || '').toLowerCase()
+  if (!raw.includes('delivery por vendedor: si')) return { enabled: false, fee: 0 }
+  const feeMatch = raw.match(/\(\+\$?([0-9\.\,]+)/)
+  const fee = feeMatch ? Number(String(feeMatch[1]).replace(/[^\d]/g, '')) || 0 : 0
+  return { enabled: true, fee }
+}
+
 // ─── Hook reconocimiento de voz ───────────────────────────────────────────────
 function useSpeech(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false)
@@ -139,6 +149,398 @@ function MicBtn({ onResult, className = '' }: { onResult: (t: string) => void; c
     >
       {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
     </button>
+  )
+}
+
+function QuickPublishModal({
+  isOpen,
+  onClose,
+  workerId,
+  storeName,
+  onSuccess,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  workerId: number
+  storeName?: string | null
+  onSuccess: () => void
+}) {
+  const [tipo, setTipo] = useState<'producto' | 'lote'>('producto')
+  const [titulo, setTitulo] = useState('')
+  const [estado, setEstado] = useState<'nuevo' | 'usado' | 'para_reparar'>('usado')
+  const [deliveryMode, setDeliveryMode] = useState<'retiro' | 'despacho' | 'conversable'>('conversable')
+  const [deliveryBySeller, setDeliveryBySeller] = useState(true)
+  const [deliveryExtra, setDeliveryExtra] = useState('')
+  const [precio, setPrecio] = useState('')
+  const [imagen, setImagen] = useState<File | null>(null)
+  const [preview, setPreview] = useState('')
+  const [imageDataUrl, setImageDataUrl] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
+  const [publishedName, setPublishedName] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    setTipo('producto')
+    setTitulo('')
+    setEstado('usado')
+    setDeliveryMode('conversable')
+    setDeliveryBySeller(true)
+    setDeliveryExtra('')
+    setPrecio('')
+    setImagen(null)
+    setPreview('')
+    setImageDataUrl('')
+    setSaving(false)
+    setError('')
+    setPublishedUrl(null)
+    setPublishedName('')
+  }, [isOpen])
+
+  const handleSubmit = async () => {
+    const cleanTitle = titulo.trim()
+    const cleanPrice = Math.round(Number(precio || 0))
+    if (!cleanTitle) {
+      setError('El titulo es obligatorio')
+      return
+    }
+    if (!cleanPrice || cleanPrice <= 0) {
+      setError('El precio debe ser mayor a 0')
+      return
+    }
+    if (!imagen) {
+      setError('Agrega una foto para publicar rapido')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+    try {
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      const sku = `EXP-${Date.now()}`
+      const finalTitle = tipo === 'lote' ? `Lote: ${cleanTitle}` : cleanTitle
+      const deliveryLabel = deliveryMode === 'retiro'
+        ? 'Retiro en domicilio'
+        : deliveryMode === 'despacho'
+          ? 'Despacho disponible'
+          : 'Delivery conversable'
+      const extraFee = Math.max(0, parseInt(deliveryExtra || '0', 10) || 0)
+      const deliveryExtraText = deliveryBySeller
+        ? ` Delivery por vendedor: si${extraFee > 0 ? ` (+${formatPrice(extraFee)})` : ''}.`
+        : ' Delivery por vendedor: no.'
+      const finalDescription = `Estado: ${estado}. Entrega: ${deliveryLabel}.${deliveryExtraText} Publicado con modo express (${tipo}).`
+      const fd = new FormData()
+      fd.append('nombre', finalTitle)
+      fd.append('descripcion', finalDescription)
+      fd.append('precio', String(cleanPrice))
+      fd.append('precio_venta', String(cleanPrice))
+      fd.append('stock_actual', '1')
+      fd.append('worker_id', String(workerId))
+      fd.append('codigobarra', sku)
+
+      const r = await fetch(`${INVENTARIO_API}/worker-productos`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data?.message || 'No se pudo publicar')
+
+      if (imagen && data?.codigobarra) {
+        const photoFd = new FormData()
+        photoFd.append('foto', imagen)
+        await fetch(`${INVENTARIO_API}/productos/${encodeURIComponent(data.codigobarra)}/foto`, {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: photoFd,
+        })
+      }
+
+      const pid = Number(data?.idproducto || 0)
+      const url = pid > 0
+        ? buildPublicProductUrl(workerId, pid, finalTitle)
+        : publicTiendaUrl(workerId)
+      setPublishedName(finalTitle)
+      setPublishedUrl(url)
+      onSuccess()
+    } catch (e: any) {
+      setError(e?.message || 'No se pudo publicar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!publishedUrl || !publishedName) return
+    const { jsPDF } = await import('jspdf')
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+    const margin = 14
+    let y = 18
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(18)
+    doc.text('Ficha de publicacion', margin, y)
+    y += 8
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(11)
+    doc.text(`Tienda: ${storeName || 'Mi tienda'}`, margin, y)
+    y += 6
+    doc.text(`Tipo: ${tipo === 'lote' ? 'Lote' : 'Producto'}`, margin, y)
+    y += 6
+    doc.text(`Titulo: ${publishedName}`, margin, y)
+    y += 6
+    doc.text(`Estado: ${estado === 'para_reparar' ? 'Para reparar' : estado === 'usado' ? 'Usado' : 'Nuevo'}`, margin, y)
+    y += 6
+    doc.text(
+      `Entrega: ${deliveryMode === 'retiro' ? 'Retiro en domicilio' : deliveryMode === 'despacho' ? 'Despacho disponible' : 'Delivery conversable'}`,
+      margin,
+      y
+    )
+    y += 6
+    const extraFeePdf = Math.max(0, parseInt(deliveryExtra || '0', 10) || 0)
+    doc.text(`Delivery por vendedor: ${deliveryBySeller ? 'Si' : 'No'}`, margin, y)
+    y += 6
+    if (deliveryBySeller && extraFeePdf > 0) {
+      doc.text(`Costo delivery adicional: ${formatPrice(extraFeePdf)}`, margin, y)
+      y += 6
+    }
+    doc.text(`Precio: ${formatPrice(Number(precio || 0))}`, margin, y)
+    y += 10
+
+    if (imageDataUrl) {
+      try {
+        doc.addImage(imageDataUrl, 'JPEG', margin, y, 70, 52)
+      } catch {
+        // si la imagen no se puede incrustar, continuamos sin bloquear el PDF
+      }
+    }
+
+    y += 60
+    doc.setFont('helvetica', 'bold')
+    doc.text('Link de la publicacion:', margin, y)
+    y += 6
+    doc.setFont('helvetica', 'normal')
+    const wrapped = doc.splitTextToSize(publishedUrl, 180)
+    doc.text(wrapped, margin, y)
+    y += 10 + wrapped.length * 5
+
+    doc.setTextColor(90, 90, 90)
+    doc.setFontSize(10)
+    doc.text('Powered by JobsHours', margin, Math.min(y, 285))
+
+    const fileName = `${publishedName.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'publicacion'}-ficha.pdf`
+    doc.save(fileName)
+  }
+
+  if (!isOpen) return null
+  return (
+    <div className="fixed inset-0 z-[320] flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl max-h-[93vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10 rounded-t-2xl">
+          <div>
+            <h2 className="font-black text-gray-900 text-lg">Publicacion Express</h2>
+            <p className="text-xs text-gray-500">Publica en menos de 30 segundos</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition">
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-5 space-y-4">
+          {publishedUrl ? (
+            <div className="space-y-3">
+              <div className="bg-teal-50 border border-teal-200 rounded-xl p-3">
+                <p className="text-sm font-black text-teal-800">Publicado exitosamente</p>
+                <p className="text-xs text-teal-700 mt-1 line-clamp-2">{publishedName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const store = storeName || 'Mi tienda'
+                  const entrega = deliveryMode === 'retiro'
+                    ? 'Retiro en domicilio'
+                    : deliveryMode === 'despacho'
+                      ? 'Despacho disponible'
+                      : 'Delivery conversable'
+                  const extraFeeWa = Math.max(0, parseInt(deliveryExtra || '0', 10) || 0)
+                  const deliveryBySellerText = deliveryBySeller
+                    ? `Delivery por vendedor${extraFeeWa > 0 ? ` (+${formatPrice(extraFeeWa)})` : ''}`
+                    : 'Delivery por vendedor no incluido'
+                  const text = `🛍️ ${publishedName}\n📍 ${store}\n🚚 ${entrega}\n${deliveryBySellerText}\n👉 Ver publicacion:\n${publishedUrl}`
+                  const wa = `https://wa.me/?text=${encodeURIComponent(text)}`
+                  window.open(wa, '_blank', 'noopener,noreferrer')
+                }}
+                className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded-xl transition"
+              >
+                Compartir por WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(publishedUrl)
+                  alert('Link copiado')
+                }}
+                className="w-full bg-white border border-orange-300 text-orange-600 font-bold py-2.5 rounded-xl transition hover:bg-orange-50"
+              >
+                Copiar link
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                className="w-full bg-slate-900 text-white font-bold py-2.5 rounded-xl transition hover:bg-slate-800 inline-flex items-center justify-center gap-2"
+              >
+                <FileDown className="w-4 h-4" />
+                Descargar PDF
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full bg-gray-100 text-gray-700 font-bold py-2.5 rounded-xl transition hover:bg-gray-200"
+              >
+                Cerrar
+              </button>
+            </div>
+          ) : (
+            <>
+              {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl px-3 py-2">{error}</div>}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Tipo</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTipo('producto')}
+                    className={`rounded-xl px-3 py-2 text-sm font-bold border ${tipo === 'producto' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-700 border-gray-200'}`}
+                  >
+                    Producto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipo('lote')}
+                    className={`rounded-xl px-3 py-2 text-sm font-bold border ${tipo === 'lote' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-700 border-gray-200'}`}
+                  >
+                    Lote
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Foto</label>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full h-28 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-gray-50 hover:border-orange-400 transition overflow-hidden"
+                >
+                  {preview ? (
+                    <img src={preview} alt="preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-sm font-semibold text-gray-500">Toca para subir foto</span>
+                  )}
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (!f) return
+                    setImagen(f)
+                    setPreview(URL.createObjectURL(f))
+                    const reader = new FileReader()
+                    reader.onload = () => {
+                      const result = typeof reader.result === 'string' ? reader.result : ''
+                      setImageDataUrl(result)
+                    }
+                    reader.readAsDataURL(f)
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Titulo</label>
+                <input
+                  value={titulo}
+                  onChange={(e) => setTitulo(e.target.value)}
+                  placeholder={tipo === 'lote' ? 'Ej: Reja usada + porton' : 'Ej: Reja usada'}
+                  className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Estado</label>
+                <select
+                  value={estado}
+                  onChange={(e) => setEstado(e.target.value as 'nuevo' | 'usado' | 'para_reparar')}
+                  className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                >
+                  <option value="nuevo">Nuevo</option>
+                  <option value="usado">Usado</option>
+                  <option value="para_reparar">Para reparar</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Entrega</label>
+                <select
+                  value={deliveryMode}
+                  onChange={(e) => setDeliveryMode(e.target.value as 'retiro' | 'despacho' | 'conversable')}
+                  className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                >
+                  <option value="conversable">Delivery conversable</option>
+                  <option value="retiro">Retiro en domicilio</option>
+                  <option value="despacho">Despacho disponible</option>
+                </select>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={deliveryBySeller}
+                    onChange={(e) => setDeliveryBySeller(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  Delivery por vendedor
+                </label>
+                {deliveryBySeller && (
+                  <input
+                    type="number"
+                    value={deliveryExtra}
+                    onChange={(e) => setDeliveryExtra(e.target.value)}
+                    placeholder="Costo extra delivery (opcional)"
+                    className="w-full bg-white border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                    min={0}
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Precio</label>
+                <input
+                  type="number"
+                  value={precio}
+                  onChange={(e) => setPrecio(e.target.value)}
+                  placeholder="Ej: 45000"
+                  className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={saving}
+                className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition disabled:opacity-50"
+              >
+                {saving ? 'Publicando...' : 'Publicar ahora'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -550,6 +952,8 @@ export default function TiendaPage() {
   const [showCheckout, setShowCheckout] = useState(false)
   const [wantsDelivery, setWantsDelivery] = useState(false)
   const [address, setAddress] = useState('')
+  const [sellerDoesDelivery, setSellerDoesDelivery] = useState(true)
+  const [deliveryExtraFee, setDeliveryExtraFee] = useState('')
   const [paying, setPaying] = useState(false)
   const [done, setDone] = useState(false)
   const [payLink, setPayLink] = useState<string | null>(null)
@@ -566,7 +970,11 @@ export default function TiendaPage() {
   const [isOwner, setIsOwner] = useState(false)
   const [categorias, setCategorias] = useState<{idcategoria: number, nombre: string}[]>([])
   const [categoriaFiltro, setCategoriaFiltro] = useState<number | null>(null)
+  const [showAddStoreCategory, setShowAddStoreCategory] = useState(false)
+  const [newStoreCategory, setNewStoreCategory] = useState('')
+  const [savingStoreCategory, setSavingStoreCategory] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showQuickPublish, setShowQuickPublish] = useState(false)
   const [editingProducto, setEditingProducto] = useState<Producto | null>(null)
   const [tab, setTab] = useState<'catalogo' | 'stats'>('catalogo')
   const [stats, setStats] = useState<any>(null)
@@ -779,6 +1187,35 @@ export default function TiendaPage() {
       .then(r => r.json()).then(data => setCategorias(data.data ?? [])).catch(() => {})
   }, [workerId])
 
+  const handleAddStoreCategory = useCallback(async () => {
+    if (!isOwner || !newStoreCategory.trim()) return
+    setSavingStoreCategory(true)
+    try {
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      const r = await fetch(`${INVENTARIO_API}/categorias`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          nombre: newStoreCategory.trim(),
+          worker_id: workerId,
+        }),
+      })
+      if (!r.ok) throw new Error('No se pudo crear la categoría')
+      const refresh = await fetch(`${INVENTARIO_API}/categorias?worker_id=${workerId}`)
+      const data = await refresh.json()
+      setCategorias(data.data ?? [])
+      setNewStoreCategory('')
+      setShowAddStoreCategory(false)
+    } catch {
+      alert('No se pudo crear la categoría de tienda. Intenta nuevamente.')
+    } finally {
+      setSavingStoreCategory(false)
+    }
+  }, [isOwner, newStoreCategory, workerId])
+
   // Productos
   const fetchProductos = useCallback(async () => {
     setLoading(true)
@@ -853,10 +1290,11 @@ export default function TiendaPage() {
   const canUseCart = !isOwner || checkoutMode === 'quote'
   const commission = Math.round(cartTotal * 0.08)
   const laborAmountNum = Math.max(0, parseInt(laborAmount || '0', 10) || 0)
-  const totalFinal = cartTotal + commission + (laborEnabled ? laborAmountNum : 0)
+  const deliveryExtraFeeNum = Math.max(0, parseInt(deliveryExtraFee || '0', 10) || 0)
+  const totalFinal = cartTotal + commission + (laborEnabled ? laborAmountNum : 0) + (wantsDelivery && sellerDoesDelivery ? deliveryExtraFeeNum : 0)
 
   const handlePay = async () => {
-    if (!buyerName.trim() || !buyerEmail.trim()) { alert(feedbackCopy.enterNameEmail); return }
+    if (!buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim()) { alert('Ingresa nombre, correo y WhatsApp para continuar'); return }
     setPaying(true)
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -869,9 +1307,11 @@ export default function TiendaPage() {
           items: cart.map(i => ({ idproducto: i.idproducto, nombre: i.nombre, cantidad: i.cantidad, precio: i.precio_venta ?? i.precio })),
           buyer_name: buyerName.trim(),
           buyer_email: buyerEmail.trim(),
-          buyer_phone: buyerPhone.trim() || null,
+          buyer_phone: buyerPhone.trim(),
           wants_delivery: wantsDelivery,
           delivery_address: wantsDelivery ? address : null,
+          delivery_by_seller: wantsDelivery ? sellerDoesDelivery : false,
+          delivery_fee: wantsDelivery && sellerDoesDelivery ? deliveryExtraFeeNum : 0,
           // Mano de obra opcional (servicio pre-asignado al mismo worker)
           service: laborEnabled ? {
             type: wantsDelivery ? 'express_errand' : 'fixed_job',
@@ -880,7 +1320,16 @@ export default function TiendaPage() {
           } : null,
         }),
       })
-      const { data } = await parseApiJson<{ payment_link?: string; store_order_id?: number; order_id?: number; confirmation_code?: string; quote_id?: number; message?: string }>(r)
+      const { data } = await parseApiJson<{ payment_link?: string; store_order_id?: number; order_id?: number; confirmation_code?: string; public_token?: string; quote_id?: number; message?: string }>(r)
+      console.info('[StorePage] integrated checkout response', {
+        httpStatus: r.status,
+        ok: r.ok,
+        orderId: data?.store_order_id ?? data?.order_id ?? null,
+        quoteId: data?.quote_id ?? null,
+        traceId: (data as { trace_id?: string } | null)?.trace_id ?? null,
+        hasPaymentLink: Boolean(data?.payment_link),
+        message: data?.message ?? null,
+      })
       if (r.ok && data?.payment_link) {
         trackEvent('tienda_integrated_checkout_success', {
           worker_id: workerId,
@@ -892,20 +1341,22 @@ export default function TiendaPage() {
         try {
           localStorage.setItem('last_store_order_id', String(data.store_order_id ?? data.order_id ?? ''))
           localStorage.setItem('last_store_confirmation_code', String(data.confirmation_code ?? ''))
+          localStorage.setItem('last_store_public_token', String(data.public_token ?? ''))
         } catch {}
         setPayLink(data.payment_link); setConfirmationCode(data.confirmation_code ?? null)
         setDone(true); setCart([])
         window.location.href = data.payment_link
       } else {
         trackEvent('tienda_integrated_checkout_error', { worker_id: workerId, message: String(data?.message || '').slice(0, 120) })
+        const traceHint = (data as { trace_id?: string } | null)?.trace_id ? ` (trace: ${(data as { trace_id?: string }).trace_id})` : ''
         if (data?.message) {
-          alert(data.message)
+          alert(data.message + traceHint)
         } else if (r.status === 404) {
           alert(feedbackCopy.quoteApiNotDeployed)
         } else if (!data) {
           alert(`${feedbackCopy.networkError} (HTTP ${r.status})`)
         } else {
-          alert(feedbackCopy.orderProcessError)
+          alert(feedbackCopy.orderProcessError + traceHint)
         }
       }
     } catch { alert(feedbackCopy.networkError) }
@@ -913,7 +1364,7 @@ export default function TiendaPage() {
   }
 
   const handleCreateQuote = async () => {
-    if (!buyerName.trim() || !buyerEmail.trim()) { alert(feedbackCopy.enterBuyerNameEmail); return }
+    if (!buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim()) { alert('Ingresa nombre, correo y WhatsApp del comprador'); return }
     setPaying(true)
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -929,9 +1380,11 @@ export default function TiendaPage() {
           items: cart.map(i => ({ idproducto: i.idproducto, nombre: i.nombre, cantidad: i.cantidad, precio: i.precio_venta ?? i.precio })),
           buyer_name: buyerName.trim(),
           buyer_email: buyerEmail.trim(),
-          buyer_phone: buyerPhone.trim() || null,
+          buyer_phone: buyerPhone.trim(),
           wants_delivery: wantsDelivery,
           delivery_address: wantsDelivery ? address : null,
+          delivery_by_seller: wantsDelivery ? sellerDoesDelivery : false,
+          delivery_fee: wantsDelivery && sellerDoesDelivery ? deliveryExtraFeeNum : 0,
           service: laborEnabled ? {
             type: wantsDelivery ? 'express_errand' : 'fixed_job',
             description: laborDesc.trim() || null,
@@ -972,6 +1425,8 @@ export default function TiendaPage() {
           laborEnabled,
           laborAmountNum,
           laborDesc: laborDesc.trim(),
+          deliveryBySeller: wantsDelivery && sellerDoesDelivery,
+          deliveryFee: wantsDelivery && sellerDoesDelivery ? deliveryExtraFeeNum : 0,
           publicUrl: data.public_url,
           expiresAt: data.expires_at ?? null,
           quoteId: data.quote_id,
@@ -1031,6 +1486,13 @@ export default function TiendaPage() {
     <div className="min-h-screen bg-gray-50">
 
       {/* Modales owner */}
+      <QuickPublishModal
+        isOpen={showQuickPublish}
+        onClose={() => setShowQuickPublish(false)}
+        workerId={workerId}
+        storeName={worker?.store_name}
+        onSuccess={fetchProductos}
+      />
       <AddProductModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -1160,6 +1622,57 @@ export default function TiendaPage() {
           </div>
         )}
         {isOwner && (
+          <div className="rounded-xl border border-orange-200 bg-orange-50/90 p-3 max-w-2xl">
+            <p className="text-xs font-bold text-orange-700">Categorías de tienda</p>
+            <p className="text-[11px] text-orange-700/80 mt-1">
+              Estas categorías organizan tus productos. Tus categorías de servicios se configuran en Mi Perfil.
+            </p>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {categorias.map((c) => (
+                <span key={c.idcategoria} className="px-2 py-0.5 bg-white text-orange-700 border border-orange-200 rounded-full text-xs font-semibold">
+                  {c.nombre}
+                </span>
+              ))}
+              {categorias.length === 0 && <span className="text-xs text-orange-700/70">Sin categorías de tienda aún.</span>}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              {!showAddStoreCategory ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAddStoreCategory(true)}
+                  className="text-xs font-bold text-orange-700 bg-white border border-orange-300 px-2.5 py-1 rounded-lg hover:bg-orange-100 transition"
+                >
+                  + Agregar categoría de tienda
+                </button>
+              ) : (
+                <>
+                  <input
+                    value={newStoreCategory}
+                    onChange={(e) => setNewStoreCategory(e.target.value)}
+                    placeholder="Ej: Herramientas, Usados, Ferretería..."
+                    className="flex-1 min-w-[240px] bg-white border border-orange-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-800 outline-none focus:ring-2 focus:ring-orange-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddStoreCategory}
+                    disabled={savingStoreCategory || !newStoreCategory.trim()}
+                    className="text-xs font-bold text-white bg-orange-500 px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+                  >
+                    {savingStoreCategory ? 'Guardando...' : 'Guardar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddStoreCategory(false); setNewStoreCategory('') }}
+                    className="text-xs font-bold text-orange-700 bg-white border border-orange-300 px-2.5 py-1.5 rounded-lg"
+                  >
+                    Cancelar
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        {isOwner && (
           <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
             <p className="text-xs font-bold text-orange-500">✏️ Modo propietario — toca cualquier producto para editar</p>
             <button onClick={() => { setTab('stats'); fetchStats() }}
@@ -1170,6 +1683,26 @@ export default function TiendaPage() {
         )}
         {isOwner && (
           <div className="space-y-2">
+            <div className="rounded-xl border border-teal-200 bg-teal-50 p-3 max-w-2xl">
+              <p className="text-xs font-black text-teal-800">Publicacion Express</p>
+              <p className="text-[11px] text-teal-700 mt-1">5 campos, publica rapido y comparte por WhatsApp al instante.</p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickPublish(true)}
+                  className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-500 px-3 py-1.5 rounded-lg transition"
+                >
+                  Publicar en 30 segundos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(true)}
+                  className="text-xs font-bold text-teal-700 bg-white border border-teal-300 px-3 py-1.5 rounded-lg transition hover:bg-teal-100"
+                >
+                  Modo avanzado
+                </button>
+              </div>
+            </div>
             <div className="flex gap-2 bg-white border border-gray-200 rounded-xl p-1 w-fit">
               <button
                 type="button"
@@ -1408,13 +1941,19 @@ export default function TiendaPage() {
           <div className="text-center py-16 text-gray-400">
             <Package className="w-16 h-16 mx-auto mb-3 opacity-30" />
             <p className="text-lg font-semibold">{emptyStateCopy.noProducts}</p>
-            {isOwner && <button onClick={() => setShowAddModal(true)} className="mt-4 bg-orange-500 text-white font-bold px-5 py-2 rounded-xl hover:bg-orange-400 transition">+ Agregar primer producto</button>}
+            {isOwner && (
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <button onClick={() => setShowQuickPublish(true)} className="bg-teal-600 text-white font-bold px-5 py-2 rounded-xl hover:bg-teal-500 transition">Publicacion Express</button>
+                <button onClick={() => setShowAddModal(true)} className="bg-orange-500 text-white font-bold px-5 py-2 rounded-xl hover:bg-orange-400 transition">Modo avanzado</button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {productos.map(p => {
               const precio = p.precio_venta ?? p.precio
               const enCarrito = cart.find(i => i.idproducto === p.idproducto)
+              const deliveryBadge = extractDeliveryBadge(p.descripcion)
               return (
                 <div key={p.idproducto} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group relative">
                   {/* Imagen */}
@@ -1447,6 +1986,11 @@ export default function TiendaPage() {
                     <p className="text-gray-800 text-sm font-bold line-clamp-2 min-h-[2.5rem]">{p.nombre}</p>
                     <p className="text-orange-500 font-black text-base mt-1">{formatPrice(precio)}</p>
                     <p className="text-gray-400 text-xs mb-3">{p.stock_actual} disponibles</p>
+                    {deliveryBadge.enabled && (
+                      <p className="mb-2 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                        🚚 Delivery por vendedor{deliveryBadge.fee > 0 ? ` (+${formatPrice(deliveryBadge.fee)})` : ''}
+                      </p>
+                    )}
 
                     {canUseCart && (
                       enCarrito ? (
@@ -1585,6 +2129,11 @@ export default function TiendaPage() {
                   <div className="flex justify-between text-xs text-gray-400">
                     <span>Servicio completo (8%)</span><span>{formatPrice(commission)}</span>
                   </div>
+                  {wantsDelivery && sellerDoesDelivery && deliveryExtraFeeNum > 0 && (
+                    <div className="flex justify-between text-xs text-gray-400 mt-1">
+                      <span>Delivery por vendedor</span><span>{formatPrice(deliveryExtraFeeNum)}</span>
+                    </div>
+                  )}
                   <p className="text-xs text-gray-400 mt-0.5">Incluye pago seguro con retención, comisión bancaria y respaldo digital</p>
                 </div>
                 <div className="flex justify-between font-black text-gray-900 text-base">
@@ -1630,7 +2179,7 @@ export default function TiendaPage() {
                   className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400" />
                 <input type="email" value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)} placeholder={isOwner ? 'Email del comprador *' : 'Tu email *'}
                   className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400" />
-                <input type="tel" value={buyerPhone} onChange={e => setBuyerPhone(e.target.value)} placeholder={isOwner ? 'Teléfono comprador (opcional)' : 'Teléfono (opcional)'}
+                <input type="tel" value={buyerPhone} onChange={e => setBuyerPhone(e.target.value)} placeholder={isOwner ? 'WhatsApp comprador *' : 'WhatsApp *'}
                   className="w-full bg-gray-50 border border-gray-200 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-orange-400" />
               </div>
               {isOwner && (
@@ -1653,11 +2202,32 @@ export default function TiendaPage() {
                   {wantsDelivery ? '✅ Con delivery' : 'Solicitar delivery (opcional)'}
                 </button>
                 {wantsDelivery && (
-                  <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Dirección de entrega..."
-                    className="mt-2 w-full bg-white border border-gray-200 text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400" />
+                  <div className="mt-2 space-y-2">
+                    <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Dirección de entrega..."
+                      className="w-full bg-white border border-gray-200 text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400" />
+                    <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={sellerDoesDelivery}
+                        onChange={(e) => setSellerDoesDelivery(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      El vendedor hace el delivery
+                    </label>
+                    {sellerDoesDelivery && (
+                      <input
+                        type="number"
+                        value={deliveryExtraFee}
+                        onChange={e => setDeliveryExtraFee(e.target.value)}
+                        placeholder="Costo extra de delivery (CLP)"
+                        className="w-full bg-white border border-gray-200 text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400"
+                        min={0}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
-              <button onClick={isOwner ? handleCreateQuote : handlePay} disabled={paying || !buyerName.trim() || !buyerEmail.trim() || (wantsDelivery && !address.trim())}
+              <button onClick={isOwner ? handleCreateQuote : handlePay} disabled={paying || !buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim() || (wantsDelivery && !address.trim())}
                 className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2">
                 {isOwner ? <FileText className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
                 {paying ? 'Procesando...' : (isOwner ? surfaceCopy.tiendaCreateShareLoteListo : `Pagar ${formatPrice(totalFinal)}`)}

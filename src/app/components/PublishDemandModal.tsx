@@ -8,6 +8,7 @@ const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
 import CategoryPicker from './CategoryPicker'
 import StoreBrowserInline from './StoreBrowserInline'
 import { trackEvent } from '@/lib/analytics'
+import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog } from '@/lib/jhFlowLog'
 import { demandTypeGlossary, feedbackCopy, surfaceCopy, type DemandTypeKey } from '@/lib/userFacingCopy'
 import { ModalShell } from '@/app/components/ui/ModalShell'
 import type { MapPoint } from '@/app/components/MapSection'
@@ -93,7 +94,7 @@ export interface PublishedDemandSnapshot {
     pos: { lat: number; lng: number }
     client: { id?: number; name: string; avatar: string | null }
     category: { name: string; color: string; icon?: string }
-    offered_price: number
+    offered_price: number | null
     urgency: string
     distance_km: number
     pickup_address?: string
@@ -137,7 +138,7 @@ function buildOptimisticSnapshot(input: {
 
   const cat = input.categories.find((c) => c.id === input.resolvedCategoryId)
   const dbUrgency = mapUrgencyToDb(input.urgency)
-  const price = Math.round(input.offeredPrice ? parseFloat(input.offeredPrice) : 0)
+  const parsedPrice = input.offeredPrice ? Math.round(parseFloat(input.offeredPrice)) : null
   const category_type: 'fixed' | 'travel' | 'errand' =
     input.demandType === 'ride_share' ? 'travel' : input.demandType === 'express_errand' ? 'errand' : 'fixed'
 
@@ -160,7 +161,7 @@ function buildOptimisticSnapshot(input: {
       color: cat?.color ?? '#f59e0b',
       icon: cat?.icon,
     },
-    offered_price: price,
+    offered_price: parsedPrice,
     urgency: dbUrgency,
     distance_km: 0,
     pickup_address: input.pickupAddress,
@@ -179,7 +180,7 @@ function buildOptimisticSnapshot(input: {
     pos: { lat: input.pickupLat, lng: input.pickupLng },
     name: feedItem.client.name,
     avatar: feedItem.client.avatar,
-    price,
+    price: parsedPrice ?? 0,
     category_color: feedItem.category.color,
     category_slug: cat?.slug ?? null,
     category_name: feedItem.category.name,
@@ -217,7 +218,7 @@ const DEMAND_TYPE_CARDS: {
   { val: 'fixed_job', Icon: Wrench, label: 'Trabajo', sub: 'Electricista, plomero…', accent: 'amber' },
   { val: 'ride_share', Icon: Car, label: 'Viaje', sub: 'Llevarme o traerme', accent: 'amber' },
   { val: 'express_errand', Icon: Package, label: 'Mandado', sub: 'Compras, delivery', accent: 'amber' },
-  { val: 'buscar_producto', Icon: ShoppingCart, label: 'Buscar producto', sub: 'Ver tiendas cercanas', accent: 'orange' },
+  { val: 'buscar_producto', Icon: ShoppingCart, label: 'Buscar tiendas', sub: 'Tiendas cercanas', accent: 'orange' },
 ]
 
 export default function PublishDemandModal({ userLat, userLng, categories, publisher, onClose, onPublished }: Props) {
@@ -268,6 +269,7 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
 
   useEffect(() => {
     trackEvent('demand_publish_modal_open', {})
+    jhFlowHintOnce()
   }, [])
 
   useEffect(() => {
@@ -413,9 +415,23 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
         }
       }
 
+      if (isJhFlowDebugEnabled()) {
+        jhFlowLog('POST /api/v1/demand/publish', {
+          offered_price: payload.offered_price,
+          type: payload.type,
+          category_id: payload.category_id,
+          ttl_minutes: payload.ttl_minutes,
+          has_image: Boolean(imageFile),
+          demandMode: imageFile ? 'multipart' : 'json',
+        })
+      }
+
       const res = await apiFetch('/api/v1/demand/publish', fetchOptions)
 
       const data = await res.json()
+      if (isJhFlowDebugEnabled()) {
+        jhFlowLog('demand/publish → resultado', { ok: res.ok, http: res.status, status: data?.status, body: data })
+      }
       if (res.ok && data.status === 'success') {
         trackEvent('demand_publish_success', {
           type: demandType,
@@ -476,7 +492,7 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
       onClose={onClose}
       titleId="demand-modal-title"
       title="¿Qué necesitas?"
-      subtitle="Publica tu demanda y recibe ofertas"
+      subtitle="Publica tu solicitud y recibe respuestas"
       variant="bottomSheet"
       bodyClassName="max-h-[78vh] px-5 py-4 space-y-5 pb-8"
     >
@@ -487,11 +503,14 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
             </div>
           )}
 
+          <div className="flex items-center justify-between bg-teal-500/10 border border-teal-500/25 rounded-xl px-3 py-2">
+            <span className="text-xs font-black text-teal-300 uppercase tracking-wide">Esencial</span>
+            <span className="text-[10px] text-slate-400">Lo minimo para publicar</span>
+          </div>
+
           {/* Tipo de servicio — PRIMERO y visible */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-              Tipo de necesidad
-            </label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tipo de solicitud</label>
             <p className="text-[11px] text-slate-500 mb-3 -mt-1">Elige una opción; luego completa los datos abajo.</p>
             <div className="grid grid-cols-2 gap-2.5">
               {DEMAND_TYPE_CARDS.map(({ val, Icon, label, sub, accent }) => {
@@ -544,11 +563,11 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
             </div>
           </div>
 
-          {/* Buscar producto — redirige a tiendas cercanas */}
+          {/* Buscar tiendas — mientras se habilita búsqueda real por producto */}
           {demandType === 'buscar_producto' && (
             <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 space-y-3">
               <p className="text-orange-300 font-black text-sm">🛒 Tiendas cercanas</p>
-              <p className="text-slate-400 text-xs">Workers de tu zona que venden productos. Toca una tienda para ver su catálogo.</p>
+              <p className="text-slate-400 text-xs">Busca por nombre de tienda o vendedor. Toca una tienda para ver su catálogo.</p>
               <StoreBrowserInline userLat={userLat} userLng={userLng} />
             </div>
           )}
@@ -609,6 +628,11 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
             <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Pesos chilenos (CLP). El trabajador puede proponer otro monto.</p>
           </div>
 
+          <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2">
+            <span className="text-xs font-black text-amber-300 uppercase tracking-wide">Sugerido</span>
+            <span className="text-[10px] text-slate-400">Mejora la coordinacion</span>
+          </div>
+
           {/* Campos ride_share */}
           {demandType === 'ride_share' && (
             <div className="space-y-3 bg-teal-500/5 border border-teal-500/20 rounded-xl p-3">
@@ -631,7 +655,7 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
           {/* Campos express_errand */}
           {demandType === 'express_errand' && (
             <div className="bg-amber-500/5 border border-amber-500/25 rounded-xl p-3 space-y-2">
-              <p className="text-xs font-black text-amber-400 uppercase tracking-wider">Detalles del mandado</p>
+              <p className="text-xs font-black text-amber-400 uppercase tracking-wider">Detalles de compra/recado</p>
               <div>
                 <input type="text" value={storeName} onChange={e => { setStoreName(e.target.value); setFieldErrors(er => ({...er, storeName: ''})) }} placeholder="Nombre del negocio (ej: Supermercado Angol)" className={inputCls} />
                 {fieldErrors.storeName && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.storeName}</p>}

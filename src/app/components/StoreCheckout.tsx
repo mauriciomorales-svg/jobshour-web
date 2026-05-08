@@ -18,6 +18,9 @@ function formatPrice(price: number) {
 
 export default function StoreCheckout({ onClose, onBack }: Props) {
   const { items, total, workerId, clearCart } = useStoreCart()
+  const [buyerName, setBuyerName] = useState('')
+  const [buyerEmail, setBuyerEmail] = useState('')
+  const [buyerPhone, setBuyerPhone] = useState('')
   const [wantsDelivery, setWantsDelivery] = useState(false)
   const [address, setAddress] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,6 +32,10 @@ export default function StoreCheckout({ onClose, onBack }: Props) {
 
   const handlePay = async () => {
     if (!workerId) return
+    if (!buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim()) {
+      alert('Ingresa nombre, correo y WhatsApp para continuar')
+      return
+    }
     setLoading(true)
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -39,17 +46,34 @@ export default function StoreCheckout({ onClose, onBack }: Props) {
           worker_id: workerId,
           items: items.map(i => ({ idproducto: i.idproducto, nombre: i.nombre, cantidad: i.cantidad, precio: i.precio })),
           total: totalWithCommission,
-          wants_delivery: wantsDelivery,
+          buyer_name: buyerName.trim(),
+          buyer_email: buyerEmail.trim(),
+          buyer_phone: buyerPhone.trim(),
+          delivery: wantsDelivery,
           delivery_address: wantsDelivery ? address : null,
         }),
       })
       const data = await r.json()
+      console.info('[StoreCheckout] create-order response', {
+        httpStatus: r.status,
+        ok: r.ok,
+        orderId: data?.order_id ?? null,
+        traceId: data?.trace_id ?? null,
+        hasPaymentLink: Boolean(data?.payment_link),
+        message: data?.message ?? null,
+      })
       if (r.ok && data.payment_link) {
+        try {
+          localStorage.setItem('last_store_order_id', String(data?.order_id ?? ''))
+          localStorage.setItem('last_store_confirmation_code', String(data?.confirmation_code ?? ''))
+          localStorage.setItem('last_store_public_token', String(data?.public_token ?? ''))
+        } catch {}
         setPayLink(data.payment_link)
         setDone(true)
         clearCart()
       } else {
-        alert(data.message || feedbackCopy.orderProcessError)
+        const traceHint = data?.trace_id ? ` (trace: ${data.trace_id})` : ''
+        alert((data.message || feedbackCopy.orderProcessError) + traceHint)
       }
     } catch {
       alert(feedbackCopy.networkError)
@@ -113,6 +137,29 @@ export default function StoreCheckout({ onClose, onBack }: Props) {
 
           {/* Delivery */}
           <div className="bg-slate-700 rounded-xl p-3">
+            <div className="space-y-2 mb-3">
+              <input
+                type="text"
+                value={buyerName}
+                onChange={e => setBuyerName(e.target.value)}
+                placeholder="Tu nombre *"
+                className="w-full bg-slate-600 text-white text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400 placeholder-slate-400"
+              />
+              <input
+                type="email"
+                value={buyerEmail}
+                onChange={e => setBuyerEmail(e.target.value)}
+                placeholder="Tu correo *"
+                className="w-full bg-slate-600 text-white text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400 placeholder-slate-400"
+              />
+              <input
+                type="tel"
+                value={buyerPhone}
+                onChange={e => setBuyerPhone(e.target.value)}
+                placeholder="Tu WhatsApp *"
+                className="w-full bg-slate-600 text-white text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400 placeholder-slate-400"
+              />
+            </div>
             <button
               onClick={() => setWantsDelivery(!wantsDelivery)}
               className={`flex items-center gap-2 w-full text-sm font-bold transition ${wantsDelivery ? 'text-orange-400' : 'text-slate-300'}`}
@@ -134,7 +181,7 @@ export default function StoreCheckout({ onClose, onBack }: Props) {
           {/* Pagar */}
           <button
             onClick={handlePay}
-            disabled={loading || (wantsDelivery && !address.trim())}
+            disabled={loading || !buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim() || (wantsDelivery && !address.trim())}
             className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <CreditCard className="w-4 h-4" />

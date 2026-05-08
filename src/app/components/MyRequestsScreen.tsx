@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { apiFetch } from '@/lib/api'
-import { emptyStateCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog, jhFlowSummarizeRequest } from '@/lib/jhFlowLog'
+import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
 
 const LiveTrackingModal = dynamic(() => import('./LiveTrackingModal'), { ssr: false })
@@ -31,6 +32,8 @@ interface ServiceRequest {
   status: 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed' | 'in_progress'
   urgency: 'normal' | 'urgent'
   offered_price: number | null
+  adjusted_price?: number | null
+  client_approved_adjustment?: boolean
   final_price: number | null
   payment_status: 'pending' | 'completed' | 'failed' | null
   created_at: string
@@ -39,6 +42,13 @@ interface ServiceRequest {
   delivery_address?: string
   delivery_lat?: number
   delivery_lng?: number
+}
+
+const getEffectivePrice = (r: ServiceRequest): number | null => {
+  if (typeof r.final_price === 'number' && r.final_price > 0) return r.final_price
+  if (r.client_approved_adjustment && typeof r.adjusted_price === 'number' && r.adjusted_price > 0) return r.adjusted_price
+  if (typeof r.offered_price === 'number' && r.offered_price > 0) return r.offered_price
+  return null
 }
 
 export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenChat }: Props) {
@@ -50,6 +60,7 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
 
   useEffect(() => {
     if (isOpen) {
+      jhFlowHintOnce()
       fetchRequests()
     }
   }, [isOpen])
@@ -86,6 +97,15 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
       })
       const data = await res.json()
       const newRequests = data.data || []
+      if (isJhFlowDebugEnabled()) {
+        jhFlowLog('GET /api/v1/requests/mine → Mis Solicitudes (modal)', {
+          count: newRequests.length,
+          items: (newRequests as ServiceRequest[]).map((r) => ({
+            ...jhFlowSummarizeRequest(r as unknown as Record<string, unknown>),
+            ui_effective_clp: getEffectivePrice(r),
+          })),
+        })
+      }
       setRequests(newRequests)
     } catch (err) {
       console.error('Error fetching requests:', err)
@@ -104,6 +124,22 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
       fetchRequests()
     } catch (err) {
       console.error('Error cancelling request:', err)
+    }
+  }
+
+  const approveAdjustment = async (id: number) => {
+    jhFlowLog('POST approve-adjustment', { requestId: id })
+    try {
+      const res = await apiFetch(`/api/v1/requests/${id}/approve-adjustment`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' }
+      })
+      const data = await res.json().catch(() => ({}))
+      jhFlowLog('approve-adjustment → resultado', { requestId: id, ok: res.ok, http: res.status, body: data })
+      if (!res.ok) alert(data.message || 'No se pudo aprobar el ajuste')
+      fetchRequests()
+    } catch {
+      alert(feedbackCopy.networkError)
     }
   }
 
@@ -213,6 +249,10 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
           ) : (
             <div className="space-y-3">
               {filtered.map(request => (
+                (() => {
+                  const effectivePrice = getEffectivePrice(request)
+                  const hasPendingAdjustment = typeof request.adjusted_price === 'number' && request.adjusted_price > 0 && !request.client_approved_adjustment
+                  return (
                 <div
                   key={request.id}
                   className="bg-slate-800 border border-slate-700 rounded-2xl p-4 hover:border-slate-600 transition"
@@ -253,21 +293,15 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
                   )}
 
                   {/* Price */}
-                  {(request.offered_price || request.final_price) && (
-                    <div className="flex items-center gap-2 mb-3">
-                      <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-sm font-bold text-slate-300">
-                        {request.final_price 
-                          ? `Precio final: $${request.final_price.toLocaleString()}`
-                          : request.offered_price
-                          ? `Oferta: $${request.offered_price.toLocaleString()}`
-                          : emptyStateCopy.noPrice}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-bold text-slate-300">
+                      {effectivePrice ? `Monto: $${effectivePrice.toLocaleString('es-CL')}` : 'Monto: A convenir'}
+                    </span>
+                  </div>
 
                   {/* Actions */}
                   <div className="flex gap-2">
@@ -299,6 +333,15 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
                         </button>
                       </>
                     )}
+                    {hasPendingAdjustment && (request.status === 'accepted' || request.status === 'in_progress') && (
+                      <button
+                        type="button"
+                        onClick={() => approveAdjustment(request.id)}
+                        className="flex-1 bg-teal-500/20 text-teal-300 py-2 rounded-xl text-sm font-bold hover:bg-teal-500/30 transition border border-teal-500/30"
+                      >
+                        ✅ Aceptar nuevo monto (${(request.adjusted_price || 0).toLocaleString('es-CL')})
+                      </button>
+                    )}
                     {request.status === 'completed' && (
                       <div className="flex gap-2 w-full">
                         {(!request.payment_status || request.payment_status === 'pending') && (
@@ -319,6 +362,8 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
                     )}
                   </div>
                 </div>
+                  )
+                })()
               ))}
             </div>
           )}

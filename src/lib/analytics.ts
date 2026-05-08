@@ -7,6 +7,8 @@
  */
 
 export type AnalyticsEvent = { name: string; payload: Record<string, unknown>; t: number }
+const LOCAL_EVENTS_KEY = 'jh_analytics_events'
+const LOCAL_MAX_EVENTS = 1500
 
 export function sendAnalyticsIngest(ev: AnalyticsEvent) {
   const base = process.env.NEXT_PUBLIC_ANALYTICS_INGEST?.trim()
@@ -53,13 +55,36 @@ export function trackEvent(name: string, payload?: Record<string, unknown>) {
   if (typeof window === 'undefined') return
   const t = Date.now()
   const p = payload ?? {}
+  const ev: AnalyticsEvent = { name, payload: p, t }
   try {
-    window.dispatchEvent(new CustomEvent('jh_analytics', { detail: { name, payload: p, t } }))
+    window.dispatchEvent(new CustomEvent('jh_analytics', { detail: ev }))
   } catch {
     /* ignore */
   }
-  sendAnalyticsIngest({ name, payload: p, t })
+  try {
+    const raw = localStorage.getItem(LOCAL_EVENTS_KEY)
+    const list = raw ? (JSON.parse(raw) as AnalyticsEvent[]) : []
+    list.push(ev)
+    const trimmed = list.slice(-LOCAL_MAX_EVENTS)
+    localStorage.setItem(LOCAL_EVENTS_KEY, JSON.stringify(trimmed))
+  } catch {
+    /* ignore */
+  }
+  sendAnalyticsIngest(ev)
   if (process.env.NODE_ENV === 'development') {
     console.debug('[jh_analytics]', name, payload)
+  }
+}
+
+export function getLocalAnalyticsEvents(): AnalyticsEvent[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(LOCAL_EVENTS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((e) => e && typeof e.name === 'string' && typeof e.t === 'number')
+  } catch {
+    return []
   }
 }

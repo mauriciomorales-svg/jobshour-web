@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf'
+import QRCode from 'qrcode'
 
 /** Marca: mismo ecosistema en toda la app */
 const BRAND = 'JobsHours'
@@ -30,16 +31,41 @@ export type BrandedQuotePdfParams = {
   publicUrl: string
   quoteId?: number
   statusLabel?: string
+  brandName?: string
+  brandTagline?: string
+  campaignCta?: string
 }
 
 function formatMoney(n: number): string {
   return '$' + Math.round(n).toLocaleString('es-CL')
 }
 
+function normalizeWhatsApp(phone?: string | null): string | null {
+  const raw = (phone ?? '').trim()
+  if (!raw) return null
+  const digits = raw.replace(/[^\d+]/g, '')
+  if (!digits) return null
+  if (digits.startsWith('+')) return digits
+  return `+${digits}`
+}
+
+async function buildQrDataUrl(value: string): Promise<string | null> {
+  try {
+    return await QRCode.toDataURL(value, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 240,
+      color: { dark: '#0f172a', light: '#ffffff' },
+    })
+  } catch {
+    return null
+  }
+}
+
 /**
  * PDF listo para compartir; cabecera y pie con marca JobsHours.
  */
-export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
+export async function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): Promise<void> {
   const {
     storeName,
     workerName,
@@ -53,11 +79,17 @@ export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
     publicUrl,
     quoteId,
     statusLabel,
+    brandName,
+    brandTagline,
+    campaignCta,
   } = params
 
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
   const pageW = pdf.internal.pageSize.getWidth()
   const margin = 14
+  const dynamicBrand = brandName?.trim() || BRAND
+  const dynamicTagline = brandTagline?.trim() || BRAND_TAGLINE
+  const dynamicCta = campaignCta?.trim() || 'Escanea y revisa esta oferta ahora'
   let y = 12
 
   // Franja marca
@@ -66,10 +98,10 @@ export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
   pdf.setTextColor(255, 255, 255)
   pdf.setFontSize(20)
   pdf.setFont('helvetica', 'bold')
-  pdf.text(BRAND, margin, y)
+  pdf.text(dynamicBrand, margin, y)
   pdf.setFontSize(8.5)
   pdf.setFont('helvetica', 'normal')
-  const tagLines = pdf.splitTextToSize(BRAND_TAGLINE, pageW - margin * 2)
+  const tagLines = pdf.splitTextToSize(dynamicTagline, pageW - margin * 2)
   y = 18
   pdf.text(tagLines, margin, y)
   pdf.setFont('helvetica', 'bold')
@@ -105,12 +137,18 @@ export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
   pdf.text('Datos del comprador', margin, y)
   y += 5
   pdf.setFont('helvetica', 'normal')
-  pdf.text(`${buyerName}`, margin, y)
+  pdf.text(`Nombre: ${buyerName}`, margin, y)
   y += 4
-  pdf.text(buyerEmail, margin, y)
-  if (buyerPhone?.trim()) {
+  pdf.text(`Correo: ${buyerEmail}`, margin, y)
+  y += 4
+  const wa = normalizeWhatsApp(buyerPhone)
+  pdf.text(`WhatsApp: ${wa ?? 'No informado'}`, margin, y)
+  if (wa) {
     y += 4
-    pdf.text(buyerPhone.trim(), margin, y)
+    const waLink = `https://wa.me/${wa.replace(/[^\d]/g, '')}`
+    pdf.setTextColor(14, 116, 144)
+    pdf.textWithLink('Abrir chat por WhatsApp', margin, y, { url: waLink })
+    pdf.setTextColor(15, 23, 42)
   }
   y += 8
 
@@ -163,6 +201,28 @@ export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
   pdf.setTextColor(15, 23, 42)
   y += 10
 
+  const qrDataUrl = await buildQrDataUrl(publicUrl)
+  const qrBoxY = y
+  const qrSize = 34
+  const qrX = pageW - margin - qrSize
+  if (qrDataUrl) {
+    pdf.setDrawColor(226, 232, 240)
+    pdf.setFillColor(255, 255, 255)
+    pdf.roundedRect(qrX - 3, qrBoxY - 3, qrSize + 6, qrSize + 6, 2, 2, 'FD')
+    pdf.addImage(qrDataUrl, 'PNG', qrX, qrBoxY, qrSize, qrSize)
+  }
+  pdf.setFontSize(9)
+  pdf.setTextColor(51, 65, 85)
+  pdf.setFont('helvetica', 'bold')
+  const qrLeadMaxW = pageW - margin * 2 - (qrDataUrl ? qrSize + 10 : 0)
+  const qrLead = pdf.splitTextToSize(dynamicCta, qrLeadMaxW)
+  pdf.text(qrLead, margin, qrBoxY + 6)
+  pdf.setFont('helvetica', 'normal')
+  pdf.setFontSize(8)
+  const publicUrlLines = pdf.splitTextToSize(publicUrl, qrLeadMaxW)
+  pdf.text(publicUrlLines, margin, qrBoxY + 13)
+  y = qrBoxY + Math.max(qrSize + 8, 22)
+
   if (expiresAt) {
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
@@ -183,7 +243,7 @@ export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
 
   // Pie en cada página — marca JobsHours (ecosistema unificado)
   const pageCount = pdf.getNumberOfPages()
-  const footerStr = `${BRAND} · ${BRAND_TAGLINE} · ${BRAND_URL}`
+  const footerStr = `${dynamicBrand} · ${dynamicTagline} · ${BRAND_URL}`
   for (let p = 1; p <= pageCount; p++) {
     pdf.setPage(p)
     pdf.setFontSize(6.5)
@@ -196,6 +256,7 @@ export function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): void {
   pdf.setPage(pageCount)
 
   const safeId = quoteId != null ? String(quoteId) : 'lote'
-  const fname = `${BRAND}-lote-${safeId}-${new Date().toISOString().slice(0, 10)}.pdf`
+  const safeBrand = dynamicBrand.replace(/[^\w-]+/g, '-')
+  const fname = `${safeBrand}-lote-${safeId}-${new Date().toISOString().slice(0, 10)}.pdf`
   pdf.save(fname)
 }

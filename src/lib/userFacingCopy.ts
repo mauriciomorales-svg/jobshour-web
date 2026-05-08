@@ -348,7 +348,7 @@ export const navCopy = {
   myProfile: 'Mi Perfil',
   myJobs: 'Mis Trabajos',
   publishDemand: 'Publicar Demanda',
-  myCategories: 'Mis Categorías',
+  myCategories: 'Categorías de servicios',
   myStore: 'Mi Tienda',
   conversations: 'Conversaciones',
   myFriends: 'Mis Amigos',

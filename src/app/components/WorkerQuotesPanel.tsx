@@ -72,39 +72,40 @@ export default function WorkerQuotesPanel({ onClose }: { onClose: () => void }) 
   }
 
   const downloadQuotePdf = (q: QuoteRow) => {
-    try {
-      trackEvent('quote_pdf_download', { source: 'worker_quotes_panel', quote_id: q.id })
-      const extras: { label: string; amount: number }[] = []
-      if (q.service_amount && q.service_amount > 0) {
-        extras.push({ label: 'Servicio / mano de obra', amount: q.service_amount })
-      }
-      if (q.delivery_amount && q.delivery_amount > 0) {
-        extras.push({ label: 'Delivery', amount: q.delivery_amount })
-      }
-      if (q.tool_wear_amount && q.tool_wear_amount > 0) {
-        extras.push({ label: 'Herramientas / otros', amount: q.tool_wear_amount })
-      }
-      downloadBrandedQuotePdf({
-        storeName: 'Tienda JobsHours',
-        workerName: 'Tu tienda',
-        buyerName: q.buyer_name || '—',
-        buyerEmail: q.buyer_email || '—',
-        buyerPhone: q.buyer_phone,
-        rows: (q.items ?? []).map((it) => ({
-          title: it.title,
-          quantity: it.quantity,
-          amount: it.subtotal_amount,
-        })),
-        extras,
-        total: q.total_amount,
-        expiresAt: q.expires_at,
-        publicUrl: q.public_url || 'https://jobshours.com',
-        quoteId: q.id,
-        statusLabel: labelIntegratedQuoteStatus(q.status),
-      })
-    } catch {
-      alert(feedbackCopy.pdfGenerateError)
+    trackEvent('quote_pdf_download', { source: 'worker_quotes_panel', quote_id: q.id })
+    const extras: { label: string; amount: number }[] = []
+    if (q.service_amount && q.service_amount > 0) {
+      extras.push({ label: 'Servicio / mano de obra', amount: q.service_amount })
     }
+    if (q.delivery_amount && q.delivery_amount > 0) {
+      extras.push({ label: 'Delivery', amount: q.delivery_amount })
+    }
+    if (q.tool_wear_amount && q.tool_wear_amount > 0) {
+      extras.push({ label: 'Herramientas / otros', amount: q.tool_wear_amount })
+    }
+    void downloadBrandedQuotePdf({
+      storeName: 'Tienda JobsHours',
+      workerName: 'Tu tienda',
+      buyerName: q.buyer_name || '—',
+      buyerEmail: q.buyer_email || '—',
+      buyerPhone: q.buyer_phone,
+      rows: (q.items ?? []).map((it) => ({
+        title: it.title,
+        quantity: it.quantity,
+        amount: it.subtotal_amount,
+      })),
+      extras,
+      total: q.total_amount,
+      expiresAt: q.expires_at,
+      publicUrl: q.public_url || 'https://jobshours.com',
+      quoteId: q.id,
+      statusLabel: labelIntegratedQuoteStatus(q.status),
+      brandName: 'Tienda JobsHours',
+      brandTagline: 'Tarjeta digital para vender y compartir productos',
+      campaignCta: 'Escanea el QR y abre esta propuesta',
+    }).catch(() => {
+      alert(feedbackCopy.pdfGenerateError)
+    })
   }
 
   return (

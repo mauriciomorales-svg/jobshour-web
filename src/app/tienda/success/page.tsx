@@ -10,12 +10,14 @@ function SuccessContent() {
   const params = useSearchParams()
   const orderIdFromUrl = params.get('external_reference')
   const confirmationCodeFromUrl = params.get('confirmation_code')
+  const publicTokenFromUrl = params.get('token')
 
   const [code, setCode] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState('')
   const [resolvedOrderId, setResolvedOrderId] = useState<string | null>(orderIdFromUrl)
   const [resolvedConfirmationCode, setResolvedConfirmationCode] = useState<string | null>(confirmationCodeFromUrl)
+  const [resolvedPublicToken, setResolvedPublicToken] = useState<string | null>(publicTokenFromUrl)
   const [timeline, setTimeline] = useState<{
     order: {
       id: number
@@ -53,7 +55,8 @@ function SuccessContent() {
   const loadTimeline = async () => {
     if (!resolvedOrderId) return
     try {
-      const r = await fetch(`${API_BASE}/v1/store/orders/${resolvedOrderId}`, {
+      if (!resolvedPublicToken) return
+      const r = await fetch(`${API_BASE}/v1/store/orders/${resolvedOrderId}?token=${encodeURIComponent(resolvedPublicToken)}`, {
         headers: { Accept: 'application/json' },
       })
       const data = await r.json()
@@ -76,8 +79,10 @@ function SuccessContent() {
       try {
         const lastId = localStorage.getItem('last_store_order_id')
         const lastCode = localStorage.getItem('last_store_confirmation_code')
+        const lastToken = localStorage.getItem('last_store_public_token')
         if (lastId) setResolvedOrderId(lastId)
         if (lastCode && !resolvedConfirmationCode) setResolvedConfirmationCode(lastCode)
+        if (lastToken && !resolvedPublicToken) setResolvedPublicToken(lastToken)
       } catch {}
     }
     if (!resolvedOrderId) return
@@ -88,7 +93,7 @@ function SuccessContent() {
       if (!isClosed) loadTimeline()
     }, 5000)
     return () => window.clearInterval(interval)
-  }, [resolvedOrderId, isClosed])
+  }, [resolvedOrderId, resolvedConfirmationCode, resolvedPublicToken, isClosed])
 
   const paymentDone = timeline?.order?.status === 'paid' || timeline?.integrated_quote?.status === 'paid'
   const materialsDone = timeline?.order?.status === 'confirmed' || timeline?.integrated_quote?.status === 'materials_confirmed' || timeline?.integrated_quote?.status === 'closed'

@@ -4,6 +4,7 @@ import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
+import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog, jhFlowSummarizeRequest } from '@/lib/jhFlowLog'
 import dynamic from 'next/dynamic'
 
 const LiveTrackingModal = dynamic(() => import('./LiveTrackingModal'), { ssr: false })
@@ -28,11 +29,21 @@ interface ServiceRequest {
   status: 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed' | 'in_progress'
   urgency: 'normal' | 'urgent'
   offered_price: number | null
+  final_price?: number | null
+  adjusted_price?: number | null
+  client_approved_adjustment?: boolean
   created_at: string
   expires_at: string | null
   delivery_address?: string
   delivery_lat?: number
   delivery_lng?: number
+}
+
+const getEffectivePrice = (r: ServiceRequest): number | null => {
+  if (typeof r.final_price === 'number' && r.final_price > 0) return r.final_price
+  if (r.client_approved_adjustment && typeof r.adjusted_price === 'number' && r.adjusted_price > 0) return r.adjusted_price
+  if (typeof r.offered_price === 'number' && r.offered_price > 0) return r.offered_price
+  return null
 }
 
 export default function WorkerRequestsScreen({ isOpen, onClose, userToken, workerId, currentUserId, onOpenChat }: Props) {
@@ -45,6 +56,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
 
   useEffect(() => {
     if (isOpen) {
+      jhFlowHintOnce()
       fetchRequests()
     }
   }, [isOpen])
@@ -72,7 +84,18 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
         headers: { Authorization: `Bearer ${userToken}` }
       })
       const data = await res.json()
-      setRequests(data.data || [])
+      const rows: ServiceRequest[] = data.data || []
+      if (isJhFlowDebugEnabled()) {
+        jhFlowLog('GET /api/v1/requests/worker/:id → lista', {
+          workerId,
+          count: rows.length,
+          items: rows.map((r) => ({
+            ...jhFlowSummarizeRequest(r as unknown as Record<string, unknown>),
+            ui_effective_clp: getEffectivePrice(r),
+          })),
+        })
+      }
+      setRequests(rows)
     } catch (err) {
       console.error('Error fetching requests:', err)
     }
@@ -80,6 +103,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
   }
 
   const handleRespond = async (requestId: number, action: 'accept' | 'reject', reason?: string) => {
+    jhFlowLog('POST respond', { requestId, action })
     setActionLoading(requestId)
     setError(null)
     try {
@@ -88,7 +112,8 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
         body: JSON.stringify({ action, reason })
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
+      jhFlowLog('respond → resultado', { requestId, ok: res.ok, http: res.status, body: data })
       if (!res.ok) setError(data.message || 'Error al procesar')
       else fetchRequests()
     } catch (err) {
@@ -98,6 +123,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
   }
 
   const handleComplete = async (requestId: number) => {
+    jhFlowLog('POST complete', { requestId })
     setActionLoading(requestId)
     setError(null)
     try {
@@ -106,10 +132,38 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
         body: JSON.stringify({})
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
+      jhFlowLog('complete → resultado', { requestId, ok: res.ok, http: res.status, body: data })
       if (!res.ok) setError(data.message || 'Error al completar')
       else fetchRequests()
     } catch (err) {
+      setError(feedbackCopy.networkError)
+    }
+    setActionLoading(null)
+  }
+
+  const handleAdjustPrice = async (requestId: number) => {
+    const raw = window.prompt('Propón monto final en CLP (ej: 15000)')
+    if (!raw) return
+    const amount = Math.max(0, parseInt(raw.replace(/[^\d]/g, ''), 10) || 0)
+    if (!amount) {
+      setError('Monto inválido')
+      return
+    }
+    jhFlowLog('POST adjust-price', { requestId, adjusted_price: amount })
+    setActionLoading(requestId)
+    setError(null)
+    try {
+      const res = await apiFetch(`/api/v1/requests/${requestId}/adjust-price`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        body: JSON.stringify({ adjusted_price: amount, reason: 'Ajuste por negociación en chat' })
+      })
+      const data = await res.json().catch(() => ({}))
+      jhFlowLog('adjust-price → resultado', { requestId, ok: res.ok, http: res.status, body: data })
+      if (!res.ok) setError(data.message || 'No se pudo proponer monto')
+      else fetchRequests()
+    } catch {
       setError(feedbackCopy.networkError)
     }
     setActionLoading(null)
@@ -174,15 +228,19 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
             </svg>
           </button>
           <div className="relative z-10">
-            <h3 className="text-white text-2xl font-black">Solicitudes Recibidas</h3>
+            <h3 className="text-white text-2xl font-black">Solicitudes para ti</h3>
             <p className="text-white/80 text-sm mt-1">
-              {pendingCount > 0 ? `${pendingCount} pendiente${pendingCount > 1 ? 's' : ''}` : 'Sin solicitudes pendientes'}
+              {pendingCount > 0 ? `${pendingCount} nueva${pendingCount > 1 ? 's' : ''}` : 'Sin solicitudes nuevas'}
             </p>
           </div>
         </div>
 
         {/* Filters */}
         <div className="p-4 border-b border-slate-700 shrink-0">
+          <div className="flex items-center justify-between bg-teal-500/10 border border-teal-500/25 rounded-xl px-3 py-2 mb-3">
+            <span className="text-xs font-black text-teal-300 uppercase tracking-wide">Esencial</span>
+            <span className="text-[10px] text-slate-400">Primero responde solicitudes nuevas</span>
+          </div>
           {error && (
             <div className="mb-3 bg-red-500/10 border border-red-500/30 rounded-xl p-2.5 text-red-400 text-sm font-semibold">
               ⚠️ {error}
@@ -198,7 +256,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
               }`}
             >
-              ⏳ Pendientes {pendingCount > 0 && `(${pendingCount})`}
+              🆕 Nuevas {pendingCount > 0 && `(${pendingCount})`}
             </button>
             <button
               type="button"
@@ -209,7 +267,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
               }`}
             >
-              ✅ Activas {acceptedCount > 0 && `(${acceptedCount})`}
+              ✅ En curso {acceptedCount > 0 && `(${acceptedCount})`}
             </button>
             <button
               type="button"
@@ -238,12 +296,15 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
               </svg>
               <p className="text-slate-400 font-semibold">No hay solicitudes</p>
               <p className="text-slate-500 text-sm mt-1">
-                {filter === 'pending' ? 'No tienes solicitudes pendientes' : filter === 'accepted' ? 'No tienes trabajos activos' : 'Aún no has recibido solicitudes'}
+                {filter === 'pending' ? 'No tienes solicitudes nuevas' : filter === 'accepted' ? 'No tienes servicios en curso' : 'Aún no has recibido solicitudes'}
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {filtered.map(request => (
+              {filtered.map(request => {
+                const effectivePrice = getEffectivePrice(request)
+                const hasPendingAdjustment = typeof request.adjusted_price === 'number' && request.adjusted_price > 0 && !request.client_approved_adjustment
+                return (
                 <div
                   key={request.id}
                   className={`border-2 rounded-2xl p-4 transition ${
@@ -270,14 +331,12 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                         </span>
                       )}
                     </div>
-                    {request.offered_price && (
-                      <div className="text-right">
-                        <p className="text-xs text-slate-400">Oferta</p>
-                        <p className="text-lg font-black text-amber-400">
-                          ${request.offered_price.toLocaleString()}
-                        </p>
-                      </div>
-                    )}
+                    <div className="text-right">
+                      <p className="text-xs text-slate-400">{hasPendingAdjustment ? 'Ajuste pendiente' : effectivePrice ? 'Monto' : 'A convenir'}</p>
+                      <p className="text-lg font-black text-amber-400">
+                        {effectivePrice ? `$${effectivePrice.toLocaleString('es-CL')}` : 'A convenir'}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Description */}
@@ -327,6 +386,10 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
 
                   {(request.status === 'accepted' || request.status === 'in_progress') && (
                     <div className="space-y-2">
+                      <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/25 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[10px] font-black text-amber-300 uppercase tracking-wide">Sugerido</span>
+                        <span className="text-[10px] text-slate-400">Mantener contacto y tracking</span>
+                      </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
@@ -346,8 +409,16 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => handleComplete(request.id)}
+                          onClick={() => handleAdjustPrice(request.id)}
                           disabled={actionLoading === request.id}
+                          className="flex-1 bg-amber-500/20 text-amber-300 py-3 rounded-xl text-sm font-black hover:bg-amber-500/30 transition border border-amber-500/30 disabled:opacity-50"
+                        >
+                          💬 Proponer monto
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleComplete(request.id)}
+                          disabled={actionLoading === request.id || !effectivePrice || hasPendingAdjustment}
                           className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white py-3 rounded-xl text-sm font-black hover:from-teal-400 hover:to-teal-500 transition shadow-lg shadow-teal-500/25 disabled:opacity-50"
                         >
                           {actionLoading === request.id ? (
@@ -382,7 +453,7 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
                     </div>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>

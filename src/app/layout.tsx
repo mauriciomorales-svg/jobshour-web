@@ -61,6 +61,40 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              (function () {
+                if (typeof window === 'undefined') return;
+                var KEY = '__jh_chunk_reload_once__';
+                var shouldReloadForChunk = function (msg) {
+                  if (!msg) return false;
+                  var text = String(msg).toLowerCase();
+                  return text.includes('chunkloaderror') || (text.includes('loading chunk') && text.includes('failed'));
+                };
+                var reloadOnce = function () {
+                  try {
+                    if (sessionStorage.getItem(KEY) === '1') return;
+                    sessionStorage.setItem(KEY, '1');
+                  } catch {}
+                  window.location.reload();
+                };
+                window.addEventListener('error', function (event) {
+                  var message = event && (event.message || (event.error && event.error.message));
+                  if (shouldReloadForChunk(message)) reloadOnce();
+                });
+                window.addEventListener('unhandledrejection', function (event) {
+                  var reason = event && event.reason;
+                  var message = reason && (reason.message || String(reason));
+                  if (shouldReloadForChunk(message)) reloadOnce();
+                });
+                window.addEventListener('load', function () {
+                  try { sessionStorage.removeItem(KEY); } catch {}
+                });
+              })();
+            `,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
               if (typeof window !== 'undefined' && window.Capacitor) {
                 const originalFetch = window.fetch;
                 window.fetch = async function() {

@@ -34,8 +34,11 @@ export function HomeLocationPrompt({
                   if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                       (pos) => {
-                        localStorage.setItem('user_lat', String(pos.coords.latitude))
-                        localStorage.setItem('user_lng', String(pos.coords.longitude))
+                        const lat = pos.coords.latitude
+                        const lng = pos.coords.longitude
+                        localStorage.setItem('user_lat', String(lat))
+                        localStorage.setItem('user_lng', String(lng))
+                        window.dispatchEvent(new CustomEvent('jh:location-selected', { detail: { lat, lng } }))
                         onDismiss()
                       },
                       (err) => {
@@ -48,7 +51,7 @@ export function HomeLocationPrompt({
                           onDismiss()
                         }
                       },
-                      { enableHighAccuracy: true, timeout: 10000 }
+                      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                     )
                   }
                 }}

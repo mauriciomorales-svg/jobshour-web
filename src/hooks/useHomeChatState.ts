@@ -6,6 +6,7 @@ export type HomeChatContext = {
   description?: string
   name?: string
   avatar?: string | null
+  email?: string | null
   myRole?: 'cliente' | 'trabajador'
   isSelf?: boolean
 }

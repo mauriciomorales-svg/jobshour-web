@@ -1,9 +1,13 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Package, Search, Loader2 } from 'lucide-react'
+import { Package, Search, Loader2, Share2, FileDown } from 'lucide-react'
 import { useStoreCart } from '@/lib/storeCartContext'
 import { emptyStateCopy } from '@/lib/userFacingCopy'
+import { downloadBrandedProductPdf } from '@/lib/brandedProductPdf'
+import { openWhatsAppWithText, publicProductUrl, whatsAppProductShareText, withShareUtm } from '@/lib/marketingShare'
+import { trackEvent } from '@/lib/analytics'
+import { useSearchParams } from 'next/navigation'
 
 const INVENTARIO_API = '/inventario'
 
@@ -15,6 +19,8 @@ interface Producto {
   stock_actual: number
   activo: boolean
   imagen_url?: string
+  descripcion?: string | null
+  codigobarra?: string | null
 }
 
 interface Props {
@@ -31,6 +37,47 @@ export default function StoreProductGrid({ workerId, storeName }: Props) {
   const [loading, setLoading] = useState(true)
   const [buscar, setBuscar] = useState('')
   const { addToCart } = useStoreCart()
+  const searchParams = useSearchParams()
+
+  const shareProduct = async (p: Producto) => {
+    const rawUrl = publicProductUrl(workerId, p.idproducto, p.nombre)
+    const shareUrl = withShareUtm(rawUrl, 'product_share')
+    const text = whatsAppProductShareText({
+      productName: p.nombre,
+      storeName: storeName ?? 'Tienda',
+      priceFormatted: formatPrice(p.precio_venta ?? p.precio),
+      productUrl: rawUrl,
+    })
+
+    if (navigator.share) {
+      trackEvent('share_click', { workerId, productId: p.idproducto, channel: 'native' })
+      await navigator.share({
+        title: p.nombre,
+        text,
+        url: shareUrl,
+      })
+      return
+    }
+
+    trackEvent('whatsapp_share', { workerId, productId: p.idproducto, channel: 'fallback' })
+    openWhatsAppWithText(text)
+  }
+
+  const downloadProductPdf = async (p: Producto) => {
+    await downloadBrandedProductPdf({
+      storeName: storeName ?? 'Tienda',
+      sellerName: storeName ?? 'Vendedor',
+      productName: p.nombre,
+      conditionLabel: 'Nuevo o usado (segun publicacion)',
+      price: p.precio_venta ?? p.precio,
+      description: p.descripcion,
+      stock: p.stock_actual,
+      productCode: p.codigobarra,
+      publicUrl: withShareUtm(publicProductUrl(workerId, p.idproducto, p.nombre), 'product_pdf'),
+      productImageUrl: p.imagen_url ?? null,
+      template: 'premium',
+    })
+  }
 
   const fetchProductos = useCallback(async () => {
     setLoading(true)
@@ -51,6 +98,29 @@ export default function StoreProductGrid({ workerId, storeName }: Props) {
   useEffect(() => {
     fetchProductos()
   }, [fetchProductos])
+
+  useEffect(() => {
+    const addParam = Number(searchParams.get('addProduct') || '')
+    const fromShare = searchParams.get('fromShare') === '1'
+    if (!addParam || productos.length === 0) return
+    const key = `autocart_${workerId}_${addParam}`
+    if (typeof window !== 'undefined' && sessionStorage.getItem(key) === '1') return
+    const p = productos.find(x => x.idproducto === addParam)
+    if (!p) return
+    addToCart({
+      idproducto: p.idproducto,
+      nombre: p.nombre,
+      precio: p.precio_venta ?? p.precio,
+      imagen_url: p.imagen_url ?? null,
+      stock: p.stock_actual,
+      workerId,
+      storeName: storeName ?? 'Tienda',
+    })
+    if (fromShare) {
+      trackEvent('checkout_from_share', { workerId, productId: p.idproducto, action: 'autocart' })
+    }
+    if (typeof window !== 'undefined') sessionStorage.setItem(key, '1')
+  }, [searchParams, productos, addToCart, workerId, storeName])
 
   return (
     <div className="space-y-3">
@@ -111,6 +181,28 @@ export default function StoreProductGrid({ workerId, storeName }: Props) {
                 >
                   Agregar
                 </button>
+                <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => { void shareProduct(p) }}
+                    className="inline-flex items-center justify-center gap-1 bg-slate-600 hover:bg-slate-500 text-white text-[11px] font-bold py-1.5 rounded-lg transition"
+                  >
+                    <Share2 className="w-3 h-3" /> Compartir
+                  </button>
+                  <button
+                    onClick={() => { void downloadProductPdf(p) }}
+                    className="inline-flex items-center justify-center gap-1 bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-bold py-1.5 rounded-lg transition"
+                  >
+                    <FileDown className="w-3 h-3" /> PDF
+                  </button>
+                </div>
+                <a
+                  href={publicProductUrl(workerId, p.idproducto, p.nombre)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 block w-full text-center text-[11px] text-orange-300 hover:text-orange-200 underline"
+                >
+                  Ver ficha compartible
+                </a>
               </div>
             </div>
           ))}

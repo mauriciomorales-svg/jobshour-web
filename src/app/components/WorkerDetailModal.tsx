@@ -40,9 +40,19 @@ interface Props {
     store_name?: string | null
   }
   onClose: () => void
+  /** Si existe conversación abierta con este trabajador (mismo id que en el mapa) */
+  chatRequestId?: number | null
+  currentUserId?: number
+  onOpenChat?: (requestId: number) => void
 }
 
-export default function WorkerDetailModal({ detail, onClose }: Props) {
+export default function WorkerDetailModal({
+  detail,
+  onClose,
+  chatRequestId = null,
+  currentUserId,
+  onOpenChat,
+}: Props) {
   const [activeTab, setActiveTab] = useState<'perfil' | 'tienda'>('perfil')
   const [showCart, setShowCart] = useState(false)
   const isActive = detail.status === 'active'
@@ -214,6 +224,21 @@ export default function WorkerDetailModal({ detail, onClose }: Props) {
 
           {/* Cart Drawer */}
           {showCart && <StoreCartDrawer onClose={() => setShowCart(false)} />}
+
+          {typeof chatRequestId === 'number' &&
+            onOpenChat &&
+            typeof currentUserId === 'number' &&
+            detail.user_id != null &&
+            currentUserId !== detail.user_id &&
+            detail.status !== 'inactive' && (
+              <button
+                type="button"
+                onClick={() => onOpenChat(chatRequestId)}
+                className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-500 text-white py-3 rounded-2xl text-sm font-bold transition shadow-md shadow-teal-500/20"
+              >
+                💬 Abrir chat
+              </button>
+            )}
 
           {/* Compartir */}
           <div className="flex gap-3 pt-2 border-t border-gray-200">

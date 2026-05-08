@@ -23,6 +23,7 @@ export interface UseMapViewportParams {
   fetchNearbyRef: FetchNearbyThrottleRef
   toast: (title: string, type?: 'success' | 'error' | 'info' | 'warning', body?: string, duration?: number) => void
   mapRef: RefObject<{ flyTo: (latlng: [number, number], zoom: number) => Promise<boolean> } | null>
+  onResolvedLocation?: (lat: number, lng: number) => void
 }
 
 /**
@@ -38,9 +39,34 @@ export function useMapViewport({
   fetchNearbyRef,
   toast,
   mapRef,
+  onResolvedLocation,
 }: UseMapViewportParams) {
   const mapPannedByUserRef = useRef(false)
   const mapViewportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const applyLocationToViewport = useCallback(
+    (lat: number, lng: number, zoom = 15) => {
+      try {
+        localStorage.setItem('user_lat', String(lat))
+        localStorage.setItem('user_lng', String(lng))
+        localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
+        localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
+      } catch {
+        /* ignore */
+      }
+      mapPannedByUserRef.current = true
+      userLatRef.current = lat
+      userLngRef.current = lng
+      setUserLat(lat)
+      setUserLng(lng)
+      fetchNearbyRef.current.lastCall = 0
+      queueMicrotask(() => {
+        fetchNearby(activeCategory, lat, lng)
+      })
+      void mapRef.current?.flyTo([lat, lng], zoom)
+      onResolvedLocation?.(lat, lng)
+    },
+    [activeCategory, fetchNearby, fetchNearbyRef, mapRef, onResolvedLocation, setUserLat, setUserLng, userLatRef, userLngRef],
+  )
 
   const handleMapViewportMove = useCallback(
     (lat: number, lng: number) => {
@@ -75,24 +101,7 @@ export function useMapViewport({
       (pos) => {
         const lat = pos.coords.latitude
         const lng = pos.coords.longitude
-        try {
-          localStorage.setItem('user_lat', String(lat))
-          localStorage.setItem('user_lng', String(lng))
-          localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
-          localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
-        } catch {
-          /* ignore */
-        }
-        mapPannedByUserRef.current = true
-        userLatRef.current = lat
-        userLngRef.current = lng
-        setUserLat(lat)
-        setUserLng(lng)
-        fetchNearbyRef.current.lastCall = 0
-        queueMicrotask(() => {
-          fetchNearby(activeCategory, lat, lng)
-        })
-        void mapRef.current?.flyTo([lat, lng], 15)
+        applyLocationToViewport(lat, lng, 15)
       },
       () => {
         toast('No se pudo obtener la ubicación. Activa el GPS y revisa permisos.', 'error')
@@ -100,7 +109,7 @@ export function useMapViewport({
       // maximumAge 0: evita caché del navegador (a veces devolvía un punto fijo / zona Renaico).
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     )
-  }, [toast, mapRef, activeCategory, fetchNearby, setUserLat, setUserLng, userLatRef, userLngRef, fetchNearbyRef])
+  }, [toast, applyLocationToViewport])
 
   const handleLeafletMapReady = useCallback((map: LeafletMap) => {
     const v = readInitialMapCoords()
@@ -125,27 +134,43 @@ export function useMapViewport({
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
+          const lat = pos.coords.latitude
+          const lng = pos.coords.longitude
+          // Si el usuario no ha movido manualmente el mapa, usamos GPS real para evitar quedar pegados al fallback.
+          if (!mapPannedByUserRef.current) {
+            applyLocationToViewport(lat, lng, 15)
+            return
+          }
           try {
-            localStorage.setItem('user_lat', String(pos.coords.latitude))
-            localStorage.setItem('user_lng', String(pos.coords.longitude))
+            localStorage.setItem('user_lat', String(lat))
+            localStorage.setItem('user_lng', String(lng))
           } catch {
             /* ignore */
           }
         },
         () => {},
-        { timeout: 12000, maximumAge: 600_000 },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
       )
     }
 
+    const onExternalLocationSet = (event: Event) => {
+      const custom = event as CustomEvent<{ lat?: number; lng?: number }>
+      const lat = custom.detail?.lat
+      const lng = custom.detail?.lng
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+      applyLocationToViewport(Number(lat), Number(lng), 15)
+    }
+    window.addEventListener('jh:location-selected', onExternalLocationSet as EventListener)
+
     return () => {
       cancelled = true
+      window.removeEventListener('jh:location-selected', onExternalLocationSet as EventListener)
       if (mapViewportTimerRef.current) {
         clearTimeout(mapViewportTimerRef.current)
         mapViewportTimerRef.current = null
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- montaje: una sola carga inicial / restauración
-  }, [])
+  }, [applyLocationToViewport, fetchNearby, fetchNearbyRef, setUserLat, setUserLng, userLatRef, userLngRef])
 
   return {
     handleMapViewportMove,

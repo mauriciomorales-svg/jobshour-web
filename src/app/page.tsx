@@ -115,9 +115,46 @@ export default function Home() {
     user, userLatRef, userLngRef, workerStatus, toast,
   })
 
+  const syncWorkerLocation = useCallback(async (lat: number, lng: number) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+    if (workerStatus === 'guest') return
+
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (!token) return
+
+    const status =
+      workerStatus === 'intermediate'
+        ? 'listening'
+        : workerStatus === 'inactive'
+          ? 'inactive'
+          : 'active'
+    try {
+      await fetch(`${getPublicApiBase()}/api/v1/worker/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status, lat, lng }),
+      })
+    } catch {
+      // Best-effort: el mapa local ya quedó actualizado aunque falle sync remoto.
+    }
+  }, [workerStatus])
+
+  const handleResolvedLocation = useCallback((lat: number, lng: number) => {
+    // Actualiza de inmediato el pin propio en el mapa para evitar desfase visual.
+    if (user?.id) {
+      setPoints((prev) =>
+        prev.map((p) => ((p.user_id && p.user_id === user.id) ? { ...p, pos: { lat, lng } } : p)),
+      )
+    }
+    void syncWorkerLocation(lat, lng)
+  }, [setPoints, syncWorkerLocation, user?.id])
+
   const { handleMapViewportMove, handleCenterOnMyLocation, handleLeafletMapReady } = useMapViewport({
     userLatRef, userLngRef, setUserLat, setUserLng,
-    activeCategory, fetchNearby, fetchNearbyRef, toast, mapRef,
+    activeCategory, fetchNearby, fetchNearbyRef, toast, mapRef, onResolvedLocation: handleResolvedLocation,
   })
 
   const {
@@ -142,7 +179,7 @@ export default function Home() {
     selectedWorkerId, setSelectedWorkerId,
     showRequestModal, setShowRequestModal,
     handlePointClick, handleMapClick,
-    handleDetailTravelJoin, handleDetailChat,
+    handleDetailTravelJoin,
     handleDetailRequest, handleDetailCallPhone,
     handleDetailVerWorkerProfile,
   } = usePointDetail({
@@ -153,7 +190,7 @@ export default function Home() {
   const authTokenForFcm = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
   useNotifications(user ? authTokenForFcm : null)
 
-  const { openActiveRequestsCount } = useActiveServiceRequests({
+  const { openActiveRequestsCount, chatRequestByWorkerId } = useActiveServiceRequests({
     user, activeRequestId, setActiveChatRequestIds,
     setActiveRequestId, setRatingRequestId, setRatingWorkerInfo, setShowRatingModal,
   })
@@ -305,16 +342,79 @@ export default function Home() {
   }, [checkAuthAndAct])
 
   const handleResetMapLocation = useCallback(() => {
-    clearMapLocalStorageFull(); window.location.reload()
-  }, [])
+    clearMapLocalStorageFull()
+    handleCenterOnMyLocation()
+    setShowSidebar(false)
+    toast('Ubicación reiniciada', 'success', 'Estamos buscando tu ubicación actual.')
+  }, [handleCenterOnMyLocation, setShowSidebar, toast])
 
   const handleRequestComplete = useCallback((reqId: number) => {
     setShowRequestModal(false)
     setActiveRequestId(reqId)
     setShowChat(true)
     toast('Solicitud enviada exitosamente', 'success')
-    setChatContext({})
-  }, [setShowRequestModal, setActiveRequestId, setShowChat, setChatContext, toast])
+
+    // Mantener contexto del chat para que ChatPanel tenga datos del interlocutor
+    // (nombre/avatar + rol) inmediatamente al abrirse.
+    if (selectedDetail) {
+      const myRole: 'cliente' | 'trabajador' =
+        user?.id && selectedDetail?.user_id && user.id === selectedDetail.user_id
+          ? 'trabajador'
+          : 'cliente'
+
+      setChatContext({
+        name: selectedDetail.name,
+        avatar: selectedDetail.avatar ?? null,
+        myRole,
+        isSelf:
+          !!(user?.id && selectedDetail?.user_id && user.id === selectedDetail.user_id),
+      })
+    } else {
+      setChatContext({})
+    }
+  }, [setShowRequestModal, setActiveRequestId, setShowChat, setChatContext, toast, selectedDetail, user?.id])
+
+  const createQuickChatRequest = useCallback(async (): Promise<number | null> => {
+    if (!selectedDetail || selectedDetail.status === 'demand') return null
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (!token) return null
+
+    try {
+      const res = await fetch('/api/v1/requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          worker_id: selectedDetail.id,
+          type: 'fixed_job',
+          category_type: 'fixed',
+          description: null,
+          urgency: 'normal',
+          offered_price: selectedDetail.hourly_rate,
+        }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast(data?.message || 'No se pudo crear la solicitud para chatear.', 'error')
+        return null
+      }
+
+      const rid = data?.data?.id
+      if (typeof rid !== 'number') {
+        toast('No se pudo obtener el ID del chat.', 'error')
+        return null
+      }
+
+      return rid
+    } catch {
+      toast('Error creando solicitud de chat.', 'error')
+      return null
+    }
+  }, [selectedDetail, toast])
 
   const filtered = (() => {
     const q = searchQuery.trim().toLowerCase()
@@ -403,11 +503,64 @@ export default function Home() {
         onCloseDetail={() => { setSelectedDetail(null); setLoadingDetail(false) }}
         user={user}
         workerProfile={workerProfile}
-        activeRequestId={activeRequestId}
+        chatRequestIdForDetail={
+          selectedDetail && selectedDetail.status !== 'demand'
+            ? chatRequestByWorkerId[selectedDetail.id] ?? null
+            : null
+        }
         onTravelJoin={() => handleDetailTravelJoin(selectedDetail)}
         onOpenProfileSection={() => setActiveSection('profile')}
         onVerWorkerProfile={() => handleDetailVerWorkerProfile(selectedDetail)}
-        onDetailChat={handleDetailChat}
+        onDetailChat={async (explicitRequestId) => {
+          const auth = checkAuthAndProfile()
+          if (!auth.canInteract) {
+            setShowLoginModal(true)
+            toast(
+              auth.reason === 'login' ? 'Inicia sesión para continuar' : 'Completa tu perfil',
+              auth.reason === 'login' ? 'info' : 'warning',
+            )
+            return
+          }
+          const rid =
+            typeof explicitRequestId === 'number'
+              ? explicitRequestId
+              : selectedDetail && selectedDetail.status !== 'demand'
+                ? chatRequestByWorkerId[selectedDetail.id]
+                : undefined
+          if (typeof rid !== 'number') {
+            // UX: si no hay chat previo, creamos una solicitud rápida (fixed_job)
+            // y abrimos el chat inmediatamente para que puedas comunicarte.
+            const quickRid = await createQuickChatRequest()
+            if (typeof quickRid === 'number') {
+              setActiveRequestId(quickRid)
+              if (selectedDetail) {
+                setChatContext({
+                  name: selectedDetail.name,
+                  avatar: selectedDetail.avatar ?? null,
+                  myRole:
+                    user?.id && selectedDetail?.user_id && user.id === selectedDetail.user_id
+                      ? 'trabajador'
+                      : 'cliente',
+                })
+              }
+              setShowChat(true)
+            } else {
+              setShowRequestModal(true)
+              toast('Primero enviemos una solicitud para habilitar el chat.', 'info')
+            }
+            return
+          }
+          setActiveRequestId(rid)
+          setChatContext({
+            name: selectedDetail?.name,
+            avatar: selectedDetail?.avatar ?? null,
+            myRole:
+              user?.id && selectedDetail?.user_id && user.id === selectedDetail.user_id
+                ? 'trabajador'
+                : 'cliente',
+          })
+          setShowChat(true)
+        }}
         onDetailRequest={handleDetailRequest}
         onCallPhone={() => handleDetailCallPhone(selectedDetail?.phone)}
         dashHidden={dashHidden}
@@ -461,6 +614,14 @@ export default function Home() {
           setChatContext(ctx)
           setShowChat(true)
         }}
+        onHighlightRequestFromSolicitudes={(requestId) => {
+          setShowSolicitudesPanel(false)
+          setActiveTab('map')
+          setActiveSection('map')
+          setDashHidden(true)
+          setHighlightedRequestId(requestId)
+          setTimeout(() => setHighlightedRequestId(null), 3000)
+        }}
       />
 
       <HomeSidebar
@@ -493,6 +654,24 @@ export default function Home() {
       {showWorkerProfileDetail && selectedDetail && (
         <WorkerDetailModal
           detail={selectedDetail}
+          chatRequestId={
+            selectedDetail.status !== 'demand' ? chatRequestByWorkerId[selectedDetail.id] ?? null : null
+          }
+          currentUserId={user?.id}
+          onOpenChat={(rid) => {
+            setActiveRequestId(rid)
+            setChatContext({
+              name: selectedDetail.name,
+              avatar: selectedDetail.avatar ?? null,
+              myRole:
+                user?.id && selectedDetail.user_id && user.id === selectedDetail.user_id
+                  ? 'trabajador'
+                  : 'cliente',
+            })
+            setShowChat(true)
+            setShowWorkerProfileDetail(false)
+            setSelectedWorkerId(null)
+          }}
           onClose={() => { setShowWorkerProfileDetail(false); setSelectedWorkerId(null) }}
         />
       )}
@@ -552,6 +731,25 @@ export default function Home() {
         onWorkerStatusChange={handleWorkerStatusChange}
         onShowLogin={() => setShowLoginModal(true)}
       />
+
+      {/* Acceso rápido a chat en desktop */}
+      {!!user && !showChat && activeChatRequestIds.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            const rid = activeRequestId ?? activeChatRequestIds[0]
+            if (!rid) return
+            setActiveRequestId(rid)
+            setShowChat(true)
+            setChatBadge(0)
+          }}
+          className="hidden md:flex fixed bottom-24 right-5 z-[120] items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black px-4 py-2.5 rounded-xl shadow-lg shadow-amber-500/30 transition"
+        >
+          <span className="text-base">💬</span>
+          <span>Abrir chat</span>
+          <span className="bg-white/20 rounded-full px-2 py-0.5 text-xs">{chatBadge > 0 ? chatBadge : activeChatRequestIds.length}</span>
+        </button>
+      )}
 
       {loading && <HomeLoadingScreen />}
 

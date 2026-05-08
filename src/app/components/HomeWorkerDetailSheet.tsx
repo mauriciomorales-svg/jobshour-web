@@ -58,7 +58,7 @@ export function HomeWorkerDetailSheet({
   onClose,
   user,
   workerProfile,
-  activeRequestId,
+  chatRequestIdForDetail,
   onTravelJoin,
   onOpenProfileSection,
   onVerWorkerProfile,
@@ -71,11 +71,13 @@ export function HomeWorkerDetailSheet({
   onClose: () => void
   user: SheetUser | null
   workerProfile: { id?: number } | null
-  activeRequestId: number | null
+  /** Solicitud activa cuyo worker coincide con la ficha (mapa experto → chat) */
+  chatRequestIdForDetail: number | null
   onTravelJoin: () => void | Promise<void>
   onOpenProfileSection: () => void
   onVerWorkerProfile: () => void
-  onChatClick: () => void
+  /** Si hay conversación con este trabajador, pasa el requestId explícito */
+  onChatClick: (requestId?: number) => void
   onRequestClick: () => void
   onCallPhoneClick: () => void
 }) {
@@ -219,11 +221,11 @@ export function HomeWorkerDetailSheet({
                           }`}
                         />
                         {selectedDetail.status === 'active'
-                          ? 'Disp. Inmediata'
+                          ? 'Disponible ahora'
                           : selectedDetail.status === 'intermediate'
-                            ? 'Disp. Flexible'
+                            ? 'Disponible pronto'
                             : _isDemand
-                              ? 'Demanda activa'
+                              ? 'Solicitud activa'
                               : 'No disponible'}
                       </span>
                     </div>
@@ -314,6 +316,8 @@ export function HomeWorkerDetailSheet({
                     const isDemand = selectedDetail.status === 'demand'
                     const isTravelPin = isDemand && !!selectedDetail.travel_role
                     const isOwnDemand = isDemand && selectedDetail.client_id === user?.id
+                    const chatWithThisWorker =
+                      !isDemand && typeof chatRequestIdForDetail === 'number' ? chatRequestIdForDetail : null
 
                     return (
                       <div className="px-5 mt-4">
@@ -421,25 +425,30 @@ export function HomeWorkerDetailSheet({
                               >
                                 No disponible
                               </button>
-                            ) : activeRequestId ? (
+                            ) : chatWithThisWorker != null ? (
                               <button
                                 type="button"
-                                onClick={onChatClick}
+                                onClick={() => onChatClick(chatWithThisWorker)}
                                 className="flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-500 text-white py-3 rounded-2xl text-sm font-bold transition active:scale-95 shadow-md shadow-teal-500/20"
                               >
-                                💬 Chat activo
+                                💬 Abrir chat
                               </button>
                             ) : (
                               <button
                                 type="button"
-                                onClick={onRequestClick}
+                                onClick={() => {
+                                  // Cuando el worker está activo, hacemos solicitud rápida y entramos al chat
+                                  // sin esperar al modal completo (para que “comunicarte por chat” sea inmediato).
+                                  if (selectedDetail.status === 'active') return void onChatClick()
+                                  return void onRequestClick()
+                                }}
                                 className={`flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition active:scale-95 ${
                                   selectedDetail.status === 'active'
-                                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-md shadow-amber-500/20'
+                                    ? 'bg-teal-600 hover:bg-teal-500 text-white shadow-md shadow-teal-500/20'
                                     : 'bg-amber-400 hover:bg-amber-500 text-white'
                                 }`}
                               >
-                                {selectedDetail.status === 'active' ? '⚡ Solicitar ahora' : '💬 Consultar'}
+                                {selectedDetail.status === 'active' ? '💬 Abrir chat' : '💬 Consultar'}
                               </button>
                             )}
                             {!isDemand && selectedDetail.is_seller && (

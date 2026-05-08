@@ -70,6 +70,29 @@ export function whatsAppQuoteShareText(opts: {
   return `Te comparto mi Feria de Pulgas en ${store} (JobsHours).${totalLine}\nVer y pagar aquí:\n${url}`
 }
 
+export function publicProductUrl(workerId: string | number, productId: string | number, productName?: string | null): string {
+  const safeName = (productName || 'producto')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48) || 'producto'
+  return `${getSiteOrigin()}/p/${workerId}-${productId}-${safeName}`
+}
+
+export function whatsAppProductShareText(opts: {
+  productName: string
+  storeName?: string | null
+  priceFormatted?: string
+  productUrl: string
+}): string {
+  const store = opts.storeName?.trim() || 'mi tienda'
+  const price = opts.priceFormatted ? `\nPrecio: ${opts.priceFormatted}` : ''
+  const url = withShareUtm(opts.productUrl, 'product_share')
+  return `Te comparto este producto de ${store} en JobsHours:\n${opts.productName}${price}\nVer ficha:\n${url}`
+}
+
 export function profileNativeShareText(profileUrl: string): string {
   return `¿Necesitas ayuda con algo? Encuentra trabajadores verificados cerca de ti en JobsHours 👇\n${profileUrl}`
 }

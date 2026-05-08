@@ -126,30 +126,31 @@ export default function PublicQuotePage() {
 
   const downloadPdf = () => {
     if (!data) return
-    try {
-      trackEvent('quote_pdf_download', { source: 'public_quote_page', quote_id: data.quote.id })
-      const url = typeof window !== 'undefined' ? window.location.href : 'https://jobshours.com'
-      downloadBrandedQuotePdf({
-        storeName: data.worker.store_name || 'Tienda JobsHours',
-        workerName: data.worker.name || '—',
-        buyerName: data.quote.buyer_name || buyerName || '—',
-        buyerEmail: data.quote.buyer_email || buyerEmail || '—',
-        buyerPhone: data.quote.buyer_phone || buyerPhone || '',
-        rows: data.quote.items.map((i) => ({
-          title: i.title,
-          quantity: i.quantity,
-          amount: i.subtotal_amount,
-        })),
-        extras: [],
-        total: data.quote.total_amount,
-        expiresAt: data.quote.expires_at,
-        publicUrl: url,
-        quoteId: data.quote.id,
-        statusLabel: labelIntegratedQuoteStatus(data.quote.status),
-      })
-    } catch {
+    trackEvent('quote_pdf_download', { source: 'public_quote_page', quote_id: data.quote.id })
+    const url = typeof window !== 'undefined' ? window.location.href : 'https://jobshours.com'
+    void downloadBrandedQuotePdf({
+      storeName: data.worker.store_name || 'Tienda JobsHours',
+      workerName: data.worker.name || '—',
+      buyerName: data.quote.buyer_name || buyerName || '—',
+      buyerEmail: data.quote.buyer_email || buyerEmail || '—',
+      buyerPhone: data.quote.buyer_phone || buyerPhone || '',
+      rows: data.quote.items.map((i) => ({
+        title: i.title,
+        quantity: i.quantity,
+        amount: i.subtotal_amount,
+      })),
+      extras: [],
+      total: data.quote.total_amount,
+      expiresAt: data.quote.expires_at,
+      publicUrl: url,
+      quoteId: data.quote.id,
+      statusLabel: labelIntegratedQuoteStatus(data.quote.status),
+      brandName: data.worker.store_name || 'Tienda JobsHours',
+      brandTagline: 'Comparte productos con estilo y convierte por WhatsApp o web',
+      campaignCta: 'Escanea el QR y abre la cotización al instante',
+    }).catch(() => {
       alert(feedbackCopy.pdfGenerateError)
-    }
+    })
   }
 
   const doCheckout = async () => {

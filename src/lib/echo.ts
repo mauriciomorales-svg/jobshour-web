@@ -12,7 +12,9 @@ let lastToken: string | null = null
 export function getEcho(): Echo<any> {
   if (typeof window === 'undefined') return null as any
 
-  const token = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null
+  const token = typeof window !== 'undefined'
+    ? (window.localStorage.getItem('auth_token') || window.localStorage.getItem('token'))
+    : null
 
   if (echoInstance && token !== lastToken) {
     try {

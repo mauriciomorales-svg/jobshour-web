@@ -640,8 +640,8 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
           <div className="p-4 border-b border-gray-100 flex items-center gap-3">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${selectedSkills.length > 0 ? 'bg-orange-500' : 'bg-gray-300'}`}>{selectedSkills.length > 0 ? '✓' : '2'}</div>
             <div>
-              <h2 className="font-black text-gray-900 text-sm">¿Qué sabes hacer? <span className="text-orange-500 font-bold">{selectedSkills.length > 0 ? `${selectedSkills.length} elegida${selectedSkills.length > 1 ? 's' : ''}` : 'Elige al menos 1'}</span></h2>
-              <p className="text-xs text-gray-500">Toca los servicios que ofreces — apareces en el mapa por esto</p>
+              <h2 className="font-black text-gray-900 text-sm">Categorías de servicios <span className="text-orange-500 font-bold">{selectedSkills.length > 0 ? `${selectedSkills.length} elegida${selectedSkills.length > 1 ? 's' : ''}` : 'Elige al menos 1'}</span></h2>
+              <p className="text-xs text-gray-500">Esto define en qué trabajos apareces en el mapa. No afecta las categorías de tu tienda.</p>
             </div>
           </div>
           
@@ -1014,12 +1014,15 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                 🛒 Ver mi tienda pública ↗
               </a>
 
-              {/* Gestión de Categorías */}
+              {/* Gestión de Categorías de Tienda */}
               <div className="border-t pt-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Categorías</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Categorías de tienda</span>
                   <button onClick={() => { setShowAddCategoria(!showAddCategoria); fetchMisCategorias() }} className="text-xs text-orange-500 font-bold">+ Nueva</button>
                 </div>
+                <p className="text-[11px] text-gray-500 mb-2">
+                  Estas categorías ordenan tus productos en la tienda. Son distintas de tus categorías de servicios.
+                </p>
                 {showAddCategoria && (
                   <div className="flex gap-2 mb-2">
                     <input value={nuevaCategoria} onChange={e => setNuevaCategoria(e.target.value)} placeholder="Ej: Ropa, Comida..." className="flex-1 px-2 py-1.5 border-2 border-gray-200 rounded-lg text-sm focus:border-orange-400 focus:outline-none" />
@@ -1032,6 +1035,14 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                   ))}
                   {misCategorias.length === 0 && <span className="text-xs text-gray-400">Sin categorías aún</span>}
                 </div>
+                <a
+                  href={`/tienda/${workerData?.id ?? ''}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 mt-2 hover:underline"
+                >
+                  Abrir Mi Tienda para gestionarlas ahí también ↗
+                </a>
               </div>
 
               {/* Gestión de Productos */}

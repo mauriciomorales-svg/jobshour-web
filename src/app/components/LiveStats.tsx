@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { emptyStateCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
+import { isJhFlowDebugEnabled } from '@/lib/jhFlowLog'
 
 interface LiveStatsProps {
   lat: number
@@ -24,27 +25,42 @@ export default function LiveStats({ lat, lng, radius = 50 }: LiveStatsProps) {
     message: 'Cargando...',
   })
   const [loading, setLoading] = useState(true)
+  const [debounced, setDebounced] = useState({ lat, lng, radius })
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebounced({ lat, lng, radius }), 700)
+    return () => window.clearTimeout(t)
+  }, [lat, lng, radius])
 
   useEffect(() => {
     const fetchStats = async () => {
-      const url = `/api/v1/dashboard/live-stats?lat=${lat}&lng=${lng}&radius=${radius}`
-      console.log('📊 LiveStats: Iniciando fetch a:', url)
-      
+      const url = `/api/v1/dashboard/live-stats?lat=${debounced.lat}&lng=${debounced.lng}&radius=${debounced.radius}`
+      const verbose = isJhFlowDebugEnabled()
+      if (verbose) {
+        console.log('📊 LiveStats: Iniciando fetch a:', url)
+      }
+
       try {
         const res = await fetch(url)
-        console.log('📊 LiveStats: Respuesta recibida. Status:', res.status, 'OK:', res.ok)
-        
+        if (verbose) {
+          console.log('📊 LiveStats: Respuesta recibida. Status:', res.status, 'OK:', res.ok)
+        }
+
         if (!res.ok) {
           const errorText = await res.text().catch(() => 'No se pudo leer el error')
           console.error('❌ LiveStats: Error HTTP', res.status, ':', errorText.substring(0, 200))
           throw new Error(`HTTP ${res.status}: ${res.statusText}. Respuesta: ${errorText.substring(0, 100)}`)
         }
-        
+
         const data = await res.json()
-        console.log('📊 LiveStats: Datos recibidos:', JSON.stringify(data, null, 2))
-        
+        if (verbose) {
+          console.log('📊 LiveStats: Datos recibidos:', JSON.stringify(data, null, 2))
+        }
+
         if (data.status === 'success' && data.data) {
-          console.log('✅ LiveStats: Datos válidos. Workers:', data.data.active_workers, 'Demands:', data.data.active_demands)
+          if (verbose) {
+            console.log('✅ LiveStats: Datos válidos. Workers:', data.data.active_workers, 'Demands:', data.data.active_demands)
+          }
           setStats({
             active_workers: data.data.active_workers || 0,
             active_demands: data.data.active_demands || 0,
@@ -64,7 +80,9 @@ export default function LiveStats({ lat, lng, radius = 50 }: LiveStatsProps) {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err)
         console.error('❌ LiveStats: Error completo:', errorMessage)
-        console.error('❌ LiveStats: Stack:', err instanceof Error ? err.stack : 'N/A')
+        if (verbose) {
+          console.error('❌ LiveStats: Stack:', err instanceof Error ? err.stack : 'N/A')
+        }
         // En caso de error, mostrar mensaje de error pero dejar de cargar
         setStats({
           active_workers: 0,
@@ -77,9 +95,9 @@ export default function LiveStats({ lat, lng, radius = 50 }: LiveStatsProps) {
 
     fetchStats()
     const interval = setInterval(fetchStats, 30000) // Actualizar cada 30s
-    
+
     return () => clearInterval(interval)
-  }, [lat, lng, radius])
+  }, [debounced.lat, debounced.lng, debounced.radius])
 
   return (
     <motion.div

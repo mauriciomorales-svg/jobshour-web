@@ -2,9 +2,11 @@
 import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import ChatImageUpload from './ChatImageUpload'
 import { apiFetch } from '@/lib/api'
+import { jhFlowLog } from '@/lib/jhFlowLog'
+import { chatEmailBadge } from '@/lib/chatIdentity'
 import dynamic from 'next/dynamic'
 const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
 
@@ -13,6 +15,7 @@ interface ChatMessage {
   sender_id: number
   sender_name: string
   sender_avatar: string | null
+  sender_email?: string | null
   body: string
   type: string
   created_at: string
@@ -26,11 +29,13 @@ interface Props {
   otherPersonName?: string
   otherPersonAvatar?: string | null
   otherPersonPhone?: string | null
+  /** Correo del interlocutor (único); refuerza nombre cuando hay homónimos. */
+  otherPersonEmail?: string | null
   myRole?: 'cliente' | 'trabajador'
   isSelf?: boolean
 }
 
-export default function ChatPanel({ requestId, currentUserId, onClose, requestDescription, otherPersonName, otherPersonAvatar, otherPersonPhone, myRole, isSelf }: Props) {
+export default function ChatPanel({ requestId, currentUserId, onClose, requestDescription, otherPersonName, otherPersonAvatar, otherPersonPhone, otherPersonEmail, myRole, isSelf }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMsg, setNewMsg] = useState('')
   const [sending, setSending] = useState(false)
@@ -40,12 +45,12 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
   const [requestingPayment, setRequestingPayment] = useState(false)
   const [serviceStatus, setServiceStatus] = useState<string | null>(null)
   const [serviceRequestDbId, setServiceRequestDbId] = useState<number | null>(null)
-  const [completing, setCompleting] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [reviewStars, setReviewStars] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewDone, setReviewDone] = useState(false)
+  const [interlocutorEmail, setInterlocutorEmail] = useState<string | null>(otherPersonEmail ?? null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const subscribedRequestIdRef = useRef<number | null>(null)
   const boundConnectionRef = useRef(false)
@@ -59,7 +64,78 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
     return Array.from(map.values()).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   }
 
-  // Fetch estado del servicio
+  const parsePaymentLinkPayload = (raw: string): { amount: number; link: string } | null => {
+    const normalizeLink = (value: string): string =>
+      value.replace(/\\\//g, '/').trim()
+
+    const fromObject = (parsed: any): { amount: number; link: string } | null => {
+      if (parsed?.type === 'payment_link' && typeof parsed?.link === 'string' && parsed.link) {
+        return {
+          amount: Number(parsed?.amount || 0),
+          link: normalizeLink(parsed.link),
+        }
+      }
+      return null
+    }
+
+    try {
+      const parsed = JSON.parse(raw)
+      const direct = fromObject(parsed)
+      if (direct) return direct
+      if (typeof parsed === 'string') {
+        const parsedTwice = JSON.parse(parsed)
+        const nested = fromObject(parsedTwice)
+        if (nested) return nested
+      }
+    } catch {
+      // fallback regex for malformed payloads already persisted in DB
+    }
+
+    const text = String(raw || '')
+    const looksLikePayment = /payment_link/i.test(text)
+    if (!looksLikePayment) return null
+
+    const amountMatch = text.match(/"amount"\s*:\s*([0-9]+(?:\.[0-9]+)?)/i)
+    const linkMatch = text.match(/"link"\s*:\s*"([^"]+)"/i)
+    const link = linkMatch ? normalizeLink(linkMatch[1]) : ''
+    if (!link) return null
+
+    return {
+      amount: amountMatch ? Number(amountMatch[1]) : 0,
+      link,
+    }
+  }
+
+  const fetchMessages = useCallback(async () => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    try {
+      const r = await apiFetch(`/api/v1/requests/${requestId}/messages`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      })
+      const data = await r.json()
+      setMessages(prev => mergeUniqueById(prev, data.data ?? []))
+    } catch {
+      // silent fallback
+    }
+  }, [requestId])
+
+  const markRead = useCallback(async () => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    try {
+      await apiFetch(`/api/v1/requests/${requestId}/messages/read`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      })
+    } catch {
+      // silent
+    }
+  }, [requestId])
+
+  useEffect(() => {
+    setInterlocutorEmail(otherPersonEmail ?? null)
+  }, [otherPersonEmail])
+
+  // Fetch estado del servicio + correo del interlocutor (desambigua homónimos)
   useEffect(() => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     apiFetch(`/api/v1/requests/${requestId}`, {
@@ -70,20 +146,23 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
         const sr = data.data ?? data
         if (sr?.status) setServiceStatus(sr.status)
         if (sr?.id) setServiceRequestDbId(sr.id)
+        const cid = sr?.client?.id
+        if (typeof cid === 'number' && typeof currentUserId === 'number') {
+          const email =
+            cid === currentUserId
+              ? (sr.worker?.email ?? null)
+              : (sr.client?.email ?? null)
+          if (email) setInterlocutorEmail(email)
+        }
       })
       .catch(() => {})
-  }, [requestId])
+  }, [requestId, currentUserId])
 
   // Fetch existing messages
   useEffect(() => {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-    apiFetch(`/api/v1/requests/${requestId}/messages`, {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    })
-      .then(r => r.json())
-      .then(data => setMessages(prev => mergeUniqueById(prev, data.data ?? [])))
-      .catch(() => {})
-  }, [requestId])
+    void fetchMessages()
+    void markRead()
+  }, [fetchMessages, markRead])
 
   // Listen for new messages via WebSocket
   useEffect(() => {
@@ -109,6 +188,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
         const msg: ChatMessage | null = e?.message ?? e ?? null
         if (!msg || typeof msg.id !== 'number') return
         setMessages(prev => mergeUniqueById(prev, [msg]))
+        void markRead()
       })
 
       echoChannel.listen('.typing', (e: any) => {
@@ -123,7 +203,16 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
       cancelled = true
       if (echo) echo.leave(`chat.${requestId}`)
     }
-  }, [requestId, currentUserId])
+  }, [requestId, currentUserId, markRead])
+
+  // Polling fallback: evita perder mensajes cuando falla websocket.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      void fetchMessages()
+      void markRead()
+    }, 4500)
+    return () => clearInterval(interval)
+  }, [requestId, fetchMessages, markRead])
 
   // Auto-scroll
   useEffect(() => {
@@ -188,6 +277,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
           sender_id: data.data.sender_id,
           sender_name: data.data.sender_name,
           sender_avatar: null,
+          sender_email: data.data.sender_email ?? null,
           body: data.data.body,
           type: data.data.type,
           created_at: data.data.created_at,
@@ -197,9 +287,11 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
         setSelectedImage(null)
       } else {
         console.error('Error enviando mensaje:', data)
+        alert(data?.message || feedbackCopy.networkErrorRetry)
       }
     } catch (err) {
       console.error('Error de red:', err)
+      alert(feedbackCopy.networkError)
     }
     setSending(false)
   }
@@ -246,12 +338,17 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                 <span className="text-amber-200 font-black text-lg">{otherPersonName?.charAt(0) ?? '💬'}</span>
               </div>
             )}
-            <div>
+            <div className="min-w-0">
               <h3 className="font-black text-white text-sm leading-tight">{otherPersonName ?? 'Chat'}</h3>
+              {chatEmailBadge(interlocutorEmail) ? (
+                <p className="text-slate-500 text-[10px] truncate max-w-[220px] mt-0.5" title={interlocutorEmail ?? ''}>
+                  {chatEmailBadge(interlocutorEmail)}
+                </p>
+              ) : null}
               <div className="flex items-center gap-1.5 mt-0.5">
                 {myRole && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/25 text-amber-200 font-bold">
-                    Tú: {myRole === 'cliente' ? 'Cliente' : 'Trabajador'}
+                    Tú: {myRole === 'cliente' ? 'Solicita' : 'Realiza'}
                   </span>
                 )}
                 {requestDescription && (
@@ -320,8 +417,9 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
           {messages.map(m => {
             const isMine = m.sender_id === currentUserId
             const isSystem = m.type === 'system'
+            const paymentPayload = parsePaymentLinkPayload(m.body)
 
-            if (isSystem) {
+            if (isSystem && !paymentPayload) {
               return (
                 <div key={m.id} className="text-center">
                   <span className="inline-block text-xs text-gray-500 bg-gray-100 px-4 py-1.5 rounded-full font-medium">
@@ -340,7 +438,14 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                 )}
                 <div className={`max-w-[75%] ${isMine ? 'order-2' : ''}`}>
                   {!isMine && (
-                    <p className="text-[10px] font-semibold text-slate-400 mb-1 px-1">{m.sender_name}</p>
+                    <div className="mb-1 px-1">
+                      <p className="text-[10px] font-semibold text-slate-400">{m.sender_name}</p>
+                      {chatEmailBadge(m.sender_email) ? (
+                        <p className="text-[9px] text-slate-500 truncate max-w-[200px]" title={m.sender_email ?? ''}>
+                          {chatEmailBadge(m.sender_email)}
+                        </p>
+                      ) : null}
+                    </div>
                   )}
                   <div className={`px-3.5 py-2.5 rounded-2xl ${
                     isMine
@@ -368,30 +473,29 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                         <p className="text-sm mb-1">📍 Ubicación compartida</p>
                         <a href={m.body} target="_blank" rel="noopener noreferrer" className="text-xs text-teal-200 underline hover:text-teal-100">Ver en mapa</a>
                       </div>
-                    ) : m.type === 'payment_link' ? (
+                    ) : m.type === 'payment_link' || m.type === 'system' || m.type === 'text' ? (
                       (() => {
-                        try {
-                          const pd = JSON.parse(m.body)
-                          return (
-                            <div className="min-w-[200px]">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-lg">💳</span>
-                                <span className="text-sm font-bold">Solicitud de pago</span>
-                              </div>
-                              <p className="text-xs mb-3 opacity-80">Monto: <span className="font-bold">${Math.round(pd.amount).toLocaleString('es-CL')} CLP</span></p>
-                              <a
-                                href={pd.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block w-full text-center bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white text-xs font-black py-2 px-3 rounded-xl transition shadow-md shadow-amber-500/20"
-                              >
-                                Pagar ahora →
-                              </a>
-                            </div>
-                          )
-                        } catch {
-                          return <p className="text-sm">{m.body}</p>
+                        const pd = paymentPayload
+                        if (!pd) {
+                          return <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
                         }
+                        return (
+                          <div className="min-w-[200px]">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-lg">💳</span>
+                              <span className="text-sm font-bold">Solicitud de pago</span>
+                            </div>
+                            <p className="text-xs mb-3 opacity-80">Monto: <span className="font-bold">${Math.round(pd.amount || 0).toLocaleString('es-CL')} CLP</span></p>
+                            <a
+                              href={pd.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block w-full text-center bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white text-xs font-black py-2 px-3 rounded-xl transition shadow-md shadow-amber-500/20"
+                            >
+                              Pagar ahora →
+                            </a>
+                          </div>
+                        )
                       })()
                     ) : (
                       <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
@@ -425,42 +529,18 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
             </div>
           )}
           <div className="flex items-center gap-2">
-            {myRole === 'cliente' && serviceStatus && ['accepted','in_progress','pending_payment'].includes(serviceStatus) && !reviewDone && (
-              <button
-                onClick={async () => {
-                  if (completing) return
-                  if (!confirm('¿Confirmas que el trabajo fue completado?')) return
-                  setCompleting(true)
-                  try {
-                    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-                    const r = await apiFetch(`/api/v1/requests/${requestId}/complete`, {
-                      method: 'POST',
-                      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                    })
-                    if (r.ok) {
-                      setServiceStatus('completed')
-                      setShowReviewModal(true)
-                    } else {
-                      const d = await r.json()
-                      alert(d.message || feedbackCopy.completeActionError)
-                    }
-                  } catch { alert(feedbackCopy.networkError) }
-                  finally { setCompleting(false) }
-                }}
-                disabled={completing}
-                className="w-9 h-9 bg-teal-600 hover:bg-teal-500 rounded-xl flex items-center justify-center text-white transition disabled:opacity-50 shrink-0 shadow-md shadow-teal-500/20"
-                title="Marcar trabajo completado"
-              >
-                {completing
-                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  : <span className="text-base">✅</span>
-                }
-              </button>
-            )}
             {myRole === 'trabajador' && (
               <button
                 onClick={async () => {
                   if (requestingPayment) return
+                  const recentLink = [...messages]
+                    .reverse()
+                    .map((msg) => parsePaymentLinkPayload(msg.body))
+                    .find((p) => Boolean(p?.link))
+                  if (recentLink?.link) {
+                    window.open(recentLink.link, '_blank', 'noopener,noreferrer')
+                    return
+                  }
                   setRequestingPayment(true)
                   try {
                     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -470,8 +550,27 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
                       body: JSON.stringify({ service_request_id: requestId }),
                     })
                     const data = await r.json()
-                    if (!r.ok) alert(data.message || feedbackCopy.linkGenerateError)
-                  } catch { alert(feedbackCopy.networkError) }
+                    if (!r.ok) {
+                      console.error('[Chat] create-link failed', { status: r.status, data })
+                      jhFlowLog('payments.create_link.failed', {
+                        requestId,
+                        httpStatus: r.status,
+                        message: data?.message,
+                      })
+                      alert(data.message || feedbackCopy.linkGenerateError)
+                    } else {
+                      console.info('[Chat] create-link ok', { requestId, hasLink: Boolean(data?.link) })
+                      jhFlowLog('payments.create_link.ok', {
+                        requestId,
+                        charged_clp: data?.amount,
+                        pricing: data?.pricing,
+                        hasLink: Boolean(data?.link),
+                      })
+                    }
+                  } catch (e) {
+                    console.error('[Chat] create-link exception', e)
+                    alert(feedbackCopy.networkError)
+                  }
                   finally { setRequestingPayment(false) }
                 }}
                 disabled={requestingPayment}

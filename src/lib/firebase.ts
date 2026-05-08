@@ -10,6 +10,14 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+const hasRequiredFirebaseConfig = () =>
+  Boolean(
+    firebaseConfig.apiKey &&
+    firebaseConfig.projectId &&
+    firebaseConfig.messagingSenderId &&
+    firebaseConfig.appId,
+  )
+
 // Helper para convertir Base64URL a Uint8Array (formato que espera PushManager)
 const urlBase64ToUint8Array = (base64url: string): Uint8Array => {
   try {
@@ -57,6 +65,11 @@ let messaging: any = null;
 
 export const initFirebase = async () => {
   if (typeof window === 'undefined') return null;
+
+  if (!hasRequiredFirebaseConfig()) {
+    console.warn('[FCM] Firebase config incompleta; se omite inicialización (sin projectId/apiKey/appId/messagingSenderId).')
+    return null
+  }
   
   const supported = await isSupported();
   if (!supported) {
@@ -218,6 +231,11 @@ export const registerFCMToken = async (token: string, apiToken: string): Promise
 
 export const setupNotifications = async (apiToken: string): Promise<void> => {
   console.log('[FCM] setupNotifications started');
+
+  if (!hasRequiredFirebaseConfig()) {
+    console.warn('[FCM] setupNotifications omitido por configuración incompleta.')
+    return
+  }
   
   const token = await requestNotificationPermission();
   console.log('[FCM] Got token:', token ? token.substring(0, 20) + '...' : 'null');
