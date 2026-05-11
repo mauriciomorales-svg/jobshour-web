@@ -44,6 +44,8 @@ interface HomeChatPanelsProps {
   onCloseChatHistory: () => void
   onOpenChatFromHistory: (requestId: number, ctx: ChatCtx) => void
   onHighlightRequestFromSolicitudes: (requestId: number) => void
+  /** Abre el mismo PublishDemandModal que el mapa, con borrador opcional desde el chat */
+  onOpenPublishDemandFromChat: (draft?: { description?: string } | null) => void
 }
 
 export function HomeChatPanels({
@@ -65,6 +67,7 @@ export function HomeChatPanels({
   onCloseChatHistory,
   onOpenChatFromHistory,
   onHighlightRequestFromSolicitudes,
+  onOpenPublishDemandFromChat,
 }: HomeChatPanelsProps) {
   return (
     <>
@@ -110,6 +113,7 @@ export function HomeChatPanels({
           otherPersonName={chatContext.name}
           otherPersonAvatar={chatContext.avatar}
           otherPersonEmail={chatContext.email}
+          onOpenPublishDemandFromChat={onOpenPublishDemandFromChat}
         />
       )}
 

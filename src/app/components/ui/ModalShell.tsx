@@ -38,8 +38,8 @@ export function ModalShell({
 
   const wrapperClass =
     variant === 'bottomSheet'
-      ? 'fixed inset-0 z-[400] flex items-end justify-center'
-      : 'fixed inset-0 z-[400] flex items-end justify-center sm:items-center sm:p-4'
+      ? 'fixed inset-0 z-[450] flex items-end justify-center'
+      : 'fixed inset-0 z-[450] flex items-end justify-center sm:items-center sm:p-4'
 
   const panelBase =
     variant === 'bottomSheet'

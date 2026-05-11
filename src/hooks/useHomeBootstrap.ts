@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Dispatch, SetStateAction } from 'react'
+import { useEffect, useState } from 'react'
 import { getPublicApiBase } from '@/lib/api'
 
 interface ApiCategory {
@@ -12,7 +12,7 @@ interface ApiCategory {
   active_count: number
 }
 
-export function useHomeBootstrap(setShowPublishDemand: Dispatch<SetStateAction<boolean>>) {
+export function useHomeBootstrap(openPublishDemand: () => void) {
   const [categories, setCategories] = useState<ApiCategory[]>([])
 
   useEffect(() => {
@@ -23,10 +23,10 @@ export function useHomeBootstrap(setShowPublishDemand: Dispatch<SetStateAction<b
   }, [])
 
   useEffect(() => {
-    const handler = () => setShowPublishDemand(true)
+    const handler = () => openPublishDemand()
     window.addEventListener('open-publish-demand', handler)
     return () => window.removeEventListener('open-publish-demand', handler)
-  }, [setShowPublishDemand])
+  }, [openPublishDemand])
 
   return { categories, setCategories }
 }

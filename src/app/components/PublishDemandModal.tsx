@@ -196,11 +196,18 @@ function buildOptimisticSnapshot(input: {
   return { feedItem, mapPoint }
 }
 
+export interface PublishDemandInitialDraft {
+  /** Texto inicial (p. ej. últimos mensajes del chat o descripción del pedido actual) */
+  description?: string
+}
+
 interface Props {
   userLat: number
   userLng: number
   categories: Category[]
   publisher: { id: number; name: string; avatarUrl: string | null } | null
+  /** Si viene desde el chat u otro flujo: precarga el mismo formulario centralizado */
+  initialDraft?: PublishDemandInitialDraft | null
   onClose: () => void
   onPublished: (snapshot?: PublishedDemandSnapshot) => void
 }
@@ -221,7 +228,7 @@ const DEMAND_TYPE_CARDS: {
   { val: 'buscar_producto', Icon: ShoppingCart, label: 'Buscar tiendas', sub: 'Tiendas cercanas', accent: 'orange' },
 ]
 
-export default function PublishDemandModal({ userLat, userLng, categories, publisher, onClose, onPublished }: Props) {
+export default function PublishDemandModal({ userLat, userLng, categories, publisher, initialDraft, onClose, onPublished }: Props) {
   const [demandType, setDemandType] = useState<DemandType>('fixed_job')
   const [travelRole, setTravelRole] = useState<TravelRole>('passenger')
   const [categoryId, setCategoryId] = useState<number | null>(null)
@@ -271,6 +278,11 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
     trackEvent('demand_publish_modal_open', {})
     jhFlowHintOnce()
   }, [])
+
+  useEffect(() => {
+    const d = initialDraft?.description?.trim()
+    if (d) setDescription(d.slice(0, 500))
+  }, [initialDraft])
 
   useEffect(() => {
     // Obtener ubicación actual como pickup por defecto

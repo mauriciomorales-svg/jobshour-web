@@ -29,7 +29,7 @@ import { useHomeChatState } from '@/hooks/useHomeChatState'
 import type { HomeMapRef } from './components/HomeMapPanel'
 import { MapScreen } from './components/MapScreen'
 import { HomeModals } from './components/HomeModals'
-import type { PublishedDemandSnapshot } from './components/PublishDemandModal'
+import type { PublishedDemandSnapshot, PublishDemandInitialDraft } from './components/PublishDemandModal'
 import { HomeSidebar } from './components/HomeSidebar'
 import { HomeLoadingScreen } from './components/HomeLoadingScreen'
 import { HomeBottomBar } from './components/HomeBottomBar'
@@ -51,6 +51,7 @@ export default function Home() {
   const [showVerificationCard, setShowVerificationCard] = useState(false)
   const [showCategoryManagement, setShowCategoryManagement] = useState(false)
   const [showPublishDemand, setShowPublishDemand] = useState(false)
+  const [publishDemandInitialDraft, setPublishDemandInitialDraft] = useState<PublishDemandInitialDraft | null>(null)
   const [showPublishSuccess, setShowPublishSuccess] = useState(false)
   const [showStoreOrders, setShowStoreOrders] = useState(false)
   const [showWorkerQuotes, setShowWorkerQuotes] = useState(false)
@@ -80,7 +81,12 @@ export default function Home() {
   const userLngRef = useRef(0)
   const mapRef = useRef<HomeMapRef | null>(null)
 
-  const { categories } = useHomeBootstrap(setShowPublishDemand)
+  const openPublishDemandClean = useCallback(() => {
+    setPublishDemandInitialDraft(null)
+    setShowPublishDemand(true)
+  }, [])
+
+  const { categories } = useHomeBootstrap(openPublishDemandClean)
   const {
     activeRequestId, setActiveRequestId,
     activeChatRequestIds, setActiveChatRequestIds,
@@ -289,6 +295,7 @@ export default function Home() {
 
   const handlePublishDemandSuccess = useCallback((snapshot?: PublishedDemandSnapshot) => {
     setShowPublishDemand(false)
+    setPublishDemandInitialDraft(null)
     setShowPublishSuccess(true)
     setTimeout(() => setShowPublishSuccess(false), 3000)
     toast('Demanda publicada', 'success', 'Ya aparece en el mapa y en Demandas.')
@@ -334,12 +341,12 @@ export default function Home() {
   }, [checkAuthAndProfile, setShowLoginModal, setShowOnboarding])
 
   const handleSidebarTryPublish = useCallback(() => {
-    checkAuthAndAct(() => { setShowPublishDemand(true); setShowSidebar(false) })
-  }, [checkAuthAndAct])
+    checkAuthAndAct(() => { openPublishDemandClean(); setShowSidebar(false) })
+  }, [checkAuthAndAct, openPublishDemandClean])
 
   const handlePublishFromEmptyMap = useCallback(() => {
-    checkAuthAndAct(() => setShowPublishDemand(true))
-  }, [checkAuthAndAct])
+    checkAuthAndAct(() => openPublishDemandClean())
+  }, [checkAuthAndAct, openPublishDemandClean])
 
   const handleResetMapLocation = useCallback(() => {
     clearMapLocalStorageFull()
@@ -622,6 +629,12 @@ export default function Home() {
           setHighlightedRequestId(requestId)
           setTimeout(() => setHighlightedRequestId(null), 3000)
         }}
+        onOpenPublishDemandFromChat={(draft) => {
+          checkAuthAndAct(() => {
+            setPublishDemandInitialDraft(draft ?? null)
+            setShowPublishDemand(true)
+          })
+        }}
       />
 
       <HomeSidebar
@@ -725,7 +738,7 @@ export default function Home() {
         isLoggedIn={!!user}
         workerCategories={workerCategories}
         selectedDetail={selectedDetail}
-        onPublishDemand={() => checkAuthAndAct(() => setShowPublishDemand(true))}
+        onPublishDemand={() => checkAuthAndAct(() => openPublishDemandClean())}
         onWorkerActivate={() => handleWorkerStatusChange('active')}
         onShowCategoryRequired={() => setShowCategoryRequiredModal(true)}
         onWorkerStatusChange={handleWorkerStatusChange}
@@ -764,7 +777,11 @@ export default function Home() {
         userLat={userLat}
         userLng={userLng}
         publishCategories={categories}
-        onClosePublishDemand={() => setShowPublishDemand(false)}
+        onClosePublishDemand={() => {
+          setShowPublishDemand(false)
+          setPublishDemandInitialDraft(null)
+        }}
+        publishDemandInitialDraft={publishDemandInitialDraft}
         publishDemandPublisher={
           user ? { id: user.id, name: user.name, avatarUrl: user.avatarUrl } : null
         }

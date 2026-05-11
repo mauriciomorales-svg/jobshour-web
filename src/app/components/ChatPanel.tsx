@@ -43,9 +43,11 @@ interface Props {
   otherPersonEmail?: string | null
   myRole?: 'cliente' | 'trabajador'
   isSelf?: boolean
+  /** Mismo formulario “¿Qué necesitas?” que en el mapa (PublishDemandModal) */
+  onOpenPublishDemandFromChat?: (draft?: { description?: string } | null) => void
 }
 
-export default function ChatPanel({ requestId, currentUserId, onClose, requestDescription, otherPersonName, otherPersonAvatar, otherPersonPhone, otherPersonEmail, myRole, isSelf }: Props) {
+export default function ChatPanel({ requestId, currentUserId, onClose, requestDescription, otherPersonName, otherPersonAvatar, otherPersonPhone, otherPersonEmail, myRole, isSelf, onOpenPublishDemandFromChat }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMsg, setNewMsg] = useState('')
   const [sending, setSending] = useState(false)
@@ -367,6 +369,18 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
     return d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
   }
 
+  const buildDraftForPublishDemand = (): { description?: string } | null => {
+    const fromMe = messages
+      .filter((m) => m.sender_id === currentUserId)
+      .map((m) => m.body.trim())
+      .filter(Boolean)
+    const joined = fromMe.slice(-8).join('\n').slice(0, 500)
+    if (joined) return { description: joined }
+    const rd = requestDescription?.trim()
+    if (rd) return { description: rd.slice(0, 500) }
+    return null
+  }
+
   return (
     <div className="fixed inset-0 z-[300] flex flex-col">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -423,6 +437,20 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
             </button>
           </div>
         </div>
+
+        {!isSelf && onOpenPublishDemandFromChat && (
+          <div className="px-3 py-2 border-b border-slate-700/80 bg-slate-800/50">
+            <button
+              type="button"
+              onClick={() => onOpenPublishDemandFromChat(buildDraftForPublishDemand())}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-100 text-xs font-black transition active:scale-[0.99]"
+            >
+              <span aria-hidden>✨</span>
+              <span>{surfaceCopy.publishNewDemandFromChat}</span>
+            </button>
+            <p className="text-center text-[10px] text-slate-500 mt-1">{surfaceCopy.publishNewDemandFromChatHint}</p>
+          </div>
+        )}
 
         {/* Montos: siempre desde el servidor (simple y alineado con Mercado Pago) */}
         {!isSelf && chatPricing && (

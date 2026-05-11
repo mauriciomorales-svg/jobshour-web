@@ -240,6 +240,9 @@ export const surfaceCopy = {
   shareViaWhatsApp: 'Compartir por WhatsApp',
 
   publishDemandCta: '✨ Publicar demanda',
+  /** Desde el chat: mismo formulario “¿Qué necesitas?” */
+  publishNewDemandFromChat: 'Publicar nueva demanda',
+  publishNewDemandFromChatHint: 'Mismo formulario que en el mapa',
   /** Feed vacío (variante “publicar una demanda”) */
   publishDemandFeed: '✨ Publicar una demanda',
   publishing: 'Publicando...',
