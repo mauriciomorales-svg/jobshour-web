@@ -16,6 +16,12 @@ import { uiTone } from '@/lib/uiTone'
 import { motion, AnimatePresence } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import ExperienceSelector from './ExperienceSelector'
+import WorkerSocialLinks from './WorkerSocialLinks'
+
+// Alias para modo edición dentro de WorkerProfileHub
+const WorkerSocialLinksEditor = ({ initialLinks }: { initialLinks: any[] }) => (
+  <WorkerSocialLinks initialLinks={initialLinks} readonly={false} />
+)
 
 function InlineFeedback({ msg, type }: { msg: string; type: 'ok' | 'err' | 'info' }) {
   const colors = { ok: 'bg-teal-50 border-teal-300 text-teal-900', err: 'bg-red-50 border-red-300 text-red-800', info: 'bg-slate-50 border-slate-200 text-slate-800' }
@@ -930,6 +936,31 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                 ))}
               </div>
             )}
+          </div>
+        </motion.div>
+
+        {/* PASO 6: Links / Redes sociales */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.22 }}
+          className={`rounded-2xl border-2 overflow-hidden ${(workerData?.social_links?.length ?? 0) > 0 ? 'border-teal-400 bg-slate-900' : 'border-gray-100 bg-slate-900'}`}
+        >
+          <div className="p-4 border-b border-white/10 flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black shrink-0 ${(workerData?.social_links?.length ?? 0) > 0 ? 'bg-teal-600' : 'bg-slate-600'}`}>
+              {(workerData?.social_links?.length ?? 0) > 0 ? '✓' : '6'}
+            </div>
+            <div className="flex-1">
+              <h2 className="font-black text-white text-sm">
+                Tus links y redes <span className="text-white/40 font-normal">(opcional)</span>
+              </h2>
+              <p className="text-xs text-white/50">
+                TikTok, YouTube, Instagram, portfolio — mostrá tu trabajo sin límite de videos
+              </p>
+            </div>
+          </div>
+          <div className="p-4">
+            <WorkerSocialLinksEditor initialLinks={workerData?.social_links ?? []} />
           </div>
         </motion.div>
 

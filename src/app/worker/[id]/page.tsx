@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { trackEvent } from '@/lib/analytics'
 import { useParams, useRouter } from 'next/navigation'
+import WorkerSocialLinks, { type SocialLink } from '@/app/components/WorkerSocialLinks'
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
 
@@ -36,6 +37,7 @@ interface WorkerData {
   skills: string[] | null
   created_at: string
   videos: { url: string; thumbnail: string | null; duration: number | null }[]
+  social_links?: SocialLink[]
   user: {
     name: string
     nickname: string | null
@@ -263,6 +265,16 @@ export default function WorkerPublicProfile() {
               {worker.skills.map((skill: string, i: number) => (
                 <span key={i} className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">{skill}</span>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Links / Redes sociales */}
+        {(worker.social_links?.length ?? 0) > 0 && (
+          <div>
+            <h3 className="text-xs uppercase font-bold text-gray-400 mb-3 tracking-wider">Links y trabajos</h3>
+            <div className="bg-slate-900 rounded-2xl p-3">
+              <WorkerSocialLinks initialLinks={worker.social_links ?? []} readonly />
             </div>
           </div>
         )}
