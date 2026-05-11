@@ -13,6 +13,7 @@ const CategoryManagement = dynamic(() => import('./components/CategoryManagement
 const StoreOrdersPanel = dynamic(() => import('./components/StoreOrdersPanel'), { ssr: false })
 const WorkerQuotesPanel = dynamic(() => import('./components/WorkerQuotesPanel'), { ssr: false })
 const WorkerDetailModal = dynamic(() => import('./components/WorkerDetailModal'), { ssr: false })
+const NoCoverageOverlay = dynamic(() => import('./components/NoCoverageOverlay'), { ssr: false })
 
 import { useNotifications } from '@/hooks/useNotifications'
 import { useNearbyFetch } from '@/hooks/useNearbyFetch'
@@ -120,6 +121,12 @@ export default function Home() {
   const { points, setPoints, meta, loading, fetchNearby, fetchNearbyRef } = useNearbyFetch({
     user, userLatRef, userLngRef, workerStatus, toast,
   })
+
+  // Reiniciar el dismiss del overlay cada vez que llegan nuevos datos del mapa
+  // (permite que el overlay reaparezca si la nueva zona también está vacía)
+  useEffect(() => {
+    if (!loading) setDismissEmptyMap(false)
+  }, [points, loading])
 
   const syncWorkerLocation = useCallback(async (lat: number, lng: number) => {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
@@ -765,6 +772,15 @@ export default function Home() {
       )}
 
       {loading && <HomeLoadingScreen />}
+
+      {showEmptyMapOverlay && (
+        <NoCoverageOverlay
+          lat={userLat}
+          lng={userLng}
+          onDismiss={() => setDismissEmptyMap(true)}
+          onPublishDemand={() => { setDismissEmptyMap(true); handlePublishFromEmptyMap() }}
+        />
+      )}
 
       <HomeModals
         showLoginModal={showLoginModal}
