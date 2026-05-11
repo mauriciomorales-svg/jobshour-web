@@ -11,7 +11,7 @@ interface ServiceRequest {
   pos: { lat: number; lng: number }
   client: { id?: number | string; name: string; avatar: string | null }
   category: { name: string; color: string; icon?: string }
-  offered_price: number
+  offered_price: number | null
   urgency: string
   distance_km: number
   pickup_address?: string
@@ -65,6 +65,14 @@ const TYPE_CONFIG = {
   fixed:  { gradient: 'from-amber-500 to-orange-600',  bg: 'bg-amber-500',  icon: '🔧', label: 'Trabajo fijo'   },
   travel: { gradient: 'from-teal-500 to-teal-800',      bg: 'bg-teal-600',   icon: '🚗', label: 'Viaje compartido' },
   errand: { gradient: 'from-amber-500 to-orange-700',   bg: 'bg-amber-600', icon: '🛍️', label: 'Mandado express' },
+}
+
+function formatCLP(value: unknown): string {
+  const n = Number(value ?? 0)
+  if (!Number.isFinite(n)) return '0'
+  // Usar entero para precios (evita "500.5" si viniera float por algún caso)
+  const rounded = Math.round(n)
+  return rounded.toLocaleString('es-CL')
 }
 
 function formatTimeAgo(dateStr: string) {
@@ -174,7 +182,7 @@ function ActionButtons({
           className="w-full py-3 bg-white text-slate-900 rounded-xl text-sm font-black hover:bg-white/90 active:scale-95 transition flex items-center justify-center gap-2 shadow-lg"
         >
           <span>⚡</span>
-          <span>Tomar esta solicitud · ${request.offered_price.toLocaleString('es-CL')}</span>
+          <span>Tomar esta solicitud · ${formatCLP(request.offered_price)}</span>
         </button>
       )}
       <div className={`grid ${secondaryGrid} gap-1.5`}>
@@ -207,7 +215,7 @@ function ActionButtons({
           </button>
         )}
         <a
-          href={`https://wa.me/?text=${encodeURIComponent(`🔥 ¡Mira esta solicitud en JobsHours!\n${request.description || 'Servicio disponible'}\n💰 $${request.offered_price.toLocaleString('es-CL')}\n📍 ${request.pickup_address || 'Ver en mapa'}\n👉 ${typeof window !== 'undefined' ? window.location.origin : ''}`)}`}
+          href={`https://wa.me/?text=${encodeURIComponent(`🔥 ¡Mira esta solicitud en JobsHours!\n${request.description || 'Servicio disponible'}\n💰 $${formatCLP(request.offered_price)}\n📍 ${request.pickup_address || 'Ver en mapa'}\n👉 ${typeof window !== 'undefined' ? window.location.origin : ''}`)}`}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
@@ -235,7 +243,7 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, cu
         <div className="flex items-center gap-2">
           <span className="text-slate-500">{cfg.icon}</span>
           <span className="text-sm text-slate-400">
-            Alguien ganó <span className="font-bold text-amber-400">${request.offered_price.toLocaleString('es-CL')}</span>
+            Alguien ganó <span className="font-bold text-amber-400">${formatCLP(request.offered_price)}</span>
           </span>
         </div>
         <span className="text-xs text-slate-600">{request.completed_at ? formatTimeAgo(request.completed_at) : ''}</span>
@@ -288,7 +296,7 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, cu
             </div>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-white font-black text-xl">${request.offered_price.toLocaleString('es-CL')}</p>
+            <p className="text-white font-black text-xl">${formatCLP(request.offered_price)}</p>
             <p className="text-white/70 text-xs">oferta</p>
           </div>
         </div>

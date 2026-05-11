@@ -17,7 +17,7 @@ export interface ServiceRequest {
   pos: { lat: number; lng: number }
   client: { id?: number | string; name: string; avatar: string | null }
   category: { name: string; color: string; icon?: string }
-  offered_price: number
+  offered_price: number | null
   urgency: string
   distance_km: number
   created_at: string
