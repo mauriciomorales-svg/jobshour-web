@@ -259,6 +259,9 @@ export const surfaceCopy = {
   sending: 'Enviando...',
   sendingRequest: 'Enviando solicitud...',
   sendServiceRequest: '⚡ Enviar solicitud',
+  /** Plazo configurable en API (p. ej. 5 min); el temporizador real viene en Mis solicitudes */
+  directHireWorkerRespondHint:
+    'El profesional tiene un plazo breve para aceptar o rechazar; en Mis solicitudes verás la cuenta regresiva.',
   sendReview: 'Enviar reseña',
   sendReviewTitle: 'Enviar Reseña',
   publishReply: 'Publicar Respuesta',

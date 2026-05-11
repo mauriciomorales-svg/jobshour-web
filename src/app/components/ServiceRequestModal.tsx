@@ -571,7 +571,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             ) : surfaceCopy.sendServiceRequest}
           </button>
 
-          <p className="text-[10px] text-slate-600 text-center pb-2">El trabajador tiene 5 minutos para responder</p>
+          <p className="text-[10px] text-slate-600 text-center pb-2">{surfaceCopy.directHireWorkerRespondHint}</p>
         </div>
         </>}
       </div>
