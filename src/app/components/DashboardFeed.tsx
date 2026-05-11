@@ -35,11 +35,12 @@ interface DashboardFeedProps {
   highlightedRequestId?: number | null
   onRequestService?: (request: ServiceRequest) => void
   onCancelOwnDemand?: (request: ServiceRequest) => void
+  onBoostDemand?: (request: ServiceRequest) => void
   onOpenChat?: (request: ServiceRequest) => void
   onGoToLocation?: (request: ServiceRequest) => void
 }
 
-export default function DashboardFeed({ userLat, userLng, currentUserId, onCardClick, highlightedRequestId, onRequestService, onCancelOwnDemand, onOpenChat, onGoToLocation }: DashboardFeedProps) {
+export default function DashboardFeed({ userLat, userLng, currentUserId, onCardClick, highlightedRequestId, onRequestService, onCancelOwnDemand, onBoostDemand, onOpenChat, onGoToLocation }: DashboardFeedProps) {
   const [feed, setFeed] = useState<ServiceRequest[]>([])
   const [cursor, setCursor] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -297,6 +298,7 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
               currentUserId={currentUserId}
               onRequestService={onRequestService}
               onCancelOwnDemand={onCancelOwnDemand}
+              onBoostDemand={onBoostDemand}
               onOpenChat={onOpenChat}
               onGoToLocation={onGoToLocation}
             />

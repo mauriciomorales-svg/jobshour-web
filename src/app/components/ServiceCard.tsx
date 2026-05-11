@@ -25,6 +25,7 @@ interface ServiceRequest {
   recurrence_days?: number[] | null
   description?: string
   worker_id?: number | null
+  boosted_until?: string | null
   payload?: {
     image?: string
     seats?: number
@@ -49,6 +50,7 @@ interface ServiceCardProps {
   currentUserId?: number
   onRequestService?: (request: ServiceRequest) => void
   onCancelOwnDemand?: (request: ServiceRequest) => void
+  onBoostDemand?: (request: ServiceRequest) => void
   onOpenChat?: (request: ServiceRequest) => void
   onGoToLocation?: (request: ServiceRequest) => void
 }
@@ -135,9 +137,11 @@ function ActionButtons({
   isOwnDemand,
   onRequestService,
   onCancelOwnDemand,
+  onBoostDemand,
   onOpenChat,
   onGoToLocation,
-}: Pick<ServiceCardProps, 'request' | 'onRequestService' | 'onCancelOwnDemand' | 'onOpenChat' | 'onGoToLocation'> & { isOwnDemand?: boolean }) {
+}: Pick<ServiceCardProps, 'request' | 'onRequestService' | 'onCancelOwnDemand' | 'onBoostDemand' | 'onOpenChat' | 'onGoToLocation'> & { isOwnDemand?: boolean }) {
+  const isBoosted = !!(request.boosted_until && new Date(request.boosted_until) > new Date())
   const isDone = request.status === 'completed' || request.status === 'taken'
   /** Dueño sin trabajador asignado: no hay con quién chatear en esta solicitud */
   const hideChatAsOwnerWaiting = !!(isOwnDemand && !request.worker_id)
@@ -169,6 +173,18 @@ function ActionButtons({
           <div className="w-full text-center py-3 px-3 bg-black/25 border border-white/20 rounded-xl text-sm text-white/90 font-semibold leading-snug">
             Es tu publicación · esperá a que un trabajador la tome
           </div>
+          {isBoosted ? (
+            <div className="w-full text-center py-2 bg-amber-500/20 border border-amber-400/40 rounded-xl text-xs text-amber-200 font-bold">
+              ⚡ Destacada hasta {new Date(request.boosted_until!).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onBoostDemand?.(request) }}
+              className="w-full py-2.5 bg-amber-500/20 border border-amber-400/40 text-amber-100 rounded-xl text-sm font-bold hover:bg-amber-500/30 active:scale-95 transition flex items-center justify-center gap-2"
+            >
+              ⚡ Destacar en el mapa · $4.990
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); onCancelOwnDemand?.(request) }}
             className="w-full py-2.5 bg-red-500/20 border border-red-300/40 text-red-100 rounded-xl text-sm font-bold hover:bg-red-500/30 active:scale-95 transition"
@@ -228,7 +244,7 @@ function ActionButtons({
   )
 }
 
-export default function ServiceCard({ request, index, onClick, isHighlighted, currentUserId, onRequestService, onCancelOwnDemand, onOpenChat, onGoToLocation }: ServiceCardProps) {
+export default function ServiceCard({ request, index, onClick, isHighlighted, currentUserId, onRequestService, onCancelOwnDemand, onBoostDemand, onOpenChat, onGoToLocation }: ServiceCardProps) {
   const isOwnDemand = userIdsMatch(currentUserId, request.client?.id)
   const cfg = TYPE_CONFIG[request.category_type] || TYPE_CONFIG.fixed
 
@@ -356,6 +372,7 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, cu
           isOwnDemand={isOwnDemand}
           onRequestService={onRequestService}
           onCancelOwnDemand={onCancelOwnDemand}
+          onBoostDemand={onBoostDemand}
           onOpenChat={onOpenChat}
           onGoToLocation={onGoToLocation}
         />

@@ -3,6 +3,8 @@ import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
+const BuyCreditsModal = dynamic(() => import('./BuyCreditsModal'), { ssr: false })
 
 interface Props {
   workerId: number
@@ -18,6 +20,7 @@ export default function PhoneRevealButton({ workerId, phone, phoneRevealed, user
   const [realPhone, setRealPhone] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showBuyCredits, setShowBuyCredits] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -69,8 +72,8 @@ export default function PhoneRevealButton({ workerId, phone, phoneRevealed, user
       const data = await r.json()
 
       if (r.status === 402) {
-        setError('Sin créditos. Adquiere un plan para continuar.')
         setShowModal(false)
+        setShowBuyCredits(true)
         setLoading(false)
         return
       }
@@ -178,7 +181,13 @@ export default function PhoneRevealButton({ workerId, phone, phoneRevealed, user
                   {(creditsBalance ?? 0) < 1 && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
                       <p className="text-red-600 text-xs font-semibold">⚠️ Sin créditos suficientes</p>
-                      <p className="text-red-500 text-[10px] mt-1">Adquiere un plan para continuar</p>
+                      <button
+                        type="button"
+                        onClick={() => { setShowModal(false); setShowBuyCredits(true) }}
+                        className="mt-2 w-full py-2 bg-teal-500 hover:bg-teal-400 text-white text-xs font-black rounded-lg transition"
+                      >
+                        💳 Comprar créditos
+                      </button>
                     </div>
                   )}
                 </div>
@@ -218,6 +227,12 @@ export default function PhoneRevealButton({ workerId, phone, phoneRevealed, user
             </div>
           </div>
         </div>
+      )}
+      {showBuyCredits && (
+        <BuyCreditsModal
+          onClose={() => setShowBuyCredits(false)}
+          currentBalance={creditsBalance}
+        />
       )}
     </>
   )

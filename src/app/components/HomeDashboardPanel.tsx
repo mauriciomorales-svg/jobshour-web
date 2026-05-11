@@ -304,6 +304,26 @@ export function HomeDashboardPanel({
                 toast(message, 'error')
               }
             }}
+            onBoostDemand={async (request) => {
+              const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+              if (!token) { setShowLoginModal(true); return }
+              try {
+                const res = await apiFetch(`/api/v1/payments/mp/demand-boost`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ service_request_id: request.id }),
+                })
+                const data = await res.json()
+                if (res.ok && data.link) {
+                  window.open(data.link, '_blank', 'noopener,noreferrer')
+                  toast('Serás redirigido a Mercado Pago para destacar tu demanda', 'info')
+                } else {
+                  toast(data.message || 'No se pudo iniciar el boost', 'error')
+                }
+              } catch {
+                toast('Error de red al iniciar el boost', 'error')
+              }
+            }}
             onGoToLocation={async (request) => {
               let targetLat = request.pos?.lat
               let targetLng = request.pos?.lng
