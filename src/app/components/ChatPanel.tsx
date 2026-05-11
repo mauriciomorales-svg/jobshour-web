@@ -1,5 +1,5 @@
 'use client'
-import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import { chatMoneyCopy, emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -19,6 +19,16 @@ interface ChatMessage {
   body: string
   type: string
   created_at: string
+}
+
+interface ChatPricingFromApi {
+  agreed_base_clp: number | null
+  base_used_for_mp_clp: number
+  mp_total_clp: number
+  mp_factor: number
+  source: string
+  adjustment_pending: boolean
+  proposed_adjusted_clp: number | null
 }
 
 interface Props {
@@ -51,6 +61,9 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewDone, setReviewDone] = useState(false)
   const [interlocutorEmail, setInterlocutorEmail] = useState<string | null>(otherPersonEmail ?? null)
+  const [chatPricing, setChatPricing] = useState<ChatPricingFromApi | null>(null)
+  const [offeredPriceHint, setOfferedPriceHint] = useState<number | null>(null)
+  const [paymentStatusHint, setPaymentStatusHint] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const subscribedRequestIdRef = useRef<number | null>(null)
   const boundConnectionRef = useRef(false)
@@ -131,32 +144,62 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
     }
   }, [requestId])
 
+  const formatClp = (n: number) =>
+    `$${Math.round(n).toLocaleString('es-CL', { maximumFractionDigits: 0 })} CLP`
+
+  const pricingSourceLabel = (src: string) => {
+    if (src === 'negotiated') return chatMoneyCopy.sourceNegotiated
+    if (src === 'hourly_rate') return chatMoneyCopy.sourceHourly
+    return chatMoneyCopy.sourceDefault
+  }
+
+  const fetchServiceRequestSummary = useCallback(async () => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    try {
+      const r = await apiFetch(`/api/v1/requests/${requestId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      const data = await r.json()
+      const sr = data.data ?? data
+      if (sr?.status) setServiceStatus(sr.status)
+      if (sr?.id) setServiceRequestDbId(sr.id)
+      const op = sr?.offered_price
+      setOfferedPriceHint(typeof op === 'number' && op > 0 ? op : null)
+      setPaymentStatusHint(typeof sr?.payment_status === 'string' ? sr.payment_status : null)
+      const p = sr?.pricing
+      if (p && typeof p.base_used_for_mp_clp === 'number') {
+        setChatPricing({
+          agreed_base_clp: p.agreed_base_clp ?? null,
+          base_used_for_mp_clp: Number(p.base_used_for_mp_clp),
+          mp_total_clp: Number(p.mp_total_clp),
+          mp_factor: Number(p.mp_factor) || 1.08,
+          source: String(p.source ?? 'default'),
+          adjustment_pending: Boolean(p.adjustment_pending),
+          proposed_adjusted_clp:
+            p.proposed_adjusted_clp != null ? Number(p.proposed_adjusted_clp) : null,
+        })
+      }
+      const cid = sr?.client?.id
+      if (typeof cid === 'number' && typeof currentUserId === 'number') {
+        const email =
+          cid === currentUserId
+            ? (sr.worker?.email ?? null)
+            : (sr.client?.email ?? null)
+        if (email) setInterlocutorEmail(email)
+      }
+    } catch {
+      // silent
+    }
+  }, [requestId, currentUserId])
+
   useEffect(() => {
     setInterlocutorEmail(otherPersonEmail ?? null)
   }, [otherPersonEmail])
 
-  // Fetch estado del servicio + correo del interlocutor (desambigua homónimos)
+  // Estado del servicio, correo del interlocutor y montos (misma fuente que el cobro MP)
   useEffect(() => {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-    apiFetch(`/api/v1/requests/${requestId}`, {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    })
-      .then(r => r.json())
-      .then(data => {
-        const sr = data.data ?? data
-        if (sr?.status) setServiceStatus(sr.status)
-        if (sr?.id) setServiceRequestDbId(sr.id)
-        const cid = sr?.client?.id
-        if (typeof cid === 'number' && typeof currentUserId === 'number') {
-          const email =
-            cid === currentUserId
-              ? (sr.worker?.email ?? null)
-              : (sr.client?.email ?? null)
-          if (email) setInterlocutorEmail(email)
-        }
-      })
-      .catch(() => {})
-  }, [requestId, currentUserId])
+    void fetchServiceRequestSummary()
+  }, [fetchServiceRequestSummary])
 
   // Fetch existing messages
   useEffect(() => {
@@ -205,14 +248,15 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
     }
   }, [requestId, currentUserId, markRead])
 
-  // Polling fallback: evita perder mensajes cuando falla websocket.
+  // Polling fallback: evita perder mensajes cuando falla websocket; refresca montos por si hubo ajuste/aprobación.
   useEffect(() => {
     const interval = setInterval(() => {
       void fetchMessages()
       void markRead()
+      void fetchServiceRequestSummary()
     }, 4500)
     return () => clearInterval(interval)
-  }, [requestId, fetchMessages, markRead])
+  }, [requestId, fetchMessages, markRead, fetchServiceRequestSummary])
 
   // Auto-scroll
   useEffect(() => {
@@ -379,6 +423,64 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
             </button>
           </div>
         </div>
+
+        {/* Montos: siempre desde el servidor (simple y alineado con Mercado Pago) */}
+        {!isSelf && chatPricing && (
+          <div className="px-3 py-2 bg-slate-900/90 border-b border-slate-700/80">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-teal-400/90 mb-1.5">
+              {chatMoneyCopy.boxTitle}
+            </p>
+            {chatPricing.adjustment_pending && (
+              <div
+                className={`mb-2 rounded-lg px-2.5 py-2 text-xs leading-snug ${
+                  myRole === 'cliente'
+                    ? 'bg-amber-500/15 text-amber-100 border border-amber-500/35'
+                    : 'bg-slate-700/80 text-slate-200 border border-slate-600'
+                }`}
+              >
+                {myRole === 'cliente'
+                  ? chatMoneyCopy.adjustmentPendingClient
+                  : chatMoneyCopy.adjustmentPendingWorker}
+                {chatPricing.proposed_adjusted_clp != null && chatPricing.proposed_adjusted_clp > 0 && (
+                  <span className="block mt-1 font-semibold">
+                    {chatMoneyCopy.proposedLabel}: {formatClp(chatPricing.proposed_adjusted_clp)}
+                  </span>
+                )}
+              </div>
+            )}
+            {chatPricing.agreed_base_clp != null && chatPricing.agreed_base_clp > 0 ? (
+              <p className="text-sm text-white font-semibold">
+                {chatMoneyCopy.agreedLabel}:{' '}
+                <span className="text-teal-300">{formatClp(chatPricing.agreed_base_clp)}</span>
+              </p>
+            ) : offeredPriceHint != null ? (
+              <p className="text-xs text-slate-300">
+                {chatMoneyCopy.offeredHint}:{' '}
+                <span className="font-semibold text-white">{formatClp(offeredPriceHint)}</span>
+                <span className="text-slate-500"> · </span>
+                <span className="text-slate-400">{chatMoneyCopy.noAmountYet}</span>
+              </p>
+            ) : chatPricing.base_used_for_mp_clp > 0 ? (
+              <p className="text-xs text-slate-300">
+                {chatMoneyCopy.baseForLinkToday}:{' '}
+                <span className="font-semibold text-white">{formatClp(chatPricing.base_used_for_mp_clp)}</span>
+              </p>
+            ) : (
+              <p className="text-xs text-slate-400">{chatMoneyCopy.noAmountYet}</p>
+            )}
+            {chatPricing.mp_total_clp > 0 && (
+              <p className="text-[11px] text-slate-300 mt-1.5">
+                {chatMoneyCopy.mpTotalLabel}:{' '}
+                <span className="font-bold text-amber-300">{formatClp(chatPricing.mp_total_clp)}</span>
+                <span className="text-slate-500"> — {chatMoneyCopy.mpCommissionNote}</span>
+              </p>
+            )}
+            <p className="text-[10px] text-slate-500 mt-1">{pricingSourceLabel(chatPricing.source)}</p>
+            {paymentStatusHint === 'completed' && (
+              <p className="text-[11px] text-emerald-400/95 mt-1 font-medium">{chatMoneyCopy.paymentDone}</p>
+            )}
+          </div>
+        )}
 
         {/* Bloqueo auto-chat */}
         {isSelf && (

@@ -15,7 +15,7 @@ export interface ServiceRequest {
   status: string
   template: 'premium' | 'standard' | 'historical' | 'minimal'
   pos: { lat: number; lng: number }
-  client: { id?: number; name: string; avatar: string | null }
+  client: { id?: number | string; name: string; avatar: string | null }
   category: { name: string; color: string; icon?: string }
   offered_price: number
   urgency: string

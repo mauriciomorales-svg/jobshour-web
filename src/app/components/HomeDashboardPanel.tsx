@@ -111,6 +111,15 @@ export function HomeDashboardPanel({
             }}
             highlightedRequestId={highlightedRequestId}
             onRequestService={(request) => {
+              const clientId = request.client?.id
+              if (
+                currentUserId != null &&
+                clientId != null &&
+                Number(clientId) === Number(currentUserId) &&
+                !Number.isNaN(Number(clientId))
+              ) {
+                return
+              }
               const authCheck = checkAuthAndProfile()
               if (!authCheck.canInteract) {
                 if (authCheck.reason === 'login') {

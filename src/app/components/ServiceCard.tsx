@@ -9,7 +9,7 @@ interface ServiceRequest {
   status: string
   template: 'premium' | 'standard' | 'historical' | 'minimal'
   pos: { lat: number; lng: number }
-  client: { id?: number; name: string; avatar: string | null }
+  client: { id?: number | string; name: string; avatar: string | null }
   category: { name: string; color: string; icon?: string }
   offered_price: number
   urgency: string
@@ -50,6 +50,14 @@ interface ServiceCardProps {
   onRequestService?: (request: ServiceRequest) => void
   onOpenChat?: (request: ServiceRequest) => void
   onGoToLocation?: (request: ServiceRequest) => void
+}
+
+/** IDs pueden venir como number o string desde JSON / capas intermedias */
+function userIdsMatch(a: unknown, b: unknown): boolean {
+  if (a == null || b == null) return false
+  const na = Number(a)
+  const nb = Number(b)
+  return !Number.isNaN(na) && !Number.isNaN(nb) && na === nb
 }
 
 const TYPE_CONFIG = {
@@ -113,13 +121,23 @@ function PayloadChips({ request }: { request: ServiceRequest }) {
   )
 }
 
-function ActionButtons({ request, onRequestService, onOpenChat, onGoToLocation }: Pick<ServiceCardProps, 'request' | 'onRequestService' | 'onOpenChat' | 'onGoToLocation'>) {
+function ActionButtons({
+  request,
+  isOwnDemand,
+  onRequestService,
+  onOpenChat,
+  onGoToLocation,
+}: Pick<ServiceCardProps, 'request' | 'onRequestService' | 'onOpenChat' | 'onGoToLocation'> & { isOwnDemand?: boolean }) {
   const isDone = request.status === 'completed' || request.status === 'taken'
   return (
     <div className="mt-3 space-y-2">
       {isDone ? (
         <div className="w-full text-center py-2.5 bg-white/10 rounded-xl text-sm text-white/60 font-semibold">
           ✅ Ya tomada
+        </div>
+      ) : isOwnDemand ? (
+        <div className="w-full text-center py-3 px-3 bg-black/25 border border-white/20 rounded-xl text-sm text-white/90 font-semibold leading-snug">
+          Es tu publicación · esperá a que un trabajador la tome
         </div>
       ) : (
         <button
@@ -148,7 +166,7 @@ function ActionButtons({ request, onRequestService, onOpenChat, onGoToLocation }
             onClick={(e) => e.stopPropagation()}
             className="flex items-center justify-center gap-1 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition active:scale-95"
           >
-            �️ Llegar
+            🧭 Llegar
           </a>
         )}
         {onOpenChat && (
@@ -174,7 +192,7 @@ function ActionButtons({ request, onRequestService, onOpenChat, onGoToLocation }
 }
 
 export default function ServiceCard({ request, index, onClick, isHighlighted, currentUserId, onRequestService, onOpenChat, onGoToLocation }: ServiceCardProps) {
-  const isOwnDemand = !!(currentUserId && request.client?.id && request.client.id === currentUserId)
+  const isOwnDemand = userIdsMatch(currentUserId, request.client?.id)
   const cfg = TYPE_CONFIG[request.category_type] || TYPE_CONFIG.fixed
 
   if (request.template === 'historical') {
@@ -298,6 +316,7 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, cu
         {/* Botones de acción — SIEMPRE visibles */}
         <ActionButtons
           request={request}
+          isOwnDemand={isOwnDemand}
           onRequestService={onRequestService}
           onOpenChat={onOpenChat}
           onGoToLocation={onGoToLocation}

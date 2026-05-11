@@ -55,7 +55,7 @@ export function useUserAuth({ fetchWorkerData, setWorkerStatus }: UseUserAuthOpt
       }
       const data = await r.json()
       setUser({
-        id: data.id,
+        id: typeof data.id === 'string' ? Number(data.id) : data.id,
         name: data.name || 'Usuario',
         firstName: (data.name || 'Usuario').split(' ')[0],
         avatarUrl: data.avatar || data.worker?.avatar || null,

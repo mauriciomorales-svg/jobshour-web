@@ -341,6 +341,49 @@ export const surfaceCopy = {
   revealNow: 'Revelar ahora',
 } as const
 
+/** Chat servicio: montos siempre alineados con el backend (GET /requests/:id). */
+export const chatMoneyCopy = {
+  boxTitle: 'Dinero en esta solicitud',
+  agreedLabel: 'Monto acordado en JobsHours',
+  offeredHint: 'Tu oferta al publicar',
+  mpTotalLabel: 'Total a pagar con Mercado Pago',
+  mpCommissionNote: 'Incluye comisión de plataforma (8%).',
+  noAmountYet:
+    'Aún no hay un monto cerrado en el sistema. Cuando el trabajador acepte o acuerden un ajuste, verás aquí el valor exacto.',
+  baseForLinkToday: 'Base que usará el link de pago (hoy)',
+  adjustmentPendingClient:
+    'El trabajador propuso un nuevo monto. Revisá y aprobá para que el cobro quede alineado.',
+  adjustmentPendingWorker: 'Esperando que el cliente apruebe el monto propuesto.',
+  proposedLabel: 'Monto propuesto',
+  paymentDone: 'Pago registrado',
+  sourceNegotiated: 'Precio acordado en la solicitud',
+  sourceHourly: 'Tarifa del perfil',
+  sourceDefault: 'Referencia del sistema',
+} as const
+
+/** Página /pago/resultado — retorno Flow y Mercado Pago */
+export const pagoResultadoCopy = {
+  verifying: 'Verificando pago...',
+  flowInvalidToken: 'Enlace de confirmación no válido o incompleto.',
+  flowVerifyError: 'No pudimos confirmar el pago con Flow. Volvé al inicio e intentá de nuevo.',
+  flowSuccess: '¡Pago completado exitosamente!',
+  flowFailed: 'El pago no pudo ser procesado',
+  redirectHome: 'Serás redirigido al inicio en unos segundos...',
+  titleProcessing: 'Procesando pago',
+  titleSuccess: '¡Pago exitoso!',
+  titleFailed: 'Pago no completado',
+  titlePending: 'Pago en proceso',
+  mpApproved: 'Mercado Pago acreditó el pago.',
+  mpRejected: 'El pago fue rechazado o cancelado en Mercado Pago.',
+  mpPending: 'Mercado Pago está procesando el pago. En unos minutos debería figurar en la app.',
+  mpOptimisticSuccess: 'Volviste desde Mercado Pago. Si el dinero ya salió de tu cuenta, el aviso en JobsHours puede tardar unos segundos.',
+  mpOptimisticFail: 'Volviste sin completar el pago o hubo un error en el checkout.',
+  mpMissingSr: 'Faltan datos para mostrar el resultado. Volvé al inicio.',
+  srSyncedPaid: 'En JobsHours esta solicitud ya figura como pagada.',
+  srSyncedPending: 'En JobsHours el pago aún figura pendiente; esperá un momento o abrí el chat de la solicitud.',
+  backHome: 'Volver al inicio',
+} as const
+
 /** Menú lateral (HomeSidebar) — mismos rotulos en todas las vistas */
 export const navCopy = {
   sectionPrincipal: 'Principal',
