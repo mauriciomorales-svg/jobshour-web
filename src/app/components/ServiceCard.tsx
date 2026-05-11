@@ -129,6 +129,25 @@ function ActionButtons({
   onGoToLocation,
 }: Pick<ServiceCardProps, 'request' | 'onRequestService' | 'onOpenChat' | 'onGoToLocation'> & { isOwnDemand?: boolean }) {
   const isDone = request.status === 'completed' || request.status === 'taken'
+  /** Dueño sin trabajador asignado: no hay con quién chatear en esta solicitud */
+  const hideChatAsOwnerWaiting = !!(isOwnDemand && !request.worker_id)
+  /** “Llegar” es ir al punto como quien toma el trabajo; en espera de socio no aporta */
+  const hideLlegarAsOwnerWaiting = !!(isOwnDemand && !isDone)
+
+  const showMapa = !!onGoToLocation
+  const showLlegar = !!(request.pos?.lat && request.pos?.lng) && !hideLlegarAsOwnerWaiting
+  const showChat = !!onOpenChat && !hideChatAsOwnerWaiting
+  const showCompartir = true
+  const secondaryCount = [showMapa, showLlegar, showChat, showCompartir].filter(Boolean).length
+  const secondaryGrid =
+    secondaryCount <= 1
+      ? 'grid-cols-1'
+      : secondaryCount === 2
+        ? 'grid-cols-2'
+        : secondaryCount === 3
+          ? 'grid-cols-3'
+          : 'grid-cols-4'
+
   return (
     <div className="mt-3 space-y-2">
       {isDone ? (
@@ -148,17 +167,17 @@ function ActionButtons({
           <span>Tomar esta solicitud · ${request.offered_price.toLocaleString('es-CL')}</span>
         </button>
       )}
-      <div className="grid grid-cols-4 gap-1.5">
-        {onGoToLocation && (
+      <div className={`grid ${secondaryGrid} gap-1.5`}>
+        {showMapa && (
           <button
-            onClick={(e) => { e.stopPropagation(); onGoToLocation(request) }}
+            onClick={(e) => { e.stopPropagation(); onGoToLocation?.(request) }}
             className="flex items-center justify-center gap-1 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             Mapa
           </button>
         )}
-        {request.pos?.lat && request.pos?.lng && (
+        {showLlegar && (
           <a
             href={`https://www.google.com/maps/dir/?api=1&destination=${request.pos.lat},${request.pos.lng}`}
             target="_blank"
@@ -169,9 +188,9 @@ function ActionButtons({
             🧭 Llegar
           </a>
         )}
-        {onOpenChat && (
+        {showChat && (
           <button
-            onClick={(e) => { e.stopPropagation(); onOpenChat(request) }}
+            onClick={(e) => { e.stopPropagation(); onOpenChat?.(request) }}
             className="flex items-center justify-center gap-1 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95"
           >
             💬 Chat
