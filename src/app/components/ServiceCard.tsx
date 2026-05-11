@@ -48,6 +48,7 @@ interface ServiceCardProps {
   isHighlighted?: boolean
   currentUserId?: number
   onRequestService?: (request: ServiceRequest) => void
+  onCancelOwnDemand?: (request: ServiceRequest) => void
   onOpenChat?: (request: ServiceRequest) => void
   onGoToLocation?: (request: ServiceRequest) => void
 }
@@ -125,9 +126,10 @@ function ActionButtons({
   request,
   isOwnDemand,
   onRequestService,
+  onCancelOwnDemand,
   onOpenChat,
   onGoToLocation,
-}: Pick<ServiceCardProps, 'request' | 'onRequestService' | 'onOpenChat' | 'onGoToLocation'> & { isOwnDemand?: boolean }) {
+}: Pick<ServiceCardProps, 'request' | 'onRequestService' | 'onCancelOwnDemand' | 'onOpenChat' | 'onGoToLocation'> & { isOwnDemand?: boolean }) {
   const isDone = request.status === 'completed' || request.status === 'taken'
   /** Dueño sin trabajador asignado: no hay con quién chatear en esta solicitud */
   const hideChatAsOwnerWaiting = !!(isOwnDemand && !request.worker_id)
@@ -155,8 +157,16 @@ function ActionButtons({
           ✅ Ya tomada
         </div>
       ) : isOwnDemand ? (
-        <div className="w-full text-center py-3 px-3 bg-black/25 border border-white/20 rounded-xl text-sm text-white/90 font-semibold leading-snug">
-          Es tu publicación · esperá a que un trabajador la tome
+        <div className="space-y-2">
+          <div className="w-full text-center py-3 px-3 bg-black/25 border border-white/20 rounded-xl text-sm text-white/90 font-semibold leading-snug">
+            Es tu publicación · esperá a que un trabajador la tome
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onCancelOwnDemand?.(request) }}
+            className="w-full py-2.5 bg-red-500/20 border border-red-300/40 text-red-100 rounded-xl text-sm font-bold hover:bg-red-500/30 active:scale-95 transition"
+          >
+            Cancelar publicación
+          </button>
         </div>
       ) : (
         <button
@@ -210,7 +220,7 @@ function ActionButtons({
   )
 }
 
-export default function ServiceCard({ request, index, onClick, isHighlighted, currentUserId, onRequestService, onOpenChat, onGoToLocation }: ServiceCardProps) {
+export default function ServiceCard({ request, index, onClick, isHighlighted, currentUserId, onRequestService, onCancelOwnDemand, onOpenChat, onGoToLocation }: ServiceCardProps) {
   const isOwnDemand = userIdsMatch(currentUserId, request.client?.id)
   const cfg = TYPE_CONFIG[request.category_type] || TYPE_CONFIG.fixed
 
@@ -337,6 +347,7 @@ export default function ServiceCard({ request, index, onClick, isHighlighted, cu
           request={request}
           isOwnDemand={isOwnDemand}
           onRequestService={onRequestService}
+          onCancelOwnDemand={onCancelOwnDemand}
           onOpenChat={onOpenChat}
           onGoToLocation={onGoToLocation}
         />

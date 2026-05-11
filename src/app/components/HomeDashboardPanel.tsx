@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from 'react'
 import dynamic from 'next/dynamic'
-import { getPublicApiBase } from '@/lib/api'
+import { apiFetch, getPublicApiBase } from '@/lib/api'
 import { feedbackCopy } from '@/lib/userFacingCopy'
 import type { ExpertDetail } from './HomeWorkerDetailSheet'
 import type { MapPoint } from './MapSection'
@@ -271,6 +271,38 @@ export function HomeDashboardPanel({
               })
               setShowChat(true)
               setDashHidden(true)
+            }}
+            onCancelOwnDemand={async (request) => {
+              const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+              if (!token) {
+                setShowLoginModal(true)
+                toast('Inicia sesión para cancelar tu demanda', 'info')
+                return
+              }
+              const ok = window.confirm('¿Cancelar esta publicación? Esta acción no se puede deshacer.')
+              if (!ok) return
+              try {
+                const res = await apiFetch(`/api/v1/requests/${request.id}/cancel`, {
+                  method: 'POST',
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                if (!res.ok) {
+                  const payload = (await res.json().catch(() => ({}))) as { message?: string }
+                  throw new Error(payload?.message || `HTTP ${res.status}`)
+                }
+                toast('Demanda cancelada', 'success')
+                const removeEvent = new CustomEvent('remove-feed-item', { detail: { id: request.id } })
+                window.dispatchEvent(removeEvent)
+                setPoints((prev) => prev.filter((p) => !(p.id === request.id && p.pin_type === 'demand')))
+                setSelectedDetail(null)
+                setTimeout(() => {
+                  fetchNearby()
+                  window.dispatchEvent(new Event('reload-feed'))
+                }, 800)
+              } catch (err) {
+                const message = err instanceof Error && err.message ? err.message : 'No se pudo cancelar la demanda'
+                toast(message, 'error')
+              }
             }}
             onGoToLocation={async (request) => {
               let targetLat = request.pos?.lat
