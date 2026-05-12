@@ -11,6 +11,8 @@ export interface SearchMeta {
   radius_searched: string
   total_found: number
   is_fallback: boolean
+  outside_zone?: boolean
+  zone_name?: string
 }
 
 type WorkerStatus = 'guest' | 'inactive' | 'intermediate' | 'active'
@@ -33,6 +35,7 @@ export function useNearbyFetch({
   const [points, setPoints] = useState<MapPoint[]>([])
   const [meta, setMeta] = useState<SearchMeta | null>(null)
   const [loading, setLoading] = useState(true)
+  const [outsideZone, setOutsideZone] = useState(false)
   const hasLoadedOnceRef = useRef(false)
   const fetchSeqRef = useRef(0)
   const fetchNearbyRef = useRef<{
@@ -121,6 +124,16 @@ export function useNearbyFetch({
           .catch(() => ({ data: [], meta: {} })),
       ])
         .then(([expertsData, demandsData]) => {
+          // Geofencing: el servidor indica que el usuario está fuera de la zona activa
+          if (expertsData?.meta?.outside_zone) {
+            setOutsideZone(true)
+            setPoints([])
+            setMeta(null)
+            hasLoadedOnceRef.current = true
+            return
+          }
+          setOutsideZone(false)
+
           const workers = (expertsData.data ?? []).map((w: any) => ({
             ...w,
             pin_type: (w.pin_type ?? 'worker') as any,
@@ -188,6 +201,7 @@ export function useNearbyFetch({
     setPoints,
     meta,
     loading,
+    outsideZone,
     fetchNearby,
     fetchNearbyRef,
   }

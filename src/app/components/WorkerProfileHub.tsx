@@ -17,6 +17,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import ExperienceSelector from './ExperienceSelector'
 import WorkerSocialLinks from './WorkerSocialLinks'
+import ProfileCompletenessBar from './ProfileCompletenessBar'
+import { useProfileCompleteness } from '@/hooks/useProfileCompleteness'
 
 // Alias para modo edición dentro de WorkerProfileHub
 const WorkerSocialLinksEditor = ({ initialLinks }: { initialLinks: any[] }) => (
@@ -70,6 +72,8 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
   const [showAddCategoria, setShowAddCategoria] = useState(false)
   const [nuevaCategoria, setNuevaCategoria] = useState('')
   
+  const completeness = useProfileCompleteness(workerData, selectedSkills, experiences)
+
   const cvInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -436,14 +440,8 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
   const profileName = workerData?.name || user?.name || 'Mi Perfil'
   const profileAvatar = workerData?.avatar || user?.avatarUrl || null
 
-  const completionSteps = [
-    { label: 'Foto de perfil', done: !!profileAvatar },
-    { label: 'Habilidades', done: selectedSkills.length > 0 },
-    { label: 'Descripción', done: bioTarjeta.length > 10 },
-    { label: 'CV o Video', done: cvUploaded || !!videoFile },
-    { label: 'Experiencia', done: experiences.length > 0 },
-  ]
-  const completionPct = Math.round((completionSteps.filter(s => s.done).length / completionSteps.length) * 100)
+  // completionPct viene del hook useProfileCompleteness (más preciso)
+  const completionPct = completeness.score
 
   const handleShare = async () => {
     const text = profileNativeShareText(profileUrl)
@@ -504,8 +502,8 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
 
           {/* Completion checklist compacto */}
           <div className="mt-4 flex flex-wrap gap-1.5">
-            {completionSteps.map(s => (
-              <span key={s.label} className={`text-xs px-2 py-0.5 rounded-full font-semibold ${s.done ? 'bg-white/30 text-white' : 'bg-black/20 text-white/60'}`}>
+            {completeness.steps.map(s => (
+              <span key={s.id} className={`text-xs px-2 py-0.5 rounded-full font-semibold ${s.done ? 'bg-white/30 text-white' : 'bg-black/20 text-white/60'}`}>
                 {s.done ? '✓' : '○'} {s.label}
               </span>
             ))}
@@ -519,6 +517,13 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
           </div>
         )}
       </div>
+
+      {/* ── INDICADOR DE COMPLETITUD EXPANSIBLE ── */}
+      {!completeness.isComplete && (
+        <div className="px-4 pt-3 pb-1">
+          <ProfileCompletenessBar completeness={completeness} />
+        </div>
+      )}
 
       {/* ── TARJETA COMPARTIBLE ── */}
       <div className="px-4 -mt-1 pt-4 pb-2">

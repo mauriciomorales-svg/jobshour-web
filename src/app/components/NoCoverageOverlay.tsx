@@ -8,11 +8,22 @@ interface Props {
   lng: number
   onDismiss: () => void
   onPublishDemand: () => void
+  /** true cuando el servidor indica que la ubicación está fuera de la zona piloto */
+  isOutsideZone?: boolean
+  /** Nombre de la zona piloto activa, ej: "Angol, La Araucanía" */
+  zoneName?: string
 }
 
 type Step = 'initial' | 'form' | 'success'
 
-export default function NoCoverageOverlay({ lat, lng, onDismiss, onPublishDemand }: Props) {
+export default function NoCoverageOverlay({
+  lat,
+  lng,
+  onDismiss,
+  onPublishDemand,
+  isOutsideZone = false,
+  zoneName,
+}: Props) {
   const [step, setStep] = useState<Step>('initial')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -59,9 +70,11 @@ export default function NoCoverageOverlay({ lat, lng, onDismiss, onPublishDemand
           <div className="p-5">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">📍</span>
+                <span className="text-2xl">{isOutsideZone ? '🗺️' : '📍'}</span>
                 <h3 className="text-white font-semibold text-base leading-tight">
-                  Aún no llegamos a tu zona
+                  {isOutsideZone
+                    ? 'Estamos creciendo barrio a barrio'
+                    : 'Sin workers activos cerca'}
                 </h3>
               </div>
               <button
@@ -73,25 +86,44 @@ export default function NoCoverageOverlay({ lat, lng, onDismiss, onPublishDemand
               </button>
             </div>
 
-            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
-              No hay workers activos cerca de ti en este momento.
-              Puedes <strong className="text-white">avisar tu demanda igual</strong> — cuando
-              llegue un worker a tu zona te notificaremos.
-            </p>
+            {isOutsideZone ? (
+              <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+                Actualmente operamos en{' '}
+                <strong className="text-amber-400">{zoneName ?? 'nuestra zona piloto'}</strong>.
+                Tu ubicación aún no tiene cobertura, pero llegaremos pronto.
+                Déjanos tu email y te avisamos cuando estemos en tu zona.
+              </p>
+            ) : (
+              <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+                No hay workers activos cerca ahora mismo.
+                Puedes <strong className="text-white">publicar tu demanda igual</strong> — cuando
+                llegue un worker a tu zona te notificaremos.
+              </p>
+            )}
 
             <div className="flex flex-col gap-2">
-              <button
-                onClick={onPublishDemand}
-                className="w-full py-3 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-white font-semibold rounded-xl text-sm transition-colors"
-              >
-                ✍️ Publicar mi demanda igual
-              </button>
+              {!isOutsideZone && (
+                <button
+                  onClick={onPublishDemand}
+                  className="w-full py-3 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-white font-semibold rounded-xl text-sm transition-colors"
+                >
+                  ✍️ Publicar mi demanda igual
+                </button>
+              )}
               <button
                 onClick={() => setStep('form')}
                 className="w-full py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium rounded-xl text-sm transition-colors"
               >
-                🔔 Avisarme cuando lleguen workers
+                🔔 Avisarme cuando {isOutsideZone ? 'estén en mi zona' : 'lleguen workers'}
               </button>
+              {isOutsideZone && (
+                <button
+                  onClick={onDismiss}
+                  className="text-gray-500 text-xs text-center hover:text-gray-300 py-1"
+                >
+                  Ver el mapa de todas formas
+                </button>
+              )}
             </div>
           </div>
         )}

@@ -14,6 +14,7 @@ const StoreOrdersPanel = dynamic(() => import('./components/StoreOrdersPanel'), 
 const WorkerQuotesPanel = dynamic(() => import('./components/WorkerQuotesPanel'), { ssr: false })
 const WorkerDetailModal = dynamic(() => import('./components/WorkerDetailModal'), { ssr: false })
 const NoCoverageOverlay = dynamic(() => import('./components/NoCoverageOverlay'), { ssr: false })
+const ZoneBadge = dynamic(() => import('./components/ZoneBadge'), { ssr: false })
 
 import { useNotifications } from '@/hooks/useNotifications'
 import { useNearbyFetch } from '@/hooks/useNearbyFetch'
@@ -119,7 +120,7 @@ export default function Home() {
     handleWelcomeSlidesDone,
   } = useUserAuth({ fetchWorkerData, setWorkerStatus })
 
-  const { points, setPoints, meta, loading, fetchNearby, fetchNearbyRef } = useNearbyFetch({
+  const { points, setPoints, meta, loading, outsideZone, fetchNearby, fetchNearbyRef } = useNearbyFetch({
     user, userLatRef, userLngRef, workerStatus, toast,
   })
 
@@ -447,7 +448,7 @@ export default function Home() {
   }
 
   const showEmptyMapOverlay =
-    activeTab === 'map' && !loading && filtered.length === 0 && !selectedDetail && !dismissEmptyMap
+    activeTab === 'map' && !loading && (outsideZone || (filtered.length === 0)) && !selectedDetail && !dismissEmptyMap
 
   const openRequestsCintilloVisible =
     !!user &&
@@ -774,12 +775,16 @@ export default function Home() {
 
       {loading && <HomeLoadingScreen />}
 
+      {activeTab === 'map' && <ZoneBadge />}
+
       {showEmptyMapOverlay && (
         <NoCoverageOverlay
           lat={userLat}
           lng={userLng}
           onDismiss={() => setDismissEmptyMap(true)}
           onPublishDemand={() => { setDismissEmptyMap(true); handlePublishFromEmptyMap() }}
+          isOutsideZone={outsideZone}
+          zoneName={meta?.zone_name ?? undefined}
         />
       )}
 
