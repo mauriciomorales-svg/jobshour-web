@@ -128,7 +128,15 @@ export function useNearbyFetch({
           if (expertsData?.meta?.outside_zone) {
             setOutsideZone(true)
             setPoints([])
-            setMeta(null)
+            const z = expertsData.meta?.zone
+            setMeta({
+              city: expertsData.meta?.city ?? null,
+              radius_searched: String(expertsData.meta?.radius_searched ?? '0'),
+              total_found: expertsData.meta?.total_found ?? 0,
+              is_fallback: expertsData.meta?.is_fallback ?? false,
+              outside_zone: true,
+              zone_name: typeof z?.zone_name === 'string' ? z.zone_name : undefined,
+            })
             hasLoadedOnceRef.current = true
             return
           }
