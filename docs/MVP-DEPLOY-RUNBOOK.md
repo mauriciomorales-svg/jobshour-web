@@ -74,7 +74,7 @@ php artisan route:cache
 - `GET {APP_URL}/api/v1/health` — chequeo amplio (BD, cache, cola, Redis, Reverb, etc.); responde **503** si algo crítico falla.
 - `GET {APP_URL}/api/v1/health/ping` — **200** si la aplicación responde (útil para uptime barato).
 - **Correo al pagar tienda:** al pasar un `store_order` de `pending` a `paid` (webhook Mercado Pago o QA), se intenta enviar correo al comprador y al vendedor. Requiere `MAIL_*` configurado en Laravel.
-- `FRONTEND_URL` (o `APP_URL` como fallback en `config/app.php`) debe apuntar al sitio Next para el enlace “ver pedido” en el correo.
+- `FRONTEND_URL` (o `APP_URL` como fallback en `config/app.php`) debe apuntar al sitio Next para el enlace “ver pedido” en el correo **y** para las `back_urls` de Mercado Pago en checkout de tienda/cotización (el `notification_url` del webhook sigue siendo la API).
 - `SUPPORT_EMAIL` (opcional) — texto de contacto en el correo al comprador; por defecto `contacto@jobshour.cl`.
 
 ## 11. Salud del front (Next)
