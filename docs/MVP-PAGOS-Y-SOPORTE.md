@@ -26,6 +26,10 @@ Objetivo: que **cliente y worker** sepan qué hacer si el dinero no cuadra con e
 - Definir internamente quién contacta a Mercado Pago (plataforma vs vendedor) según vuestro modelo legal.
 - Hasta tener flujo automático: canal único de correo y plantilla de respuesta.
 
+## Correo al confirmar pago (tienda)
+
+- Cuando un pedido de tienda pasa de `pending` a `paid`, la API intenta enviar un correo al comprador (enlace al detalle) y un aviso corto al vendedor. Requiere `MAIL_*` y `FRONTEND_URL` correctos en el servidor Laravel.
+
 ---
 
 Actualizar el correo si el definitivo no es `contacto@jobshour.cl`.

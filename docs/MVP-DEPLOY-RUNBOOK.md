@@ -68,3 +68,15 @@ php artisan route:cache
 
 - Web: volver al commit anterior, `npm ci && npm run build`, reiniciar.
 - API: `git checkout` commit anterior + `composer install` + `migrate` solo si hace falta revertir migraciones (planificar antes).
+
+## 10. Salud HTTP y correo transaccional (API)
+
+- `GET {APP_URL}/api/v1/health` — chequeo amplio (BD, cache, cola, Redis, Reverb, etc.); responde **503** si algo crítico falla.
+- `GET {APP_URL}/api/v1/health/ping` — **200** si la aplicación responde (útil para uptime barato).
+- **Correo al pagar tienda:** al pasar un `store_order` de `pending` a `paid` (webhook Mercado Pago o QA), se intenta enviar correo al comprador y al vendedor. Requiere `MAIL_*` configurado en Laravel.
+- `FRONTEND_URL` (o `APP_URL` como fallback en `config/app.php`) debe apuntar al sitio Next para el enlace “ver pedido” en el correo.
+- `SUPPORT_EMAIL` (opcional) — texto de contacto en el correo al comprador; por defecto `contacto@jobshour.cl`.
+
+## 11. Salud del front (Next)
+
+- `GET https://tu-dominio/api/health` — JSON `{ ok: true }` desde el propio Next (no valida la API Laravel).

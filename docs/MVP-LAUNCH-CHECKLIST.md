@@ -33,7 +33,8 @@ Marcar antes de abrir a usuarios reales. Prioridad: **pagos**, **soporte** y **d
 
 - [ ] Deploy documentado (`MVP-DEPLOY-RUNBOOK.md`).
 - [ ] Variables `.env` / `NEXT_PUBLIC_*` alineadas en producción.
-- [ ] API + inventario + front levantados; health-check manual tras deploy.
+- [ ] API + inventario + front levantados; health-check manual tras deploy (`/api/v1/health`, `/api/v1/health/ping`, `/api/health` en Next).
+- [ ] **Correo** (`MAIL_*` en Laravel, `FRONTEND_URL`) probado: pago de tienda de prueba → correo al comprador/vendedor si aplica.
 - [ ] Backup de base de datos y prueba de restauración (al menos documentada).
 
 ## Calidad (30 min antes de salir)

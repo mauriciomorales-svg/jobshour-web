@@ -20,14 +20,30 @@ const tone: Record<Variant, { nav: string; link: string }> = {
 export default function LegalSupportLinks({
   className = '',
   variant = 'light',
+  showHelpLink = true,
 }: {
   className?: string
   variant?: Variant
+  /** En /ayuda no hace falta enlazar de nuevo al centro de ayuda */
+  showHelpLink?: boolean
 }) {
   const t = tone[variant]
   const mail = surfaceCopy.supportContactEmail
   return (
-    <nav className={`${t.nav} ${className}`} aria-label={surfaceCopy.mvpLegalNavAriaLabel}>
+    <nav
+      className={`inline-flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${t.nav} ${className}`}
+      aria-label={surfaceCopy.mvpLegalNavAriaLabel}
+    >
+      {showHelpLink ? (
+        <>
+          <Link href="/ayuda" className={t.link}>
+            {surfaceCopy.mvpHelpCenter}
+          </Link>
+          <span className="mx-0.5 opacity-50" aria-hidden>
+            ·
+          </span>
+        </>
+      ) : null}
       <Link href="/terminos" className={t.link}>
         {surfaceCopy.mvpLegalTerms}
       </Link>

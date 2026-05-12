@@ -230,6 +230,7 @@ export const surfaceCopy = {
   mvpLegalTerms: 'Términos',
   mvpLegalPrivacy: 'Privacidad',
   mvpLegalSupportMailto: 'Ayuda y pagos',
+  mvpHelpCenter: 'Centro de ayuda',
   mvpPaymentDisputeHint:
     'Si un cargo no coincide con tu banco o Mercado Pago, escríbenos con el número de pedido y la fecha (usa el enlace de ayuda abajo).',
   mvpSettingsTrustLead: 'Contratos y datos:',
