@@ -3,24 +3,17 @@
 import { useEffect } from 'react';
 import { setupNotifications, onMessageListener } from '@/lib/firebase';
 
+const isDev = process.env.NODE_ENV === 'development';
+
 export const useNotifications = (apiToken: string | null) => {
   useEffect(() => {
-    console.log('[useNotifications] effect triggered, apiToken exists:', !!apiToken);
-    if (!apiToken) {
-      console.log('[useNotifications] no apiToken, skipping');
-      return;
-    }
+    if (!apiToken) return;
 
-    // Setup notifications when user is authenticated
-    console.log('[useNotifications] calling setupNotifications...');
-    setupNotifications(apiToken).then(() => {
-      console.log('[useNotifications] setupNotifications completed');
-    }).catch((err) => {
-      console.error('[useNotifications] setupNotifications failed:', err);
-    });
+    setupNotifications(apiToken)
+      .catch((err) => {
+        if (isDev) console.error('[useNotifications] setupNotifications failed:', err);
+      });
 
-    // Listen for foreground messages
     onMessageListener();
-
   }, [apiToken]);
 };
