@@ -30,6 +30,7 @@ Tras cambiar env: **rebuild** (`npm run build`) y reiniciar proceso Node.
 cd /ruta/jobshour-web
 git pull origin master
 npm ci
+npm run mvp:verify   # opcional: exige NEXT_PUBLIC_API_URL válida (.env.local o export)
 npm run build
 # Reiniciar PM2/systemd según tengáis
 ```
@@ -40,6 +41,7 @@ npm run build
 cd /ruta/jobshour-api
 git pull origin master
 composer install --no-dev --optimize-autoloader
+composer mvp:verify   # mismo que: php artisan mvp:verify-env --strict
 php artisan migrate --force
 php artisan config:cache
 php artisan route:cache
@@ -49,7 +51,7 @@ php artisan route:cache
 ## 6. Salud post-deploy
 
 - `GET /` o página pública carga sin 500.
-- En el **contenedor o VPS API**: `php artisan mvp:verify-env` (comprueba `APP_KEY`, BD, `FRONTEND_URL`, token MP, `MAIL_*`).
+- En el **contenedor o VPS API**: `php artisan mvp:verify-env` o `composer mvp:verify` (comprueba `APP_KEY`, BD, `FRONTEND_URL`, token MP, `MAIL_*`).
 - Login y una llamada autenticada a `/api/...` OK.
 - Tienda de prueba: checkout llega a Mercado Pago (sandbox o prod según entorno).
 - Inventario: `GET /inventario/worker-stats/{id}` con token si aplica.
