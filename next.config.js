@@ -2,6 +2,9 @@ const path = require('path')
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 })
+const { withSentryConfig } = process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? require('@sentry/nextjs')
+  : { withSentryConfig: (c) => c }
 
 /** @type {import('next').NextConfig} */
 const isExport = process.env.NEXT_EXPORT === 'true'
@@ -56,4 +59,14 @@ const nextConfig = {
   } : {}),
 }
 
-module.exports = withBundleAnalyzer(nextConfig)
+const sentryWebpackPluginOptions = {
+  // Solo subir source maps si hay auth token configurado
+  silent: !process.env.SENTRY_AUTH_TOKEN,
+  dryRun: !process.env.SENTRY_AUTH_TOKEN,
+  org: process.env.SENTRY_ORG ?? 'jobshours',
+  project: process.env.SENTRY_PROJECT ?? 'jobshours-web',
+}
+
+module.exports = withBundleAnalyzer(
+  withSentryConfig(nextConfig, sentryWebpackPluginOptions)
+)
