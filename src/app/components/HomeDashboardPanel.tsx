@@ -216,7 +216,7 @@ export function HomeDashboardPanel({
                       })
                       const raw = typeof data.message === 'string' ? data.message : ''
                       const friendly =
-                        raw.includes('Ya tomada') || data._worker
+                        r.status === 409 || raw.includes('Ya tomada') || raw.includes('ya fue tomada') || data._worker
                           ? 'Esta demanda ya fue tomada por otro trabajador.'
                           : typeof data._status === 'string' && data._status !== 'pending'
                             ? 'Esta demanda ya no está disponible.'
