@@ -31,6 +31,8 @@ export type BrandedQuotePdfParams = {
   publicUrl: string
   quoteId?: number
   statusLabel?: string
+  /** Título principal del documento (ej. "Cotización"). Por defecto: Cotización */
+  documentTitle?: string
   brandName?: string
   brandTagline?: string
   campaignCta?: string
@@ -79,6 +81,7 @@ export async function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): Pr
     publicUrl,
     quoteId,
     statusLabel,
+    documentTitle,
     brandName,
     brandTagline,
     campaignCta,
@@ -90,6 +93,7 @@ export async function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): Pr
   const dynamicBrand = brandName?.trim() || BRAND
   const dynamicTagline = brandTagline?.trim() || BRAND_TAGLINE
   const dynamicCta = campaignCta?.trim() || 'Escanea y revisa esta oferta ahora'
+  const docTitle = (documentTitle ?? '').trim() || 'Cotización'
   let y = 12
 
   // Franja marca
@@ -112,7 +116,7 @@ export async function downloadBrandedQuotePdf(params: BrandedQuotePdfParams): Pr
   pdf.setTextColor(15, 23, 42)
   pdf.setFontSize(14)
   pdf.setFont('helvetica', 'bold')
-  pdf.text('Feria de Pulgas', margin, y)
+  pdf.text(docTitle, margin, y)
   y += 7
   pdf.setFontSize(10)
   pdf.setFont('helvetica', 'normal')

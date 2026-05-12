@@ -2324,6 +2324,7 @@ export default function TiendaPage() {
                         expiresAt: quotePdfSnapshot.expiresAt,
                         publicUrl: quotePdfSnapshot.publicUrl,
                         quoteId: quotePdfSnapshot.quoteId,
+                        documentTitle: 'Propuesta de compra',
                       })
                     } catch {
                       alert(feedbackCopy.pdfGenerateError)

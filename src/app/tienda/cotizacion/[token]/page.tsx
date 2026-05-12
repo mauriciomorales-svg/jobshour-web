@@ -145,6 +145,7 @@ export default function PublicQuotePage() {
       publicUrl: url,
       quoteId: data.quote.id,
       statusLabel: labelIntegratedQuoteStatus(data.quote.status),
+      documentTitle: 'Cotización',
       brandName: data.worker.store_name || 'Tienda JobsHours',
       brandTagline: 'Comparte productos con estilo y convierte por WhatsApp o web',
       campaignCta: 'Escanea el QR y abre la cotización al instante',

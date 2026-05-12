@@ -7,8 +7,13 @@ Se incrustan en el bundle en **build time**. Tras cambiarlas en el servidor hay 
 | Variable | Uso |
 |----------|-----|
 | `NEXT_PUBLIC_API_URL` | Base de la API Laravel (con o sin `/api` final; el código normaliza). En producción debe ser la URL pública real (p. ej. `https://jobshours.com`), **no** `localhost` en el `.env` del VPS, o el cliente intentará llamar al navegador del usuario. |
-| `NEXT_PUBLIC_PUSHER_KEY` | Clave Pusher para tiempo real. |
-| `NEXT_PUBLIC_PUSHER_CLUSTER` | Cluster Pusher (p. ej. `us2`). |
+| `NEXT_PUBLIC_PUSHER_KEY` | Clave Pusher para tiempo real (**solo** si usás Pusher Cloud y **no** Reverb self-hosted). |
+| `NEXT_PUBLIC_PUSHER_CLUSTER` | Cluster Pusher (p. ej. `us2`). Ignorado cuando Reverb está activo (abajo). |
+| `NEXT_PUBLIC_REVERB_APP_KEY` | Misma clave pública que `REVERB_APP_KEY` en Laravel. Si está definida **junto con** `NEXT_PUBLIC_REVERB_HOST`, Echo conecta al WebSocket Reverb propio. |
+| `NEXT_PUBLIC_REVERB_HOST` | Hostname **sin** protocolo (p. ej. `jobshours.com`). Requiere `NEXT_PUBLIC_REVERB_APP_KEY`. |
+| `NEXT_PUBLIC_REVERB_PORT` | Puerto WebSocket TLS (típico `443` detrás de Nginx). Por defecto `443` si `NEXT_PUBLIC_REVERB_SCHEME=https`. |
+| `NEXT_PUBLIC_REVERB_SCHEME` | `https` o `http` (desarrollo). |
+| `NEXT_PUBLIC_ECHO_AUTH_ENDPOINT` | Opcional. URL absoluta del `POST` de autorización de canales privados. Por defecto: `/api/broadcasting/auth` (mismo origen que la web) o, en `file:` (Capacitor), derivado de `NEXT_PUBLIC_API_URL`. |
 | `NEXT_PUBLIC_ANALYTICS_INGEST` | Opcional. URL del **POST** de eventos (absoluta o relativa al mismo origen). Body JSON: `{ "name": string, "payload": object, "t": number }`. Ejemplo en la misma app Next: **`/api/jh-analytics`** (ruta `src/app/api/jh-analytics/route.ts`). Si no existe, solo se emite `jh_analytics` en el cliente. |
 | `ANALYTICS_FORWARD_URL` | Solo servidor (no `NEXT_PUBLIC`). Si está definida, la ruta `/api/jh-analytics` **reenvía** el mismo JSON a este URL (p. ej. Laravel `https://jobshours.com/api/v1/analytics/events`). Opcional. |
 | `ANALYTICS_FORWARD_SECRET` | Solo servidor. Si el backend exige `X-Analytics-Secret` (mismo valor que `ANALYTICS_INGEST_SECRET` en Laravel), defínelo aquí para que Next lo envíe al reenviar. |

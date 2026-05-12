@@ -100,6 +100,7 @@ export default function WorkerQuotesPanel({ onClose }: { onClose: () => void }) 
       publicUrl: q.public_url || 'https://jobshours.com',
       quoteId: q.id,
       statusLabel: labelIntegratedQuoteStatus(q.status),
+      documentTitle: 'Cotización integrada',
       brandName: 'Tienda JobsHours',
       brandTagline: 'Tarjeta digital para vender y compartir productos',
       campaignCta: 'Escanea el QR y abre esta propuesta',
