@@ -49,6 +49,7 @@ php artisan route:cache
 ## 6. Salud post-deploy
 
 - `GET /` o página pública carga sin 500.
+- En el **contenedor o VPS API**: `php artisan mvp:verify-env` (comprueba `APP_KEY`, BD, `FRONTEND_URL`, token MP, `MAIL_*`).
 - Login y una llamada autenticada a `/api/...` OK.
 - Tienda de prueba: checkout llega a Mercado Pago (sandbox o prod según entorno).
 - Inventario: `GET /inventario/worker-stats/{id}` con token si aplica.

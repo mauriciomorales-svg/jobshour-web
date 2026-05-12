@@ -31,6 +31,7 @@ Marcar antes de abrir a usuarios reales. Prioridad: **pagos**, **soporte** y **d
 
 ## Operación
 
+- [ ] En el servidor API: `php artisan mvp:verify-env` (y `php artisan mvp:verify-env --strict` en CI si queréis fallar por advertencias).
 - [ ] Deploy documentado (`MVP-DEPLOY-RUNBOOK.md`).
 - [ ] Variables `.env` / `NEXT_PUBLIC_*` alineadas en producción.
 - [ ] API + inventario + front levantados; health-check manual tras deploy (`/api/v1/health`, `/api/v1/health/ping`, `/api/health` en Next).
