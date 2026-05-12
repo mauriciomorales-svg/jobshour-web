@@ -1,6 +1,7 @@
 'use client'
 import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
+import LegalSupportLinks from './LegalSupportLinks'
 
 import { useState, useEffect } from 'react'
 import { isCapacitor, openExternalBrowser, onAppResume } from '@/lib/capacitor'
@@ -337,6 +338,10 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
                 {surfaceCopy.registerHere}
               </button>
             </p>
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-slate-700/80">
+            <LegalSupportLinks variant="dark" className="text-center text-[11px] leading-relaxed" />
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect, useRef } from 'react'
 import CategoryPicker from './CategoryPicker'
+import LegalSupportLinks from './LegalSupportLinks'
 import { JSON_REQUEST_HEADERS } from '@/lib/api'
 
 interface Props {
@@ -503,6 +504,10 @@ export default function RegisterModal({ isOpen, onClose, onSuccess, onSwitchToLo
                 {surfaceCopy.loginExisting}
               </button>
             </p>
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-slate-200">
+            <LegalSupportLinks variant="light" className="text-center text-[11px] leading-relaxed" />
           </div>
         </div>
       </div>

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { navCopy } from '@/lib/userFacingCopy'
+import { navCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import LegalSupportLinks from './LegalSupportLinks'
 import { API_BASE_URL } from '../lib/api'
 
 interface SettingsProps {
@@ -128,6 +129,11 @@ export default function Settings({ user, onClose }: SettingsProps) {
               <li>• Puedes bloquear usuarios en cualquier momento</li>
               <li>• Tu historial de ganancias es privado</li>
             </ul>
+          </div>
+
+          <div className="border border-slate-200 rounded-2xl p-4 bg-white">
+            <p className="text-xs font-bold text-slate-700 mb-2">{surfaceCopy.mvpSettingsTrustLead}</p>
+            <LegalSupportLinks variant="light" className="text-[11px] leading-relaxed" />
           </div>
 
           {/* Cerrar sesión */}

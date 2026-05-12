@@ -1,8 +1,10 @@
 'use client'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { Suspense, useEffect, useState } from 'react'
 import { trackEvent } from '@/lib/analytics'
-import { buyerQuoteTimelineSteps, feedbackCopy } from '@/lib/userFacingCopy'
+import { buyerQuoteTimelineSteps, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
+import LegalSupportLinks from '@/app/components/LegalSupportLinks'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://jobshours.com/api'
 
@@ -230,10 +232,12 @@ function SuccessContent() {
           </div>
         )}
 
-        <div className="mt-6">
-          <a href="https://jobshours.com" className="text-teal-400 text-sm font-bold hover:underline">
+        <div className="mt-6 space-y-4">
+          <p className="text-slate-500 text-xs text-center leading-relaxed px-1">{surfaceCopy.mvpPaymentDisputeHint}</p>
+          <LegalSupportLinks variant="dark" className="text-center text-[11px] leading-relaxed" />
+          <Link href="/" className="block text-center text-teal-400 text-sm font-bold hover:underline">
             Volver a JobsHours
-          </a>
+          </Link>
         </div>
       </div>
     </div>

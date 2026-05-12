@@ -225,6 +225,15 @@ export const surfaceCopy = {
   /** Accesibilidad: grupo de periodos (servicios completados) */
   workerEarningsAriaPeriodGroup: 'Periodo para ver ganancias en servicios completados',
 
+  /** MVP — legal y soporte visibles en login, tienda post-pago, ajustes */
+  mvpLegalNavAriaLabel: 'Legal, privacidad y contacto',
+  mvpLegalTerms: 'Términos',
+  mvpLegalPrivacy: 'Privacidad',
+  mvpLegalSupportMailto: 'Ayuda y pagos',
+  mvpPaymentDisputeHint:
+    'Si un cargo no coincide con tu banco o Mercado Pago, escríbenos con el número de pedido y la fecha (usa el enlace de ayuda abajo).',
+  mvpSettingsTrustLead: 'Contratos y datos:',
+
   emittedQuotesSection: 'Cotizaciones emitidas',
 
   emptyStoreOrdersTitle: 'Sin pedidos aún',
