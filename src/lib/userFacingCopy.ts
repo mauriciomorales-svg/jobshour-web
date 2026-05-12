@@ -201,6 +201,29 @@ export const surfaceCopy = {
   workerEarningsHubTitle: 'Mis ganancias',
   workerEarningsHubSubtitle: 'Servicios JobsHours + ventas de tu tienda (inventario).',
   workerEarningsOpenButton: 'Ver mis ganancias',
+  workerEarningsPeriodAll: 'Histórico',
+  workerEarningsPeriod7: '7 días',
+  workerEarningsPeriod30: '30 días',
+  workerEarningsPeriod90: '90 días',
+  workerEarningsCombinedHint:
+    'Suma referencial: servicios completados en JobsHours + ingresos que registra tu inventario. No es saldo bancario ni neto tras comisiones.',
+  workerEarningsServicesCompletedHint:
+    'Bruto por trabajos en estado completado (precio final del pedido en la app). Pendientes y por validar van aparte.',
+  workerEarningsStoreHint:
+    'Montos que calcula tu módulo de inventario / tienda. Pueden diferir de liquidaciones de Mercado Pago.',
+  workerEarningsWindowHint:
+    'Solo servicios JobsHours: suma de precio final en completados cuya fecha de cierre (o actualización) cae en el periodo.',
+  workerEarningsStoreNoPeriodHint:
+    'Los montos de tienda siguen siendo históricos; el detalle por fechas está en Estadísticas.',
+  workerEarningsLastUpdated: 'Actualizado',
+  workerEarningsOpenMisTrabajos: 'Mis trabajos',
+  workerEarningsOpenTiendaStats: 'Tienda — Estadísticas',
+  workerEarningsRetryStore: 'Reintentar tienda',
+  workerEarningsSupportHint:
+    'Si un número no coincide con tu extracto, recuerda que aquí ves registros internos de la app. Dudas:',
+  supportContactEmail: 'contacto@jobshour.cl',
+  /** Accesibilidad: grupo de periodos (servicios completados) */
+  workerEarningsAriaPeriodGroup: 'Periodo para ver ganancias en servicios completados',
 
   emittedQuotesSection: 'Cotizaciones emitidas',
 

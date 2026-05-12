@@ -1,5 +1,8 @@
 /**
  * Eventos de producto (retención, embudo).
+ * Hub Mis ganancias (worker): `worker_earnings_open_from_hub` (perfil),
+ * `worker_earnings_hub_open`, `worker_earnings_hub_period`, `worker_earnings_hub_refresh`,
+ * `worker_earnings_hub_retry_store`, `worker_earnings_hub_nav_jobs`, `worker_earnings_hub_nav_tienda_stats`.
  * - `window` CustomEvent `jh_analytics` — suscripciones en devtools o extensiones.
  * - Opcional: `NEXT_PUBLIC_ANALYTICS_INGEST` — URL del POST (absoluta o relativa, p. ej. `/api/jh-analytics`).
  *   Body: `{ name, payload, t }`. En servidor: `src/app/api/jh-analytics/route.ts` + opcional `ANALYTICS_FORWARD_URL`.
