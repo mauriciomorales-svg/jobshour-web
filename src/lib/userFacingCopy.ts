@@ -198,6 +198,10 @@ export const surfaceCopy = {
   workerQuotesHeading: 'Mis Cotizaciones',
   workerQuotesSubtitle: 'Links desde tu tienda (Feria de Pulgas y otras ofertas)',
 
+  workerEarningsHubTitle: 'Mis ganancias',
+  workerEarningsHubSubtitle: 'Servicios JobsHours + ventas de tu tienda (inventario).',
+  workerEarningsOpenButton: 'Ver mis ganancias',
+
   emittedQuotesSection: 'Cotizaciones emitidas',
 
   emptyStoreOrdersTitle: 'Sin pedidos aún',

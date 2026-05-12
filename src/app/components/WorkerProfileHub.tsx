@@ -19,6 +19,8 @@ import ExperienceSelector from './ExperienceSelector'
 import WorkerSocialLinks from './WorkerSocialLinks'
 import ProfileCompletenessBar from './ProfileCompletenessBar'
 import { useProfileCompleteness } from '@/hooks/useProfileCompleteness'
+import WorkerEarningsHub from './WorkerEarningsHub'
+import { Wallet } from 'lucide-react'
 
 // Alias para modo edición dentro de WorkerProfileHub
 const WorkerSocialLinksEditor = ({ initialLinks }: { initialLinks: any[] }) => (
@@ -71,7 +73,8 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
   const [misCategorias, setMisCategorias] = useState<any[]>([])
   const [showAddCategoria, setShowAddCategoria] = useState(false)
   const [nuevaCategoria, setNuevaCategoria] = useState('')
-  
+  const [showEarningsHub, setShowEarningsHub] = useState(false)
+
   const completeness = useProfileCompleteness(workerData, selectedSkills, experiences, bioTarjeta)
 
   const cvInputRef = useRef<HTMLInputElement>(null)
@@ -508,6 +511,20 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
               </span>
             ))}
           </div>
+
+          {workerData?.id ? (
+            <button
+              type="button"
+              onClick={() => {
+                trackEvent('worker_earnings_open_from_hub', { worker_id: workerData.id })
+                setShowEarningsHub(true)
+              }}
+              className="mt-3 w-full py-2.5 rounded-xl bg-white/20 backdrop-blur text-white font-black text-sm border border-white/30 hover:bg-white/30 transition flex items-center justify-center gap-2 active:scale-[0.99]"
+            >
+              <Wallet className="w-4 h-4 shrink-0" aria-hidden />
+              {surfaceCopy.workerEarningsOpenButton}
+            </button>
+          ) : null}
         </div>
 
         {/* Feedback global */}
@@ -1134,6 +1151,10 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
         </motion.div>
 
       </div>
+
+      {showEarningsHub && workerData?.id != null && (
+        <WorkerEarningsHub workerId={Number(workerData.id)} onClose={() => setShowEarningsHub(false)} />
+      )}
 
       {/* Experience Selector Modal */}
       <ExperienceSelector
