@@ -475,6 +475,7 @@ export default function Home() {
           user={user}
           onClose={() => setActiveSection('map')}
           onSellerChange={(val) => setIsSeller(val)}
+          onOpenMisTrabajos={() => setActiveSection('jobs')}
           onCategorySelected={() => {
             const token = localStorage.getItem('auth_token')
             if (token) fetchWorkerData(token)

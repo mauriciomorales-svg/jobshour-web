@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import { Suspense } from 'react'
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://jobshours.com'
@@ -65,5 +66,5 @@ export async function generateMetadata({
 }
 
 export default function TiendaWorkerLayout({ children }: { children: ReactNode }) {
-  return children
+  return <Suspense fallback={<div className="min-h-[40vh]" aria-hidden />}>{children}</Suspense>
 }

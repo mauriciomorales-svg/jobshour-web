@@ -42,9 +42,10 @@ interface Props {
   onClose: () => void
   onCategorySelected?: () => void // Callback cuando se selecciona una categoría
   onSellerChange?: (val: boolean) => void // Callback cuando cambia el modo vendedor
+  onOpenMisTrabajos?: () => void
 }
 
-export default function WorkerProfileHub({ user, onClose, onCategorySelected, onSellerChange }: Props) {
+export default function WorkerProfileHub({ user, onClose, onCategorySelected, onSellerChange, onOpenMisTrabajos }: Props) {
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [cvUploaded, setCvUploaded] = useState(false)
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -1153,7 +1154,11 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
       </div>
 
       {showEarningsHub && workerData?.id != null && (
-        <WorkerEarningsHub workerId={Number(workerData.id)} onClose={() => setShowEarningsHub(false)} />
+        <WorkerEarningsHub
+          workerId={Number(workerData.id)}
+          onClose={() => setShowEarningsHub(false)}
+          onOpenMisTrabajos={onOpenMisTrabajos}
+        />
       )}
 
       {/* Experience Selector Modal */}

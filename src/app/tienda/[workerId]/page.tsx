@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { trackEvent } from '@/lib/analytics'
 import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info, FileDown } from 'lucide-react'
@@ -941,6 +941,7 @@ function EditProductModal({ producto, workerId, onClose, onSuccess }: {
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function TiendaPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const workerId = Number(params.workerId)
 
   const [worker, setWorker] = useState<WorkerInfo | null>(null)
@@ -1075,7 +1076,13 @@ export default function TiendaPage() {
     finally { setLoadingStats(false) }
   }, [isOwner, workerId])
 
-  useEffect(() => { if (isOwner && tab === 'stats') fetchStats() }, [isOwner, tab])
+  useEffect(() => { if (isOwner && tab === 'stats') fetchStats() }, [isOwner, tab, fetchStats])
+
+  useEffect(() => {
+    if (!isOwner) return
+    const t = searchParams.get('tab')
+    if (t === 'stats') setTab('stats')
+  }, [isOwner, searchParams])
 
   const fetchMarketingStats = useCallback(async () => {
     if (!isOwner || typeof window === 'undefined') return

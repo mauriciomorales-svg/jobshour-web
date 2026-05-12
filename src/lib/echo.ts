@@ -29,7 +29,7 @@ function getEchoAuthEndpoint(): string {
  * Reverb expone el protocolo Pusher. Si defines NEXT_PUBLIC_REVERB_HOST + NEXT_PUBLIC_REVERB_APP_KEY,
  * el cliente conecta al WebSocket propio; si no, usa Pusher Cloud (cluster).
  */
-function useSelfHostedReverb(): boolean {
+function isSelfHostedReverb(): boolean {
   const host = process.env.NEXT_PUBLIC_REVERB_HOST?.trim()
   const key = process.env.NEXT_PUBLIC_REVERB_APP_KEY?.trim()
   return Boolean(host && key)
@@ -39,7 +39,7 @@ function buildEchoOptions(token: string | null): Record<string, unknown> {
   const authEndpoint = getEchoAuthEndpoint()
   const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
-  if (useSelfHostedReverb()) {
+  if (isSelfHostedReverb()) {
     const host = process.env.NEXT_PUBLIC_REVERB_HOST!.trim()
     const key = process.env.NEXT_PUBLIC_REVERB_APP_KEY!.trim()
     const scheme = (process.env.NEXT_PUBLIC_REVERB_SCHEME || 'https').toLowerCase()
