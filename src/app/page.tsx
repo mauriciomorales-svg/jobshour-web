@@ -60,6 +60,7 @@ export default function Home() {
   const [showSolicitudesPanel, setShowSolicitudesPanel] = useState(false)
   const [dashHidden, setDashHidden] = useState(true)
   const [dismissEmptyMap, setDismissEmptyMap] = useState(false)
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [showLocationPrompt, setShowLocationPrompt] = useState(false)
   const [openRequestsBannerDismissed, setOpenRequestsBannerDismissed] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -787,7 +788,7 @@ export default function Home() {
         user={user ? { id: user.id, name: user.name, token: user.token, avatarUrl: user.avatarUrl } : null}
         onCloseLogin={() => setShowLoginModal(false)}
         onLoginSuccess={handleLoginSuccess}
-        onSwitchRegister={() => { setShowLoginModal(false); toast('Registro disponible en jobshours.com', 'info') }}
+        onSwitchRegister={() => { setShowLoginModal(false); setShowRegisterModal(true) }}
         onForgotPassword={() => window.open('https://jobshours.com/recuperar', '_blank')}
         showPublishDemand={showPublishDemand}
         userLat={userLat}
@@ -816,6 +817,10 @@ export default function Home() {
         showWelcomeSlides={showWelcomeSlides}
         onWelcomeSlidesDone={handleWelcomeSlidesDone}
         showPublishSuccess={showPublishSuccess}
+        showRegisterModal={showRegisterModal}
+        onCloseRegister={() => setShowRegisterModal(false)}
+        onRegisterSuccess={(u: any, token: string) => { setShowRegisterModal(false); handleLoginSuccess(u, token) }}
+        onSwitchToLogin={() => { setShowRegisterModal(false); setShowLoginModal(true) }}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

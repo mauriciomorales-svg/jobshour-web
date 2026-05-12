@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import type { PublishedDemandSnapshot, PublishDemandInitialDraft } from './PublishDemandModal'
 
 const LoginModal = dynamic(() => import('./LoginModal'), { ssr: false })
+const RegisterModal = dynamic(() => import('./RegisterModal'), { ssr: false })
 const PublishDemandModal = dynamic(() => import('./PublishDemandModal'), { ssr: false })
 const RatingModal = dynamic(() => import('./RatingModal'), { ssr: false })
 const OnboardingWizard = dynamic(() => import('./OnboardingWizard'), { ssr: false })
@@ -31,6 +32,10 @@ export function HomeModals({
   onLoginSuccess,
   onSwitchRegister,
   onForgotPassword,
+  showRegisterModal,
+  onCloseRegister,
+  onRegisterSuccess,
+  onSwitchToLogin,
   showPublishDemand,
   userLat,
   userLng,
@@ -60,6 +65,10 @@ export function HomeModals({
   onLoginSuccess: (u: unknown, token: string) => void
   onSwitchRegister: () => void
   onForgotPassword: () => void
+  showRegisterModal?: boolean
+  onCloseRegister?: () => void
+  onRegisterSuccess?: (u: any, token: string) => void
+  onSwitchToLogin?: () => void
   showPublishDemand: boolean
   userLat: number
   userLng: number
@@ -92,6 +101,15 @@ export function HomeModals({
           onSuccess={onLoginSuccess}
           onSwitchToRegister={onSwitchRegister}
           onForgotPassword={onForgotPassword}
+        />
+      )}
+
+      {showRegisterModal && !user && (
+        <RegisterModal
+          isOpen={showRegisterModal}
+          onClose={onCloseRegister ?? (() => {})}
+          onSuccess={onRegisterSuccess ?? (() => {})}
+          onSwitchToLogin={onSwitchToLogin ?? (() => {})}
         />
       )}
 
