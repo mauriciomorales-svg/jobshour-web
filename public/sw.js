@@ -1,4 +1,5 @@
-const CACHE_NAME = 'jobshours-v5';
+// Bump this on each production deploy so installed PWAs drop old caches.
+const CACHE_NAME = 'jobshours-v6';
 const OFFLINE_URL = '/offline.html';
 
 const PRECACHE_URLS = [
