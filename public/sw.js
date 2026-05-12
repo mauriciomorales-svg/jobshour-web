@@ -1,5 +1,6 @@
-// Bump this on each production deploy so installed PWAs drop old caches.
-const CACHE_NAME = 'jobshours-v6';
+// En producción, deploy-on-server.sh reemplaza CACHE_NAME por jobshours-YYYYMMDD-<commit>.
+// Valor por defecto para desarrollo / repo.
+const CACHE_NAME = 'jobshours-v7';
 const OFFLINE_URL = '/offline.html';
 
 const PRECACHE_URLS = [

@@ -29,21 +29,34 @@ git checkout -f "$BRANCH"
 git reset --hard "origin/$BRANCH"
 log "Nuevo commit: $(git rev-parse --short HEAD)"
 
-# ── 2. Dependencias ──────────────────────────────────────────────────────────
-log "=== [2/5] npm ci ==="
-export NODE_OPTIONS="--max-old-space-size=1536"
-npm ci --prefer-offline
+# ── 2. PWA: nuevo nombre de caché en cada deploy (app instalada / Añadir a inicio) ─
+log "=== [2/6] PWA service worker — invalidar caché ==="
+SW_TAG="jobshours-$(date -u +%Y%m%d)-$(git rev-parse --short HEAD)"
+if [[ -f public/sw.js ]]; then
+  sed -i "s/^const CACHE_NAME = '.*'/const CACHE_NAME = '${SW_TAG}'/" public/sw.js
+  log "CACHE_NAME=${SW_TAG}"
+else
+  log "⚠️  public/sw.js no encontrado, se omite"
+fi
 
-# ── 3. Build ─────────────────────────────────────────────────────────────────
-log "=== [3/5] Build ==="
+# ── 3. Dependencias ──────────────────────────────────────────────────────────
+log "=== [3/6] npm ci (o npm install si el lock no coincide) ==="
+export NODE_OPTIONS="--max-old-space-size=1536"
+if ! npm ci --prefer-offline; then
+  log "⚠️  npm ci falló — usando npm install"
+  npm install --prefer-offline
+fi
+
+# ── 4. Build ─────────────────────────────────────────────────────────────────
+log "=== [4/6] Build ==="
 export NODE_ENV=production
 export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://jobshours.com/api}"
 export NEXT_PUBLIC_PUSHER_KEY="${NEXT_PUBLIC_PUSHER_KEY:-9a309a9f35c89457ea2c}"
 export NEXT_PUBLIC_PUSHER_CLUSTER="${NEXT_PUBLIC_PUSHER_CLUSTER:-us2}"
 npm run build
 
-# ── 4. PM2 reload (zero-downtime) ────────────────────────────────────────────
-log "=== [4/5] PM2 reload ==="
+# ── 5. PM2 reload (zero-downtime) ────────────────────────────────────────────
+log "=== [5/6] PM2 reload ==="
 # Si el proceso no existe aún, lo creamos con el ecosistema
 if pm2 list | grep -q "jobshour-web"; then
     pm2 reload jobshour-web --update-env
@@ -52,8 +65,8 @@ else
 fi
 pm2 save  # Persiste la lista de procesos para reinicios del sistema
 
-# ── 5. Health check ──────────────────────────────────────────────────────────
-log "=== [5/5] Health check ==="
+# ── 6. Health check ──────────────────────────────────────────────────────────
+log "=== [6/6] Health check ==="
 sleep 5
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://127.0.0.1:3000/" || echo "000")
 

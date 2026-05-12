@@ -10,6 +10,7 @@
     "build": "next build",
     "build:safe": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next build",
     "build:android": "node scripts/build-android-static.mjs",
+    "cap:sync": "npx cap sync android",
     "start": "next start -p 3001",
     "lint": "next lint --max-warnings 99999",
     "test": "vitest run",
