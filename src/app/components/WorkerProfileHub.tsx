@@ -72,7 +72,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
   const [showAddCategoria, setShowAddCategoria] = useState(false)
   const [nuevaCategoria, setNuevaCategoria] = useState('')
   
-  const completeness = useProfileCompleteness(workerData, selectedSkills, experiences)
+  const completeness = useProfileCompleteness(workerData, selectedSkills, experiences, bioTarjeta)
 
   const cvInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)

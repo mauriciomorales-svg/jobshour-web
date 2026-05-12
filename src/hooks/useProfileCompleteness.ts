@@ -30,8 +30,11 @@ export function useProfileCompleteness(
   workerData: any,
   selectedSkills: number[],
   experiences: any[],
+  /** Texto actual del campo bio (puede no estar guardado aún en workerData) */
+  bioDraft?: string,
 ): ProfileCompleteness {
   return useMemo(() => {
+    const bioText = (bioDraft ?? workerData?.bio_tarjeta ?? '').trim()
     const steps: ProfileStep[] = [
       {
         id: 'avatar',
@@ -51,7 +54,7 @@ export function useProfileCompleteness(
         id: 'bio',
         label: 'Bio / Presentación corta',
         hint: 'Cuéntale a los clientes quién eres (mínimo 20 caracteres)',
-        done: typeof workerData?.bio_tarjeta === 'string' && workerData.bio_tarjeta.trim().length >= 20,
+        done: bioText.length >= 20,
         weight: 20,
       },
       {
@@ -72,7 +75,12 @@ export function useProfileCompleteness(
         id: 'cv_or_video',
         label: 'CV o video presentación',
         hint: 'Sube tu CV o graba un video corto',
-        done: !!(workerData?.cv_url || workerData?.video_cv_url),
+        done: !!(
+          workerData?.cv_path
+          || workerData?.video_cv_path
+          || workerData?.cv_url
+          || workerData?.video_cv_url
+        ),
         weight: 15,
       },
     ]
@@ -90,5 +98,5 @@ export function useProfileCompleteness(
       pending,
       isComplete: score === 100,
     }
-  }, [workerData, selectedSkills, experiences])
+  }, [workerData, selectedSkills, experiences, bioDraft])
 }
