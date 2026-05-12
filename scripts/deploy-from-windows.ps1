@@ -7,6 +7,10 @@
 #   .\scripts\deploy-from-windows.ps1 -Server "IP" -User "ubuntu"
 # Rama (debe existir en origin en el VPS):
 #   .\scripts\deploy-from-windows.ps1 -Server "IP" -Branch "main"
+#
+# No sustituyas esto por un SSH suelto tipo "npm run build | tail -20": la sesión puede
+# cortarse y no es el flujo del repo. Si el build tarda mucho y SSH cae, entrá al VPS
+# y ejecutá allí: bash /var/www/jobshour-web/scripts/deploy-on-server.sh (ideal en tmux).
 param(
   [string]$Server = "",
   [string]$User = "root",

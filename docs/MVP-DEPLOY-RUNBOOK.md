@@ -24,7 +24,28 @@ Tras cambiar env: **rebuild** (`npm run build`) y reiniciar proceso Node.
 - `APP_URL`, `APP_KEY`, base de datos, colas, mail, Mercado Pago, CORS si front está en otro dominio.
 - `SANCTUM_STATEFUL_DOMAINS` / cookies si usáis sesión entre subdominios.
 
-## 4. Secuencia típica (web)
+## 4. Deploy web en VPS (forma estándar del repo)
+
+Evitá disparar solo `ssh ... "cd /var/www/jobshour-web && npm run build"` desde la laptop: la sesión SSH puede cortarse al cabo de mucho tiempo y perdés salida útil. El flujo acordado en este monorepo es **siempre** el script del servidor.
+
+**En el VPS** (si la conexión es inestable, usá `tmux` o `screen`):
+
+```bash
+export DEPLOY_BRANCH=master   # o la rama que uses en origin
+bash /var/www/jobshour-web/scripts/deploy-on-server.sh
+```
+
+Ese script hace `git fetch/reset`, `npm ci`, `npm run build` con `NODE_OPTIONS` y `NEXT_PUBLIC_*` por defecto, `pm2 reload jobshour-web` y un health check. Deja traza en `/var/log/jobshours-web-deploy.log`.
+
+**Desde Windows (PowerShell)**, desde la raíz de `jobshour-web`:
+
+```powershell
+.\scripts\deploy-from-windows.ps1 -SshConfigHost "jobshours-droplet"
+```
+
+Eso envía por SSH el mismo contenido que `scripts/deploy-on-server.sh` y lo ejecuta en el servidor (misma lógica que el job de GitHub Actions, que llama a `bash /var/www/jobshour-web/scripts/deploy-on-server.sh`).
+
+## 5. Secuencia típica (web, a mano sin el script)
 
 ```bash
 cd /ruta/jobshour-web
@@ -35,7 +56,7 @@ npm run build
 # Reiniciar PM2/systemd según tengáis
 ```
 
-## 5. Secuencia típica (API)
+## 6. Secuencia típica (API)
 
 ```bash
 cd /ruta/jobshour-api
@@ -48,7 +69,7 @@ php artisan route:cache
 # Reiniciar PHP-FPM / Octane / queue workers
 ```
 
-## 6. Salud post-deploy
+## 7. Salud post-deploy
 
 - `GET /` o página pública carga sin 500.
 - En el **contenedor o VPS API**: `php artisan mvp:verify-env` o `composer mvp:verify` (comprueba `APP_KEY`, BD, `FRONTEND_URL`, token MP, `MAIL_*`).
@@ -56,23 +77,23 @@ php artisan route:cache
 - Tienda de prueba: checkout llega a Mercado Pago (sandbox o prod según entorno).
 - Inventario: `GET /inventario/worker-stats/{id}` con token si aplica.
 
-## 7. Monitoreo mínimo (recomendado)
+## 8. Monitoreo mínimo (recomendado)
 
 - Logs de nginx / PHP / Node centralizados o al menos rotación en disco.
 - Alerta si el proceso web o API cae (UptimeRobot, Healthchecks.io, etc.).
 - Revisar colas (`failed_jobs`) y workers de Laravel si usáis colas.
 
-## 8. Backups
+## 9. Backups
 
 - Dump programado de MySQL/PostgreSQL + retención.
 - **Probar** restaurar una copia en entorno de staging al menos una vez.
 
-## 9. Rollback
+## 10. Rollback
 
 - Web: volver al commit anterior, `npm ci && npm run build`, reiniciar.
 - API: `git checkout` commit anterior + `composer install` + `migrate` solo si hace falta revertir migraciones (planificar antes).
 
-## 10. Salud HTTP y correo transaccional (API)
+## 11. Salud HTTP y correo transaccional (API)
 
 - `GET {APP_URL}/api/v1/health` — chequeo amplio (BD, cache, cola, Redis, Reverb, etc.); responde **503** si algo crítico falla.
 - `GET {APP_URL}/api/v1/health/ping` — **200** si la aplicación responde (útil para uptime barato).
@@ -80,6 +101,6 @@ php artisan route:cache
 - `FRONTEND_URL` (o `APP_URL` como fallback en `config/app.php`) debe apuntar al sitio Next para el enlace “ver pedido” en el correo **y** para las `back_urls` de Mercado Pago en checkout de tienda/cotización (el `notification_url` del webhook sigue siendo la API).
 - `SUPPORT_EMAIL` (opcional) — texto de contacto en el correo al comprador; por defecto `contacto@jobshour.cl`.
 
-## 11. Salud del front (Next)
+## 12. Salud del front (Next)
 
 - `GET https://tu-dominio/api/health` — JSON `{ ok: true }` desde el propio Next (no valida la API Laravel).
