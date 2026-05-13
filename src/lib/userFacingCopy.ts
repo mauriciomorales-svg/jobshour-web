@@ -219,11 +219,27 @@ export const surfaceCopy = {
   workerEarningsOpenMisTrabajos: 'Mis trabajos',
   workerEarningsOpenTiendaStats: 'Tienda — Estadísticas',
   workerEarningsRetryStore: 'Reintentar tienda',
+  workerEarningsStoreErrorGeneric:
+    'No pudimos cargar la tienda (inventario). Reintentá en unos minutos; si sos quien administra el servidor, revisá que las migraciones de inventario estén aplicadas (tabla venta y relacionadas).',
+  workerEarningsCombinedUnavailable:
+    'No pudimos calcular el total: servicios e inventario no respondieron. Cuando carguen bien, verás el monto aquí.',
+  workerEarningsCombinedPartialNote:
+    'Aviso: una parte de los datos no cargó; el total puede estar incompleto hasta que todo responda bien.',
   workerEarningsSupportHint:
     'Si un número no coincide con tu extracto, recuerda que aquí ves registros internos de la app. Dudas:',
   supportContactEmail: 'contacto@jobshour.cl',
   /** Accesibilidad: grupo de periodos (servicios completados) */
   workerEarningsAriaPeriodGroup: 'Periodo para ver ganancias en servicios completados',
+
+  /** Tienda premium en mapa (sitio web externo del socio) */
+  premiumStoreHandoffBadge: 'JobsHours · Tienda premium en el mapa',
+  premiumStoreHandoffTitle: 'Salís al catálogo web del socio',
+  premiumStoreHandoffBody:
+    'Esta tienda tiene su propia página para pedidos y catálogo. Seguís dentro del ecosistema JobsHours: la encontraste en el mapa y el pago o contacto puede ser en su sitio.',
+  premiumStoreHandoffExternalCta: 'Ir a la tienda web',
+  premiumStoreHandoffJobsHoursCta: 'Ver tienda en JobsHours',
+  premiumStoreHandoffJobsHoursHint: 'Catálogo y carrito dentro de la app (si el socio lo tiene activo).',
+  premiumStoreHandoffClose: 'Cerrar',
 
   /** MVP — legal y soporte visibles en login, tienda post-pago, ajustes */
   mvpLegalNavAriaLabel: 'Legal, privacidad y contacto',

@@ -72,7 +72,9 @@ Checklist para probar en **celulares reales**, **navegadores** y **ubicaciones**
 | 5.6 | **Owner — Nuevo producto:** completar código de barras **a mano** (o voz con mic) y guardar sin error | |
 | 5.7 | **Owner — Nuevo producto:** **Escanear** código con la cámara (HTTPS); al leer, el campo se rellena y podés publicar | |
 | 5.8 | **Denegar** permiso de cámara: el flujo sigue con código manual / voz (sin pantalla colgada) | |
-| 5.9 | **Feed / mapa:** en una tarjeta de demanda, **Compartir** abre nativo o WhatsApp con enlace a ficha `/d/{id}` (preview OG) | |
+| 5.9 | **Feed / mapa:** en tarjeta de demanda: **Tarjeta** abre `/d/{id}` en nueva pestaña (UTM `demand_card`); **Compartir** abre nativo o WhatsApp con enlace a ficha `/d/{id}` (preview OG) | |
+| 5.10 | **Worker — Hub perfil (con sesión):** bloque «Tarjeta pública»: **Tarjeta** abre `/worker/{id}` en nueva pestaña (UTM `worker_profile_card`); **Compartir** / **WhatsApp** / **Copiar** con mensaje breve «Ver tarjeta» / «Ver mi tarjeta» y UTM coherente | |
+| 5.11 | **Público —** abrir `/worker/{id}` desde enlace compartido (WhatsApp o compartir nativo): página carga; **Abrir en JobsHours** lleva al home con el worker (`?worker=`); compartir de esa página no rompe en móvil | |
 
 ---
 

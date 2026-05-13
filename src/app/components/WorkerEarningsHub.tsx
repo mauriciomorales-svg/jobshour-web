@@ -9,6 +9,21 @@ import { surfaceCopy } from '@/lib/userFacingCopy'
 
 const INVENTARIO_API = '/inventario'
 
+/** Evita mostrar SQL, stack traces o respuestas técnicas largas al usuario. */
+function userFacingStoreApiMessage(raw: unknown): string {
+  const s = typeof raw === 'string' ? raw.trim() : ''
+  if (!s) return surfaceCopy.workerEarningsStoreErrorGeneric
+  if (
+    s.length > 380 ||
+    /SQLSTATE|SQL syntax|SQL:|PostgreSQL|relation\s+["']?|does not exist|Undefined table|PDOException|Illuminate\\Database|Stack trace|Connection:\s*pgsql|at line\s+\d+/i.test(
+      s,
+    )
+  ) {
+    return surfaceCopy.workerEarningsStoreErrorGeneric
+  }
+  return s
+}
+
 export type EarningsPeriod = 'all' | '7' | '30' | '90'
 
 export type ServiceMetrics = {
@@ -114,7 +129,11 @@ export default function WorkerEarningsHub({
         setStoreError(null)
       } else {
         setStore(null)
-        setStoreError(invJson?.message || 'Tienda sin datos o inventario no disponible.')
+        const raw =
+          (typeof invJson?.message === 'string' && invJson.message) ||
+          (typeof invJson?.error === 'string' && invJson.error) ||
+          null
+        setStoreError(userFacingStoreApiMessage(raw))
       }
     } catch {
       setStore(null)
@@ -176,6 +195,9 @@ export default function WorkerEarningsHub({
 
   const servicesInPeriod = servicesAmountForPeriod(services, period)
   const combinedDisplay = period === 'all' ? combinedAll : servicesInPeriod
+
+  const bothApisFailed = !!(servicesError && storeError)
+  const showPartialDataNote = !!(servicesError || storeError) && !bothApisFailed && !!(services || store)
 
   const openMisTrabajos = () => {
     trackEvent('worker_earnings_hub_nav_jobs', { worker_id: workerId })
@@ -290,16 +312,43 @@ export default function WorkerEarningsHub({
                 </Link>
               </div>
 
-              <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/80 p-4">
-                <p className="text-xs font-bold text-emerald-800 uppercase tracking-wide">
+              <div
+                className={`rounded-2xl border-2 p-4 ${
+                  bothApisFailed
+                    ? 'border-amber-300 bg-amber-50/95'
+                    : 'border-emerald-200 bg-emerald-50/80'
+                }`}
+              >
+                <p
+                  className={`text-xs font-bold uppercase tracking-wide ${
+                    bothApisFailed ? 'text-amber-900' : 'text-emerald-800'
+                  }`}
+                >
                   {period === 'all' ? 'Total combinado (referencia)' : 'Servicios en el periodo'}
                 </p>
-                <p className="text-3xl font-black text-emerald-900 mt-1">{formatCLP(combinedDisplay)}</p>
-                <p className="text-[11px] text-emerald-800/80 mt-2 leading-snug">
-                  {period === 'all'
-                    ? surfaceCopy.workerEarningsCombinedHint
-                    : `${surfaceCopy.workerEarningsWindowHint} ${surfaceCopy.workerEarningsStoreNoPeriodHint}`}
+                <p
+                  className={`text-3xl font-black mt-1 ${
+                    bothApisFailed ? 'text-amber-800/80' : 'text-emerald-900'
+                  }`}
+                >
+                  {bothApisFailed ? '—' : formatCLP(combinedDisplay)}
                 </p>
+                <p
+                  className={`text-[11px] mt-2 leading-snug ${
+                    bothApisFailed ? 'text-amber-900/85' : 'text-emerald-800/80'
+                  }`}
+                >
+                  {bothApisFailed
+                    ? surfaceCopy.workerEarningsCombinedUnavailable
+                    : period === 'all'
+                      ? surfaceCopy.workerEarningsCombinedHint
+                      : `${surfaceCopy.workerEarningsWindowHint} ${surfaceCopy.workerEarningsStoreNoPeriodHint}`}
+                </p>
+                {showPartialDataNote && (
+                  <p className="text-[10px] text-amber-800 font-semibold mt-2 leading-snug border-t border-amber-200/80 pt-2">
+                    {surfaceCopy.workerEarningsCombinedPartialNote}
+                  </p>
+                )}
               </div>
 
               <section className="rounded-xl border border-slate-200 p-4 bg-slate-50/80">
@@ -366,7 +415,11 @@ export default function WorkerEarningsHub({
                     </button>
                   )}
                 </div>
-                {storeError && <p className="text-xs text-amber-700 mb-2">{storeError}</p>}
+                {storeError && (
+                  <p className="text-xs text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-2 mb-2 leading-snug">
+                    {storeError}
+                  </p>
+                )}
                 {store ? (
                   <>
                     <p className="text-[10px] text-slate-500 mb-2 leading-snug">{surfaceCopy.workerEarningsStoreHint}</p>

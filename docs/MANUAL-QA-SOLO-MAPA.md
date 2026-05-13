@@ -60,8 +60,11 @@ Eso ejecuta Playwright contra la URL indicada: cierra onboarding con **Saltar** 
 | L1 | Al mover el mapa, la lista o resultados **se actualizan** o muestran estado de carga claro | | |
 | L2 | Si falla la red: **mensaje de error** visible (toast / texto), no silencio total | | |
 | L3 | Pestaña **Demandas / feed** (si la usás): ante error de carga, **Reintentar** visible; con éxito pero sin tarjetas, texto distinto si estás **fuera de zona piloto** vs dentro | | |
+| L4 | En una tarjeta de demanda: **Tarjeta** abre `/d/{id}` en nueva pestaña; **Compartir** lleva a la ficha pública (mensaje con «Ver tarjeta…») | | |
 
-> **Playwright (`npm run test:e2e:map`):** además valida que la pestaña **Demandas** u **Oportunidades** abre el panel (título «Demandas» y texto «Oportunidades cerca»). No reemplaza L1–L3 a mano (pan, errores de red, zona piloto).
+> **Playwright (`npm run test:e2e:map`):** además valida que la pestaña **Demandas** u **Oportunidades** abre el panel (título «Demandas» y texto «Oportunidades cerca»). No reemplaza L1–L4 a mano (pan, errores de red, zona piloto, tarjeta/compartir demanda).
+
+Perfil público worker (hub, WhatsApp, `/worker/{id}`): checklist **5.10–5.11** en `docs/MANUAL-QA-DISPOSITIVOS.md`.
 
 ---
 

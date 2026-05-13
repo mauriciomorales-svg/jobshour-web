@@ -52,8 +52,17 @@ export function withShareUtm(url: string, campaign: string): string {
   }
 }
 
+/** Invitación genérica (p. ej. QR en Amigos): mensaje corto + enlace con UTM. */
 export function whatsAppInviteProfileText(profileUrl: string): string {
-  return `¿Necesitas ayuda con algo? En JobsHours encontrarás personas con habilidades reales cerca de ti 📍\nMira este perfil: ${profileUrl}`
+  const url = withShareUtm(profileUrl, 'worker_profile_invite')
+  return `JobsHours — ver tarjeta de perfil:\n${url}`
+}
+
+/** Compartir perfil de un worker (vista pública / terceros). */
+export function whatsAppWorkerProfileShareText(opts: { workerName: string; profileUrl: string }): string {
+  const url = withShareUtm(opts.profileUrl, 'worker_profile_share')
+  const name = opts.workerName.trim() || 'Este perfil'
+  return `${name} en JobsHours\n👉 Ver tarjeta:\n${url}`
 }
 
 export function whatsAppQuoteShareText(opts: {
@@ -95,7 +104,7 @@ export function whatsAppDemandShareText(opts: {
   const url = withShareUtm(opts.demandUrl, 'demand_share')
   const head = opts.summary.trim() || opts.categoryLabel
   const price = opts.priceFormatted ? `\n💰 ${opts.priceFormatted}` : ''
-  return `Mirá esta demanda en JobsHours 💼\n${head}${price}\nVer ficha:\n${url}`
+  return `Mirá esta demanda en JobsHours 💼\n${head}${price}\n👉 Ver tarjeta y tomar:\n${url}`
 }
 
 export function whatsAppProductShareText(opts: {
@@ -110,12 +119,17 @@ export function whatsAppProductShareText(opts: {
   return `Te comparto este producto de ${store} en JobsHours:\n${opts.productName}${price}\nVer ficha:\n${url}`
 }
 
-export function profileNativeShareText(profileUrl: string): string {
-  return `¿Necesitas ayuda con algo? Encuentra trabajadores verificados cerca de ti en JobsHours 👇\n${profileUrl}`
+/** Compartir nativo desde el hub (incluye UTM en el enlace del texto). */
+export function profileNativeShareText(profileUrl: string, profileName?: string): string {
+  const url = withShareUtm(profileUrl, 'worker_profile_share')
+  const head = profileName?.trim() ? `${profileName.trim()} · JobsHours` : 'Perfil en JobsHours'
+  return `${head}\n👉 Ver tarjeta:\n${url}`
 }
 
+/** El worker se presenta por WhatsApp (desde su propia tarjeta en el hub). */
 export function profileIntroWhatsAppText(profileName: string, profileUrl: string): string {
-  return `¡Hola! Soy ${profileName} y ofrezco mis servicios en JobsHours 🔧\nMírame aquí: ${profileUrl}`
+  const url = withShareUtm(profileUrl, 'worker_profile_intro')
+  return `Soy ${profileName} en JobsHours.\n👉 Ver mi tarjeta:\n${url}`
 }
 
 export function openWhatsAppWithText(text: string): void {

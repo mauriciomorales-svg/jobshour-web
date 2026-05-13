@@ -7,6 +7,7 @@ import { HomeHeader } from './HomeHeader'
 import { HomeWorkerDetailSheet, type ExpertDetail } from './HomeWorkerDetailSheet'
 import { HomeDashboardPanel } from './HomeDashboardPanel'
 import { HomeLocationPrompt } from './HomeLocationPrompt'
+import PremiumStoreHandoffSheet, { type PremiumStoreHandoff } from './PremiumStoreHandoffSheet'
 import { MapPoint } from './MapSection'
 import type { ApiCategory } from '@/hooks/useHomeBootstrap'
 import type { AuthUser } from '@/hooks/useUserAuth'
@@ -73,6 +74,9 @@ interface MapScreenProps {
   onDismissLocationPrompt: () => void
   /** True cuando el mapa / API indica que el usuario está fuera de la zona piloto */
   outsideZone: boolean
+  /** Tienda premium: handoff antes de abrir web externa */
+  premiumHandoff: PremiumStoreHandoff | null
+  onDismissPremiumHandoff: () => void
 }
 
 export function MapScreen(props: MapScreenProps) {
@@ -90,6 +94,7 @@ export function MapScreen(props: MapScreenProps) {
     setPoints, fetchNearby, checkAuthAndProfile, toast,
     showLocationPrompt, onDismissLocationPrompt,
     outsideZone,
+    premiumHandoff, onDismissPremiumHandoff,
   } = props
 
   return (
@@ -169,6 +174,8 @@ export function MapScreen(props: MapScreenProps) {
         user={user}
         onDismiss={onDismissLocationPrompt}
       />
+
+      <PremiumStoreHandoffSheet state={premiumHandoff} onClose={onDismissPremiumHandoff} />
     </>
   )
 }

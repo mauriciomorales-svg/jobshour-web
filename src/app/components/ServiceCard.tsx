@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { Link2 } from 'lucide-react'
 import { trackEvent } from '@/lib/analytics'
 import { openWhatsAppWithText, publicDemandUrl, whatsAppDemandShareText, withShareUtm } from '@/lib/marketingShare'
 
@@ -154,15 +155,14 @@ function ActionButtons({
   const showLlegar = !!(request.pos?.lat && request.pos?.lng) && !hideLlegarAsOwnerWaiting
   const showChat = !!onOpenChat && !hideChatAsOwnerWaiting
   const showCompartir = true
-  const secondaryCount = [showMapa, showLlegar, showChat, showCompartir].filter(Boolean).length
+  const showTarjeta = !isDone
+  const secondaryCount = [showMapa, showLlegar, showChat, showCompartir, showTarjeta].filter(Boolean).length
   const secondaryGrid =
     secondaryCount <= 1
       ? 'grid-cols-1'
       : secondaryCount === 2
         ? 'grid-cols-2'
-        : secondaryCount === 3
-          ? 'grid-cols-3'
-          : 'grid-cols-4'
+        : 'grid-cols-2 sm:grid-cols-3'
 
   return (
     <div className="mt-3 space-y-2">
@@ -203,11 +203,11 @@ function ActionButtons({
           <span>Tomar esta solicitud · ${formatCLP(request.offered_price)}</span>
         </button>
       )}
-      <div className={`grid ${secondaryGrid} gap-1.5`}>
+      <div className={`grid ${secondaryGrid} gap-2`}>
         {showMapa && (
           <button
             onClick={(e) => { e.stopPropagation(); onGoToLocation?.(request) }}
-            className="flex items-center justify-center gap-1 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95"
+            className="flex min-h-[44px] items-center justify-center gap-1.5 py-2 px-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95 touch-manipulation"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             Mapa
@@ -219,7 +219,7 @@ function ActionButtons({
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center justify-center gap-1 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition active:scale-95"
+            className="flex min-h-[44px] items-center justify-center gap-1.5 py-2 px-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition active:scale-95 touch-manipulation"
           >
             🧭 Llegar
           </a>
@@ -227,9 +227,24 @@ function ActionButtons({
         {showChat && (
           <button
             onClick={(e) => { e.stopPropagation(); onOpenChat?.(request) }}
-            className="flex items-center justify-center gap-1 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95"
+            className="flex min-h-[44px] items-center justify-center gap-1.5 py-2 px-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95 touch-manipulation"
           >
             💬 Chat
+          </button>
+        )}
+        {showTarjeta && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              const cardUrl = withShareUtm(publicDemandUrl(request.id), 'demand_card')
+              trackEvent('demand_card_open', { demandId: request.id, context: 'feed' })
+              window.open(cardUrl, '_blank', 'noopener,noreferrer')
+            }}
+            className="flex min-h-[44px] items-center justify-center gap-1.5 py-2 px-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition active:scale-95 touch-manipulation"
+          >
+            <Link2 className="w-3.5 h-3.5 shrink-0" />
+            Tarjeta
           </button>
         )}
         <button
@@ -241,7 +256,7 @@ function ActionButtons({
             const summary =
               (request.description || '').trim().slice(0, 200) ||
               (request.category?.name || 'Solicitud en JobsHours')
-            const text = `${request.category?.name || 'Demanda'} · ${priceStr}\n${summary.slice(0, 160)}`
+            const text = `🔔 ${request.category?.name || 'Demanda'}\n💰 ${priceStr}\n${summary.slice(0, 120)}\n👉 Ver tarjeta y tomar en JobsHours:\n${url}`
             trackEvent('demand_share_click', { demandId: request.id, channel: 'native' })
             if (typeof navigator !== 'undefined' && navigator.share) {
               void navigator.share({ title: 'Demanda en JobsHours', text, url }).catch(() => {})
@@ -257,7 +272,7 @@ function ActionButtons({
               }),
             )
           }}
-          className="flex items-center justify-center gap-1 py-2.5 bg-amber-500/25 hover:bg-amber-500/35 text-amber-100 rounded-xl text-sm font-bold transition active:scale-95"
+          className="flex min-h-[44px] items-center justify-center gap-1.5 py-2 px-2 bg-amber-500/25 hover:bg-amber-500/35 text-amber-100 rounded-xl text-sm font-bold transition active:scale-95 touch-manipulation"
         >
           📲 Compartir
         </button>

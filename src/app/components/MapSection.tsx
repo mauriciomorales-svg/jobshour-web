@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, ZoomControl, useMap, useMapEvents } fr
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEffect, forwardRef, useImperativeHandle, useState, useCallback, useRef } from 'react'
+import { isPremiumStoreMapPoint } from '@/lib/mapPremiumPin'
 
 export interface MapPoint {
   id: number
@@ -34,6 +35,8 @@ export interface MapPoint {
   store_name?: string | null
   store_plan?: 'basic' | 'premium' | 'self_service' | string
   store_url?: string | null
+  /** Worker JobsHours vinculado (catálogo in-app /tienda/{id}) */
+  linked_worker_id?: number | null
 }
 
 const isDev = process.env.NODE_ENV === 'development'
@@ -47,7 +50,7 @@ const STATUS_STYLES = {
 
 function createPointIcon(p: MapPoint, isHighlighted = false) {
   // Pines Premium Store (negocios tipo dondemorales.cl)
-  if (p.pin_type === 'premium_store') {
+  if (isPremiumStoreMapPoint(p)) {
     const avatar = p.avatar || `https://i.pravatar.cc/100?u=${p.id}`
     const title = p.store_name || p.name
     const label = `⭐ ${title} • Premium`

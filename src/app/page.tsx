@@ -194,6 +194,7 @@ export default function Home() {
     showWorkerProfileDetail, setShowWorkerProfileDetail,
     selectedWorkerId, setSelectedWorkerId,
     showRequestModal, setShowRequestModal,
+    premiumHandoff, dismissPremiumHandoff,
     handlePointClick, handleMapClick,
     handleDetailTravelJoin,
     handleDetailRequest, handleDetailCallPhone,
@@ -560,7 +561,11 @@ export default function Home() {
         onCategoryClick={handleCategoryClick}
         selectedDetail={selectedDetail}
         loadingDetail={loadingDetail}
-        onCloseDetail={() => { setSelectedDetail(null); setLoadingDetail(false) }}
+        onCloseDetail={() => {
+          setSelectedDetail(null)
+          setLoadingDetail(false)
+          dismissPremiumHandoff()
+        }}
         user={user}
         workerProfile={workerProfile}
         chatRequestIdForDetail={
@@ -645,6 +650,8 @@ export default function Home() {
         showLocationPrompt={showLocationPrompt}
         onDismissLocationPrompt={() => setShowLocationPrompt(false)}
         outsideZone={outsideZone}
+        premiumHandoff={premiumHandoff}
+        onDismissPremiumHandoff={dismissPremiumHandoff}
       />
 
       <HomeChatPanels

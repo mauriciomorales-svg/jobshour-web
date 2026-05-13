@@ -21,6 +21,22 @@ function formatCLP(n: number) {
   return '$' + Math.round(n).toLocaleString('es-CL')
 }
 
+function DemandShareSkeleton() {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-4 animate-pulse">
+      <div className="flex gap-3">
+        <div className="h-12 w-12 shrink-0 rounded-full bg-slate-800" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3 w-24 rounded bg-slate-800" />
+          <div className="h-5 w-20 rounded-full bg-slate-800/80" />
+        </div>
+        <div className="h-8 w-16 rounded bg-slate-800 shrink-0" />
+      </div>
+      <div className="h-20 rounded-xl bg-slate-800/50" />
+    </div>
+  )
+}
+
 export default function DemandShareView({ demandId }: { demandId: number }) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<DemandData | null>(null)
@@ -76,7 +92,7 @@ export default function DemandShareView({ demandId }: { demandId: number }) {
     if (!data) return
     const url = withShareUtm(publicUrl, 'demand_share')
     trackEvent('demand_share_click', { demandId, channel: 'native' })
-    const text = `${data.category?.name || 'Demanda'} · ${price}\n${summaryLine.slice(0, 160)}`
+    const text = `🔔 ${data.category?.name || 'Demanda'}\n💰 ${price}\n${summaryLine.slice(0, 120)}\n👉 Ver tarjeta y tomar en JobsHours:\n${url}`
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({ title: 'Demanda en JobsHours', text, url })
@@ -114,9 +130,7 @@ export default function DemandShareView({ demandId }: { demandId: number }) {
         </Link>
 
         {loading ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-6 text-center text-slate-400">
-            Cargando demanda…
-          </div>
+          <DemandShareSkeleton />
         ) : error || !data ? (
           <div className="rounded-2xl border border-amber-500/30 bg-amber-950/40 p-6 text-center space-y-3">
             <p className="text-4xl">📍</p>
@@ -124,15 +138,15 @@ export default function DemandShareView({ demandId }: { demandId: number }) {
             <p className="text-sm text-slate-300">{error || 'Puede haber sido tomada o expiró.'}</p>
             <Link
               href="/"
-              className="inline-block w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-2.5 rounded-xl transition"
+              className="flex w-full min-h-[44px] items-center justify-center bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 rounded-xl transition touch-manipulation"
             >
               Explorar JobsHours
             </Link>
           </div>
         ) : (
           <>
-            <section className="rounded-2xl border border-orange-500/35 bg-gradient-to-br from-orange-500/15 to-slate-900/90 p-4 space-y-2 shadow-xl shadow-orange-900/20">
-              <p className="text-[11px] font-bold tracking-wide text-orange-200 uppercase">Demanda en JobsHours</p>
+            <section className="rounded-2xl border border-orange-500/35 bg-gradient-to-br from-orange-500/15 to-slate-900/90 p-4 space-y-2 shadow-lg shadow-orange-950/15">
+              <p className="text-[11px] font-bold tracking-wide text-orange-200 uppercase">Tarjeta pública · JobsHours</p>
               <div className="flex items-start gap-3">
                 {data.client.avatar ? (
                   <img
@@ -179,31 +193,35 @@ export default function DemandShareView({ demandId }: { demandId: number }) {
 
             <Link
               href={mapHref}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-3 py-3 text-sm font-black hover:bg-orange-400 transition"
+              className="w-full min-h-[48px] inline-flex flex-col items-center justify-center gap-0.5 rounded-xl bg-orange-500 px-3 py-3.5 text-sm font-black hover:bg-orange-400 transition text-center leading-tight touch-manipulation"
             >
-              Abrir en la app (mapa y feed)
+              <span>Abrir en JobsHours</span>
+              <span className="text-[11px] font-semibold text-white/90">Mapa + feed · resalta esta demanda</span>
             </Link>
+
+            <p className="text-[11px] text-slate-500 text-center leading-snug px-1">
+              Enlace listo para WhatsApp; en la app ves mapa y feed con esta demanda resaltada.
+            </p>
 
             <section className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => void handleNativeShare()}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-3 py-2.5 text-sm font-bold hover:bg-slate-600 transition"
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-slate-700 px-3 py-3 text-sm font-bold text-white hover:bg-slate-600 transition touch-manipulation"
               >
-                <Share2 className="w-4 h-4" /> Compartir
+                <Share2 className="w-4 h-4 shrink-0" /> Compartir
               </button>
               <button
                 type="button"
                 onClick={handleWhatsApp}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-bold hover:bg-emerald-500 transition"
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 text-sm font-bold text-white hover:bg-emerald-500 transition touch-manipulation"
               >
-                <MessageCircle className="w-4 h-4" /> WhatsApp
+                <MessageCircle className="w-4 h-4 shrink-0" /> WhatsApp
               </button>
             </section>
 
             <p className="text-[11px] text-slate-500 text-center leading-snug">
-              Las coordenadas exactas se muestran a socios con sesión iniciada. Este enlace sirve para difundir la
-              oportunidad.
+              Las coordenadas exactas se muestran a socios con sesión iniciada en la app.
             </p>
           </>
         )}

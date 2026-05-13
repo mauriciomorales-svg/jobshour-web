@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState, type MutableRefObject } from 'react'
 
 import { getPublicApiBase } from '@/lib/api'
+import { normalizeExpertMapPointPinTypes } from '@/lib/mapPremiumPin'
 import { DEFAULT_MAP_LAT, DEFAULT_MAP_LNG } from '@/lib/mapStorage'
 import type { MapPoint } from '@/app/components/MapSection'
 
@@ -143,8 +144,7 @@ export function useNearbyFetch({
           setOutsideZone(false)
 
           const workers = (expertsData.data ?? []).map((w: any) => ({
-            ...w,
-            pin_type: (w.pin_type ?? 'worker') as any,
+            ...normalizeExpertMapPointPinTypes(w),
             active_route: w.active_route || null,
             user_id: w.user_id || null,
           }))

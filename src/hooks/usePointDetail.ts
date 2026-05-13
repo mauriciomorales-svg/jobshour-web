@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { ExpertDetail } from '@/app/components/HomeWorkerDetailSheet'
 import { MapPoint } from '@/app/components/MapSection'
 import { feedbackCopy } from '@/lib/userFacingCopy'
+import { isPremiumStoreMapPoint } from '@/lib/mapPremiumPin'
 
 type ToastFn = (msg: string, type?: 'info' | 'success' | 'error' | 'warning', subtitle?: string) => void
 
@@ -36,15 +37,41 @@ export function usePointDetail({
   const [selectedWorkerId, setSelectedWorkerId] = useState<number | null>(null)
   const [showRequestModal, setShowRequestModal] = useState(false)
 
+  const [premiumHandoff, setPremiumHandoff] = useState<{
+    storeName: string
+    externalUrl: string
+    linkedWorkerId: number | null
+  } | null>(null)
+
   const handlePointClick = useCallback(async (point: MapPoint) => {
-    if (point.pin_type === 'premium_store') {
+    if (isPremiumStoreMapPoint(point)) {
       setSelectedDetail(null)
       setLoadingDetail(false)
       const url = point.store_url || (point.payload as any)?.store_url || 'https://dondemorales.cl'
-      try { window.open(url, '_blank', 'noopener,noreferrer') } catch {}
+      const rawLinked =
+        point.linked_worker_id ??
+        (point.payload as Record<string, unknown> | null | undefined)?.linked_worker_id
+      let linkedWorkerId: number | null = null
+      if (typeof rawLinked === 'number' && Number.isFinite(rawLinked) && rawLinked > 0) {
+        linkedWorkerId = rawLinked
+      } else if (typeof rawLinked === 'string' && /^\d+$/.test(rawLinked)) {
+        const n = parseInt(rawLinked, 10)
+        if (n > 0) linkedWorkerId = n
+      }
+      const mapId = Number(point.id)
+      if (linkedWorkerId == null && Number.isFinite(mapId) && mapId >= 900_000 && mapId < 1_000_000) {
+        const derived = mapId - 900_000
+        if (derived > 0) linkedWorkerId = derived
+      }
+      setPremiumHandoff({
+        storeName: (point.store_name || point.name || 'Tienda').trim(),
+        externalUrl: url,
+        linkedWorkerId,
+      })
       return
     }
 
+    setPremiumHandoff(null)
     setLoadingDetail(true)
     setSelectedDetail(null)
 
@@ -103,6 +130,7 @@ export function usePointDetail({
   const handleMapClick = useCallback(() => {
     setSelectedDetail(null)
     setLoadingDetail(false)
+    setPremiumHandoff(null)
   }, [])
 
   const handleDetailTravelJoin = useCallback(async (detail: ExpertDetail | null) => {
@@ -167,6 +195,8 @@ export function usePointDetail({
     setShowWorkerProfileDetail(true)
   }, [])
 
+  const dismissPremiumHandoff = useCallback(() => setPremiumHandoff(null), [])
+
   return {
     selectedDetail,
     setSelectedDetail,
@@ -180,6 +210,8 @@ export function usePointDetail({
     setSelectedWorkerId,
     showRequestModal,
     setShowRequestModal,
+    premiumHandoff,
+    dismissPremiumHandoff,
     handlePointClick,
     handleMapClick,
     handleDetailTravelJoin,

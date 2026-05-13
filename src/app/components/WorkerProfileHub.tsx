@@ -9,6 +9,7 @@ import {
   profileIntroWhatsAppText,
   profileNativeShareText,
   publicWorkerProfileUrl,
+  withShareUtm,
 } from '@/lib/marketingShare'
 import { ICON_MAP } from '@/lib/iconMap'
 import { feedbackCopy, formatSaveSkillsLabel, surfaceCopy } from '@/lib/userFacingCopy'
@@ -20,7 +21,7 @@ import WorkerSocialLinks from './WorkerSocialLinks'
 import ProfileCompletenessBar from './ProfileCompletenessBar'
 import { useProfileCompleteness } from '@/hooks/useProfileCompleteness'
 import WorkerEarningsHub from './WorkerEarningsHub'
-import { Wallet } from 'lucide-react'
+import { Link2, Wallet } from 'lucide-react'
 
 // Alias para modo edición dentro de WorkerProfileHub
 const WorkerSocialLinksEditor = ({ initialLinks }: { initialLinks: any[] }) => (
@@ -55,7 +56,6 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
   const [availableCategories, setAvailableCategories] = useState<any[]>([])
   const [workerData, setWorkerData] = useState<any>(null)
   const [showQR, setShowQR] = useState(false)
-  const [showShareCard, setShowShareCard] = useState(false)
   const [isLoadingSkills, setIsLoadingSkills] = useState(true)
   const [bioTarjeta, setBioTarjeta] = useState('')
   const [experiences, setExperiences] = useState<any[]>([])
@@ -65,6 +65,9 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
   const [skillSearch, setSkillSearch] = useState('')
   const [isSeller, setIsSeller] = useState(false)
   const [storeName, setStoreName] = useState('')
+  const [showPremiumMapPin, setShowPremiumMapPin] = useState(false)
+  const [premiumExternalStoreUrl, setPremiumExternalStoreUrl] = useState('')
+  const [savingPremiumMapPin, setSavingPremiumMapPin] = useState(false)
   const [savingStore, setSavingStore] = useState(false)
   const [misProductos, setMisProductos] = useState<any[]>([])
   const [loadingProductos, setLoadingProductos] = useState(false)
@@ -117,6 +120,14 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
         }
         if (data.data?.store_name) {
           setStoreName(data.data.store_name)
+        }
+        if (data.data?.show_premium_pin_on_map !== undefined) {
+          setShowPremiumMapPin(!!data.data.show_premium_pin_on_map)
+        }
+        if (data.data?.premium_external_store_url != null) {
+          setPremiumExternalStoreUrl(String(data.data.premium_external_store_url))
+        } else {
+          setPremiumExternalStoreUrl('')
         }
       }
       
@@ -440,7 +451,8 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
     }
   }
 
-  const profileUrl = publicWorkerProfileUrl(user?.id)
+  const profileSlugId = workerData?.id ?? user?.id
+  const profileUrl = publicWorkerProfileUrl(profileSlugId)
   const profileName = workerData?.name || user?.name || 'Mi Perfil'
   const profileAvatar = workerData?.avatar || user?.avatarUrl || null
 
@@ -448,16 +460,22 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
   const completionPct = completeness.score
 
   const handleShare = async () => {
-    const text = profileNativeShareText(profileUrl)
+    const url = withShareUtm(profileUrl, 'worker_profile_share')
+    const text = profileNativeShareText(profileUrl, profileName)
+    trackEvent('worker_profile_share_click', { context: 'profile_hub', channel: 'native' })
     if (typeof navigator !== 'undefined' && navigator.share) {
-      try { await navigator.share({ title: profileName, text, url: profileUrl }) } catch {}
+      try {
+        await navigator.share({ title: `${profileName} · JobsHours`, text, url })
+      } catch {
+        /* cancelado */
+      }
     } else {
-      setShowShareCard(true)
+      openWhatsAppWithText(profileIntroWhatsAppText(profileName, profileUrl))
     }
   }
 
   const copyLink = () => {
-    navigator.clipboard.writeText(profileUrl)
+    navigator.clipboard.writeText(withShareUtm(profileUrl, 'worker_profile_copy'))
     setFeedback({ msg: surfaceCopy.linkCopiedToClipboard, type: 'ok' })
     setTimeout(() => setFeedback(null), 2500)
   }
@@ -545,7 +563,8 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
 
       {/* ── TARJETA COMPARTIBLE ── */}
       <div className="px-4 -mt-1 pt-4 pb-2">
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 shadow-xl">
+        <div className="rounded-2xl border border-slate-600/40 bg-slate-900/40 p-4 shadow-md">
+          <p className="text-[10px] font-semibold tracking-wide text-slate-500 uppercase mb-2">Tarjeta pública</p>
           <div className="flex items-start gap-3 mb-3">
             <div className="w-14 h-14 rounded-xl overflow-hidden bg-white/10 border border-white/20 shrink-0">
               {profileAvatar
@@ -570,10 +589,22 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
             </span>
           </div>
           {/* Share buttons */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const cardUrl = withShareUtm(profileUrl, 'worker_profile_card')
+                trackEvent('worker_profile_card_open', { context: 'profile_hub', worker_id: workerData?.id })
+                window.open(cardUrl, '_blank', 'noopener,noreferrer')
+              }}
+              className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2.5 px-2 bg-slate-700/70 hover:bg-slate-600 text-white rounded-xl text-xs font-bold transition active:scale-95 border border-white/10 touch-manipulation"
+            >
+              <Link2 className="w-4 h-4 shrink-0" aria-hidden />
+              Tarjeta
+            </button>
             <button
               onClick={handleShare}
-              className="flex flex-col items-center gap-1 py-2.5 bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-md shadow-amber-500/20"
+              className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2.5 px-2 bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-sm shadow-amber-900/20 touch-manipulation"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
               Compartir
@@ -583,14 +614,14 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                 trackEvent('marketing_share_whatsapp', { context: 'profile_hub_card' })
                 openWhatsAppWithText(profileIntroWhatsAppText(profileName, profileUrl))
               }}
-              className="flex flex-col items-center gap-1 py-2.5 bg-gradient-to-br from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-md shadow-teal-500/20"
+              className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2.5 px-2 bg-gradient-to-br from-teal-600 to-teal-700 hover:from-teal-500 hover:to-teal-600 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-sm shadow-teal-900/25 touch-manipulation"
             >
               <span className="text-base leading-none">💬</span>
               WhatsApp
             </button>
             <button
               onClick={copyLink}
-              className="flex flex-col items-center gap-1 py-2.5 bg-slate-600 hover:bg-slate-500 text-white rounded-xl text-xs font-bold transition active:scale-95"
+              className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2.5 px-2 bg-slate-600/90 hover:bg-slate-500 text-white rounded-xl text-xs font-bold transition active:scale-95 touch-manipulation"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
               {surfaceCopy.copyLink}
@@ -1059,6 +1090,77 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
                   className="mt-1 w-full px-3 py-2 border-2 border-gray-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm"
                 />
               </div>
+
+              <div className="rounded-xl border border-violet-200 bg-violet-50/80 p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-black text-violet-900 uppercase tracking-wider">Pin premium en el mapa</p>
+                    <p className="text-[11px] text-violet-800/90 mt-0.5">
+                      Mostrá un pin morado con tu web externa (se abre con aviso JobsHours). Requiere ubicación en el mapa.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPremiumMapPin(v => !v)}
+                    className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${showPremiumMapPin ? 'bg-violet-600' : 'bg-gray-300'}`}
+                    aria-pressed={showPremiumMapPin}
+                  >
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${showPremiumMapPin ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+                {showPremiumMapPin && (
+                  <>
+                    <label className="text-[11px] font-bold text-violet-900/80 uppercase tracking-wider">URL de tu tienda web</label>
+                    <input
+                      type="url"
+                      value={premiumExternalStoreUrl}
+                      onChange={e => setPremiumExternalStoreUrl(e.target.value)}
+                      placeholder="https://mitienda.cl"
+                      className="w-full px-3 py-2 border-2 border-violet-200 rounded-xl focus:border-violet-500 focus:outline-none text-sm bg-white"
+                    />
+                  </>
+                )}
+                <button
+                  type="button"
+                  disabled={savingPremiumMapPin}
+                  onClick={async () => {
+                    if (showPremiumMapPin && !premiumExternalStoreUrl.trim()) {
+                      setFeedback({ msg: 'Indica la URL de tu tienda web', type: 'err' })
+                      setTimeout(() => setFeedback(null), 3500)
+                      return
+                    }
+                    setSavingPremiumMapPin(true)
+                    try {
+                      const token = localStorage.getItem('auth_token')
+                      const res = await apiFetch('/api/v1/worker/premium-map-pin', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({
+                          show_premium_pin_on_map: showPremiumMapPin,
+                          premium_external_store_url: showPremiumMapPin ? premiumExternalStoreUrl.trim() : null,
+                        }),
+                      })
+                      const data = await res.json().catch(() => ({}))
+                      if (res.ok) {
+                        setFeedback({ msg: '✅ Pin premium guardado', type: 'ok' })
+                        setShowPremiumMapPin(!!data.show_premium_pin_on_map)
+                        setPremiumExternalStoreUrl(data.premium_external_store_url ? String(data.premium_external_store_url) : '')
+                      } else {
+                        setFeedback({ msg: (data as { message?: string }).message || 'No se pudo guardar', type: 'err' })
+                      }
+                    } catch {
+                      setFeedback({ msg: feedbackCopy.networkError, type: 'err' })
+                    } finally {
+                      setSavingPremiumMapPin(false)
+                      setTimeout(() => setFeedback(null), 3500)
+                    }
+                  }}
+                  className="w-full py-2 rounded-xl text-sm font-bold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+                >
+                  {savingPremiumMapPin ? surfaceCopy.saving : 'Guardar pin premium'}
+                </button>
+              </div>
+
               <a
                 href={`/tienda/${workerData?.id ?? ''}`}
                 target="_blank"
@@ -1174,7 +1276,7 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
         <div className="pointer-events-auto flex gap-2">
           <button
             onClick={handleShare}
-            className="flex-1 bg-gradient-to-r from-orange-400 to-orange-500 text-white py-3.5 rounded-xl font-black text-sm shadow-lg active:scale-95 transition flex items-center justify-center gap-2"
+            className="flex-1 min-h-[48px] bg-gradient-to-r from-orange-400 to-orange-500 text-white py-3.5 rounded-xl font-black text-sm shadow-md shadow-orange-900/20 active:scale-95 transition flex items-center justify-center gap-2 touch-manipulation"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
             Compartir mi tarjeta
