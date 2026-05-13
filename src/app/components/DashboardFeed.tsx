@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, TouchEvent } from 'react'
 import { apiFetch } from '@/lib/api'
 import ServiceCard from './ServiceCard'
 import LiveStats from './LiveStats'
+import WorkerIncomePulse from './WorkerIncomePulse'
 import { motion } from 'framer-motion'
 import { emptyStateCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import type { PublishedDemandSnapshot } from '@/app/components/PublishDemandModal'
@@ -258,6 +259,9 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
           <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
         </button>
       </div>
+
+      {/* Resumen tienda + servicios (usuario logueado con perfil worker) */}
+      <WorkerIncomePulse currentUserId={currentUserId} />
 
       {/* Live Stats */}
       <LiveStats lat={userLat} lng={userLng} />

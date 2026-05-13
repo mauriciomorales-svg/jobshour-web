@@ -69,7 +69,7 @@ export function HomeDashboardPanel({
         <div className="sticky top-0 bg-slate-900 px-4 pt-4 pb-3 border-b border-slate-700/50 z-10 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-black text-white">Demandas</h2>
-            <p className="text-xs text-slate-400">Solicitudes reales que puedes tomar ahora</p>
+            <p className="text-xs text-slate-400">Tu resumen, oportunidades cerca y pedidos reales</p>
           </div>
           <div className="flex items-center gap-2">
             <button
