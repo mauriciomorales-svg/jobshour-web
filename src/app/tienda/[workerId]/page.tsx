@@ -1,12 +1,15 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import { useParams, useSearchParams } from 'next/navigation'
 import { trackEvent } from '@/lib/analytics'
 import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
-import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info, FileDown } from 'lucide-react'
+import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info, FileDown, ScanLine } from 'lucide-react'
 import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
 import { displayPublicUrl, publicTiendaUrl, withShareUtm } from '@/lib/marketingShare'
+
+const BarcodeScanModal = dynamic(() => import('@/app/components/BarcodeScanModal'), { ssr: false })
 
 // Misma lógica que page.tsx: base sin /api para llamadas a jobshours API
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
@@ -555,6 +558,7 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
   const [error, setError] = useState('')
   const [categorias, setCategorias] = useState<{idcategoria: number, nombre: string}[]>([])
   const [categoria, setCategoria] = useState('')
+  const [barcodeScanOpen, setBarcodeScanOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const precioNum = parseFloat(form.precio) || 0
@@ -562,7 +566,10 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
   const precioVentaFinal = parseFloat(form.precioVenta) || precioVentaAuto
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      setBarcodeScanOpen(false)
+      return
+    }
     setForm({ nombre: '', precio: '', precioVenta: '', stock: '1', codigo: '', descripcion: '', condition: 'nuevo' })
     setImagen(null); setPreview(''); setError(''); setCategoria('')
     fetch(`${INVENTARIO_API}/categorias?worker_id=${workerId}`)
@@ -622,6 +629,7 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
 
   if (!isOpen) return null
   return (
+    <>
     <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="relative bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl max-h-[93vh] flex flex-col">
@@ -660,10 +668,21 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
           {/* Código de barras */}
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1 ml-1">Código de barras</label>
+            <p className="text-[11px] text-gray-400 mb-1.5 ml-1 leading-snug">
+              Escribilo a mano, dictarlo con el micrófono o escanearlo con la cámara.
+            </p>
             <div className="flex gap-2">
-              <input type="text" placeholder="Ej: 7891234567890 (opcional)" value={form.codigo}
+              <input type="text" autoComplete="off" placeholder="Ej: 7891234567890 (opcional)" value={form.codigo}
                 onChange={e => setForm(f => ({ ...f, codigo: e.target.value }))}
-                className={inp + " flex-1"} />
+                className={inp + " flex-1 min-w-0"} />
+              <button
+                type="button"
+                title="Escanear con la cámara"
+                onClick={() => setBarcodeScanOpen(true)}
+                className="shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-gray-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition active:scale-95"
+              >
+                <ScanLine className="w-5 h-5" />
+              </button>
               <MicBtn onResult={t => setForm(f => ({ ...f, codigo: t }))} />
             </div>
           </div>
@@ -787,6 +806,12 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
 
       </div>
     </div>
+    <BarcodeScanModal
+      open={barcodeScanOpen}
+      onClose={() => setBarcodeScanOpen(false)}
+      onDetected={(code) => setForm((f) => ({ ...f, codigo: code }))}
+    />
+    </>
   )
 }
 
