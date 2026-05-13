@@ -38,3 +38,8 @@ android/app/build/
 android/.gradle/
 android/build/
 android/captures/
+
+# Playwright
+/playwright-report/
+/test-results/
+/blob-report/

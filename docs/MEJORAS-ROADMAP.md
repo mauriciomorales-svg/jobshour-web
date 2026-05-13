@@ -57,7 +57,7 @@ Plan priorizado para abordar deuda técnica, operación y calidad. Cada fase pue
 | 4.1 | Documentar variables `NEXT_PUBLIC_*`, puerto API (8095), no commitear `.env.local` de prod | Hecho (`docs/ENV.md`) |
 | 4.2 | `next.config.js`: valorar `env` o documentar que rewrites apuntan al backend en el mismo host | Parcial (documentado en `docs/ENV.md`) |
 | 4.3 | Quitar o acotar `(window as any).mapRef` solo en desarrollo | Hecho |
-| 4.4 | Revisión `npm audit` + actualizar dependencias críticas | Pendiente |
+| 4.4 | Revisión `npm audit` + actualizar dependencias críticas | Parcial: `npm audit fix` sin `--force` (resto ligado a `next`/postcss; seguir releases Next). `composer audit` periódico en API — ver `jobshour-api/docs/SOLIDEZ-API.md` |
 
 ---
 
