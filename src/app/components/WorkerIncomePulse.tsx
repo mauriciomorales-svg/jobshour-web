@@ -177,12 +177,21 @@ export default function WorkerIncomePulse({ currentUserId }: { currentUserId?: n
       </div>
 
       {data?.store.is_seller && data.worker_id != null && (
-        <a
-          href={`/tienda/${data.worker_id}`}
-          className="mt-2 block text-center text-[11px] font-bold text-teal-400 hover:text-teal-300 transition"
-        >
-          Ver mi tienda pública →
-        </a>
+        <>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('open-store-orders'))}
+            className="mt-2 w-full py-2 rounded-xl text-center text-[11px] font-bold bg-slate-800/90 border border-amber-500/40 text-amber-200 hover:bg-slate-700/90 transition"
+          >
+            Mis pedidos de tienda
+          </button>
+          <a
+            href={`/tienda/${data.worker_id}`}
+            className="mt-2 block text-center text-[11px] font-bold text-teal-400 hover:text-teal-300 transition"
+          >
+            Ver mi tienda pública →
+          </a>
+        </>
       )}
     </motion.div>
   )

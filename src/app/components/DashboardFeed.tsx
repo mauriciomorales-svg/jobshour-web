@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback, TouchEvent } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
 import ServiceCard from './ServiceCard'
 import LiveStats from './LiveStats'
@@ -32,6 +32,8 @@ interface DashboardFeedProps {
   userLat: number
   userLng: number
   currentUserId?: number
+  /** True si el usuario está fuera de la zona piloto (mapa / API); ajusta el copy del feed vacío */
+  outsideZone?: boolean
   onCardClick: (request: ServiceRequest) => void
   highlightedRequestId?: number | null
   onRequestService?: (request: ServiceRequest) => void
@@ -41,11 +43,24 @@ interface DashboardFeedProps {
   onGoToLocation?: (request: ServiceRequest) => void
 }
 
-export default function DashboardFeed({ userLat, userLng, currentUserId, onCardClick, highlightedRequestId, onRequestService, onCancelOwnDemand, onBoostDemand, onOpenChat, onGoToLocation }: DashboardFeedProps) {
+export default function DashboardFeed({
+  userLat,
+  userLng,
+  currentUserId,
+  outsideZone = false,
+  onCardClick,
+  highlightedRequestId,
+  onRequestService,
+  onCancelOwnDemand,
+  onBoostDemand,
+  onOpenChat,
+  onGoToLocation,
+}: DashboardFeedProps) {
   const [feed, setFeed] = useState<ServiceRequest[]>([])
   const [cursor, setCursor] = useState(0)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
+  const [feedError, setFeedError] = useState(false)
   const [dailyViewed, setDailyViewed] = useState(0)
   const [pullY, setPullY] = useState(0)
   const [isPulling, setIsPulling] = useState(false)
@@ -73,6 +88,9 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
     console.log(`🔄 loadMore: iniciando (reset=${reset})`)
     loadingRef.current = true
     setLoading(true)
+    if (reset) {
+      setFeedError(false)
+    }
 
     try {
       const currentCursor = reset ? 0 : cursorRef.current
@@ -86,6 +104,7 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
       const data = await res.json()
 
       if (data.status === 'success' && data.data && Array.isArray(data.data)) {
+        setFeedError(false)
         if (reset) {
           setFeed(data.data)
           cursorRef.current = data.meta?.next_cursor ?? 0
@@ -107,11 +126,11 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
       }
     } catch (err) {
       console.error('❌ Error loading feed:', err)
-      // Asegurar que siempre se quite el loading incluso si hay error
-      loadingRef.current = false
-      setLoading(false)
-      // Si hay error y el feed está vacío, mostrar mensaje
-      setHasMore(false)
+      if (reset) {
+        setFeedError(true)
+        hasMoreRef.current = false
+        setHasMore(false)
+      }
     } finally {
       // Asegurar que siempre se quite el loading
       console.log('✅ loadMore: finalizado, quitando loading')
@@ -130,6 +149,7 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
     setHasMore(true)
     loadingRef.current = false // Reset loading ref
     setLoading(false) // Asegurar que loading esté en false inicialmente
+    setFeedError(false)
     
     // Cargar después de un pequeño delay para asegurar que el estado se haya actualizado
     const timer = setTimeout(() => {
@@ -322,17 +342,50 @@ export default function DashboardFeed({ userLat, userLng, currentUserId, onCardC
         </div>
       )}
       
-      {/* Estado vacío */}
-      {!loading && feed.length === 0 && (
+      {/* Estado error de red / servidor */}
+      {feedError && !loading && feed.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-10 px-4"
+        >
+          <div className="text-6xl mb-4" aria-hidden>
+            📡
+          </div>
+          <p className="text-white font-black text-lg mb-2">{emptyStateCopy.feedLoadFailedTitle}</p>
+          <p className="text-slate-400 text-sm mb-6 leading-relaxed">{emptyStateCopy.feedLoadFailedBody}</p>
+          <div className="flex flex-col gap-3 max-w-xs mx-auto">
+            <button
+              type="button"
+              onClick={() => loadMore(true)}
+              className="w-full py-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-2xl text-sm font-black shadow-lg shadow-teal-500/30 active:scale-95 transition"
+            >
+              {emptyStateCopy.feedRetry}
+            </button>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('open-publish-demand'))}
+              className="w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-2xl text-sm font-bold transition active:scale-95"
+            >
+              {surfaceCopy.publishDemandFeed}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Estado vacío (carga OK, sin tarjetas) */}
+      {!feedError && !loading && feed.length === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center py-10 px-4"
         >
           <div className="text-6xl mb-4" aria-hidden>🔍</div>
-          <p className="text-white font-black text-lg mb-2">{emptyStateCopy.noOpportunitiesNearby}</p>
-          <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-            No hay solicitudes activas en tu zona ahora mismo.<br />También puedes publicar una solicitud.
+          <p className="text-white font-black text-lg mb-2">
+            {outsideZone ? emptyStateCopy.noOpportunitiesOutsideZoneTitle : emptyStateCopy.noOpportunitiesNearby}
+          </p>
+          <p className="text-slate-400 text-sm mb-6 leading-relaxed whitespace-pre-line">
+            {outsideZone ? emptyStateCopy.noOpportunitiesOutsideZoneBody : emptyStateCopy.noOpportunitiesInZonePilotBody}
           </p>
           <div className="flex flex-col gap-3 max-w-xs mx-auto">
             <button

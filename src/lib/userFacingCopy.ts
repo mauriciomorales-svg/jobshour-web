@@ -448,6 +448,16 @@ export const navCopy = {
 
 /** Listas vacías y buscadores sin resultado */
 export const emptyStateCopy = {
+  /** Feed demandas: usuario en zona piloto pero sin tarjetas */
+  noOpportunitiesOutsideZoneTitle: 'Tu zona aún tiene pocas demandas',
+  noOpportunitiesOutsideZoneBody:
+    'Estamos sumando socios y clientes. Mientras tanto, activá tu disponibilidad o compartí tu perfil / tienda.',
+  /** Feed vacío en zona piloto (no es error de red) */
+  noOpportunitiesInZonePilotBody:
+    'No hay solicitudes activas en tu zona ahora mismo. También podés publicar una solicitud.',
+  feedLoadFailedTitle: 'No pudimos cargar el feed',
+  feedLoadFailedBody: 'Revisá tu conexión e intentá de nuevo.',
+  feedRetry: 'Reintentar',
   noProducts: 'Sin productos disponibles',
   noProductsShort: 'Sin productos aún.',
   noCategories: 'Sin categorías aún',

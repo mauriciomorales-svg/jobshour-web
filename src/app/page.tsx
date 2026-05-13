@@ -215,6 +215,21 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
+    const onOnboardingComplete = () => {
+      setActiveTab('feed')
+      setDashHidden(false)
+      toast('¡Listo! Tu primer paso: revisá las oportunidades cerca.', 'success')
+    }
+    const onOpenStoreOrders = () => setShowStoreOrders(true)
+    window.addEventListener('jh-onboarding-complete', onOnboardingComplete)
+    window.addEventListener('open-store-orders', onOpenStoreOrders)
+    return () => {
+      window.removeEventListener('jh-onboarding-complete', onOnboardingComplete)
+      window.removeEventListener('open-store-orders', onOpenStoreOrders)
+    }
+  }, [toast])
+
+  useEffect(() => {
     const prev = prevOpenRequestCountRef.current
     prevOpenRequestCountRef.current = openActiveRequestsCount
     if (prev !== null && prev > 0 && openActiveRequestsCount === 0) {
@@ -601,6 +616,7 @@ export default function Home() {
         toast={toast}
         showLocationPrompt={showLocationPrompt}
         onDismissLocationPrompt={() => setShowLocationPrompt(false)}
+        outsideZone={outsideZone}
       />
 
       <HomeChatPanels

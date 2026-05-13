@@ -35,6 +35,7 @@ export function HomeDashboardPanel({
   fetchNearby,
   checkAuthAndProfile,
   toast,
+  outsideZone,
 }: {
   hidden: boolean
   userLat: number
@@ -58,6 +59,8 @@ export function HomeDashboardPanel({
   fetchNearby: (categoryId?: number | null) => void
   checkAuthAndProfile: CheckAuth
   toast: ToastFn
+  /** Feed vacío por cobertura vs por falta de demandas en zona piloto */
+  outsideZone: boolean
 }) {
   return (
     <div
@@ -104,6 +107,7 @@ export function HomeDashboardPanel({
             userLat={userLat}
             userLng={userLng}
             currentUserId={currentUserId}
+            outsideZone={outsideZone}
             onCardClick={(request) => {
               setHighlightedRequestId(request.id)
               setTimeout(() => setHighlightedRequestId(null), 3000)

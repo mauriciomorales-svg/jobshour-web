@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import { ICON_MAP as SHARED_ICON_MAP } from '@/lib/iconMap'
 import { feedbackCopy } from '@/lib/userFacingCopy'
 
@@ -39,6 +39,9 @@ function getIcon(icon?: string): string {
 /** Referencia inicial modesta (Chile); el socio sube la tarifa cuando quiera. */
 const DEFAULT_HOURLY_RATE_CLP = 8000
 const QUICK_RATE_PRESETS_CLP = [5000, 7000, 10000, 14000] as const
+const ONBOARDING_DRAFT_KEY = 'jh_onboarding_wizard_draft_v1'
+
+const MOTIVATIONAL = [
   'Tu talento merece ser visto',
   'Cada habilidad tiene valor',
   'Estás a un paso de conectar con tu comunidad',
@@ -60,6 +63,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
   const [selectedCategories, setSelectedCategories] = useState<number[]>([])
   const [customSkill, setCustomSkill] = useState('')
   const [error, setError] = useState('')
+  const [draftReady, setDraftReady] = useState(false)
 
   const motivational = MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)]
 
@@ -81,6 +85,67 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
       .then(d => setCategories(d.data || d || []))
       .catch(() => {})
   }, [])
+
+  // Restaurar borrador antes del primer paint con el modal abierto (evita que el guardado pise el borrador)
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setDraftReady(false)
+      return
+    }
+    try {
+      const raw = localStorage.getItem(ONBOARDING_DRAFT_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          step?: number
+          data?: Partial<OnboardingData>
+          selectedCategories?: number[]
+        }
+        if (typeof parsed.step === 'number' && parsed.step >= 1 && parsed.step <= 4) {
+          setStep(parsed.step)
+        }
+        if (parsed.data) {
+          setData((prev) => ({
+            ...prev,
+            hourly_rate: typeof parsed.data?.hourly_rate === 'number' ? parsed.data.hourly_rate : prev.hourly_rate,
+            skills: Array.isArray(parsed.data?.skills) ? (parsed.data!.skills as string[]) : prev.skills,
+            bio: typeof parsed.data?.bio === 'string' ? parsed.data.bio : prev.bio,
+            location:
+              parsed.data?.location &&
+              typeof parsed.data.location.lat === 'number' &&
+              parsed.data.location.lat !== 0
+                ? parsed.data.location
+                : prev.location,
+          }))
+        }
+        if (Array.isArray(parsed.selectedCategories)) {
+          setSelectedCategories(parsed.selectedCategories.filter((n) => typeof n === 'number'))
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    setDraftReady(true)
+  }, [isOpen])
+
+  // Guardar progreso (local) para no perder paso ni tarifa si cambia de pestaña
+  useEffect(() => {
+    if (!isOpen || !draftReady) return
+    try {
+      const payload = {
+        step,
+        data: {
+          location: data.location,
+          hourly_rate: data.hourly_rate,
+          skills: data.skills,
+          bio: data.bio,
+        },
+        selectedCategories,
+      }
+      localStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(payload))
+    } catch {
+      /* ignore */
+    }
+  }, [isOpen, draftReady, step, data.location, data.hourly_rate, data.skills, data.bio, selectedCategories])
 
   const handleLocationSelect = () => {
     if (!('geolocation' in navigator)) {
@@ -154,6 +219,11 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
       })
 
       if (res.ok) {
+        try {
+          localStorage.removeItem(ONBOARDING_DRAFT_KEY)
+        } catch {
+          /* ignore */
+        }
         localStorage.setItem(`onboarding_done_${userName}`, 'true')
         onComplete({ ...data, category_id: selectedCategories[0] || selectedCategory || undefined, category_ids: selectedCategories })
       } else {

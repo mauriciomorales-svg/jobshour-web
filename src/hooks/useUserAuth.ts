@@ -212,6 +212,9 @@ export function useUserAuth({ fetchWorkerData, setWorkerStatus }: UseUserAuthOpt
     if (userId) localStorage.setItem(`onboarding_done_${userId}`, 'true')
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     if (token) await fetchUserProfile(token)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('jh-onboarding-complete', { detail: { userId } }))
+    }
   }, [fetchUserProfile])
 
   const handleWelcomeSlidesDone = useCallback(() => {

@@ -71,6 +71,8 @@ interface MapScreenProps {
   toast: (msg: string, type?: 'info' | 'success' | 'error' | 'warning', subtitle?: string) => void
   showLocationPrompt: boolean
   onDismissLocationPrompt: () => void
+  /** True cuando el mapa / API indica que el usuario está fuera de la zona piloto */
+  outsideZone: boolean
 }
 
 export function MapScreen(props: MapScreenProps) {
@@ -87,6 +89,7 @@ export function MapScreen(props: MapScreenProps) {
     setShowLoginModal, setShowOnboarding, setActiveRequestId, setChatContext, setShowChat,
     setPoints, fetchNearby, checkAuthAndProfile, toast,
     showLocationPrompt, onDismissLocationPrompt,
+    outsideZone,
   } = props
 
   return (
@@ -158,6 +161,7 @@ export function MapScreen(props: MapScreenProps) {
         fetchNearby={fetchNearby}
         checkAuthAndProfile={checkAuthAndProfile}
         toast={toast}
+        outsideZone={outsideZone}
       />
 
       <HomeLocationPrompt
