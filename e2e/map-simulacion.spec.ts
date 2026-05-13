@@ -98,4 +98,28 @@ test.describe('Simulación checklist — solo mapa', () => {
     expect(json).toHaveProperty('data')
     expect(Array.isArray(json.data)).toBeTruthy()
   })
+
+  /** Humo Playwright: abrir feed desde la barra inferior (no valida pan del mapa ni errores de red). */
+  test('L1: pestaña Demandas u Oportunidades abre el panel con título y bloque de feed', async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(90_000)
+    const base = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3002'
+    await context.grantPermissions(['geolocation'], { origin: new URL(base).origin })
+    await context.setGeolocation(GEO)
+
+    const goto = await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90_000 })
+    expect(goto?.ok()).toBeTruthy()
+    await dismissOnboardingIfPresent(page)
+    await waitForMapTiles(page)
+
+    const feedTab = page
+      .getByRole('button', { name: /^Demandas$/i })
+      .or(page.getByRole('button', { name: /^Oportunidades$/i }))
+    await feedTab.first().click({ timeout: 15_000 })
+
+    await expect(page.getByRole('heading', { name: 'Demandas' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText('Oportunidades cerca')).toBeVisible()
+  })
 })

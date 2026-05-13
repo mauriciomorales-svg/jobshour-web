@@ -4,7 +4,7 @@ Usá esta lista cuando quieras **refinar solo la experiencia del mapa** en vario
 
 **Preparación mínima**
 
-- [ ] URL fija (p. ej. `https://jobshours.com`).
+- [ ] URL fija (p. ej. `https://jobshours.com`). En móvil, **HTTPS** evita bloqueos de cámara/mic si probás tienda o permisos del navegador.
 - [ ] Saber si probás **con sesión** (para ver estados worker) o **sin login** (solo exploración pública del mapa).
 
 ### Simulación automática (antes de salir a campo)
@@ -15,7 +15,7 @@ Desde la raíz de `jobshour-web` (una vez: `npm run test:e2e:install`):
 PLAYWRIGHT_BASE_URL=https://jobshours.com npm run test:e2e:map
 ```
 
-Eso ejecuta Playwright contra la URL indicada: cierra onboarding con **Saltar** si aparece, comprueba tiles del mapa, **rueda** (zoom), **arrastre** (pan), **recarga**, un caso sin permiso de geo explícito, y un GET a `experts/nearby` en el mismo origen. Si tu API está en otro host, definí `PLAYWRIGHT_API_ROOT` (ej. `https://api.tudominio.com/api/v1`).
+Eso ejecuta Playwright contra la URL indicada: cierra onboarding con **Saltar** si aparece, comprueba tiles del mapa, **rueda** (zoom), **arrastre** (pan), **recarga**, un caso sin permiso de geo explícito, un GET a `experts/nearby`, y **abre la pestaña Demandas / Oportunidades** validando el panel del feed (ver nota al pie de la sección «Lista / feed»). Si tu API está en otro host, definí `PLAYWRIGHT_API_ROOT` (ej. `https://api.tudominio.com/api/v1`).
 
 ---
 
@@ -60,6 +60,8 @@ Eso ejecuta Playwright contra la URL indicada: cierra onboarding con **Saltar** 
 | L1 | Al mover el mapa, la lista o resultados **se actualizan** o muestran estado de carga claro | | |
 | L2 | Si falla la red: **mensaje de error** visible (toast / texto), no silencio total | | |
 | L3 | Pestaña **Demandas / feed** (si la usás): ante error de carga, **Reintentar** visible; con éxito pero sin tarjetas, texto distinto si estás **fuera de zona piloto** vs dentro | | |
+
+> **Playwright (`npm run test:e2e:map`):** además valida que la pestaña **Demandas** u **Oportunidades** abre el panel (título «Demandas» y texto «Oportunidades cerca»). No reemplaza L1–L3 a mano (pan, errores de red, zona piloto).
 
 ---
 
