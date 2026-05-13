@@ -14,6 +14,7 @@ Revisar al menos:
 
 - `NEXT_PUBLIC_API_URL` — base de la API Laravel (con o sin `/api` según cómo esté armado `apiFetch`).
 - `NEXT_PUBLIC_SITE_URL` — URL pública del sitio (canonical, OG).
+- **`INTERNAL_API_ORIGIN`** y **`INTERNAL_INVENTARIO_ORIGIN`** — orígenes que usa **Next al compilar** (`next.config.js`) para los rewrites de `/api/*`, `/inventario/*`, etc. Deben ser alcanzables **desde el proceso Node en el VPS** (típico: `http://127.0.0.1:8095` y `http://127.0.0.1:8003`). Si cambiás puertos o el inventario va a otra máquina, exportá estas variables **antes de** `npm run build` (el script `deploy-on-server.sh` ya pone valores por defecto en `127.0.0.1`).
 - `NEXT_PUBLIC_ANALYTICS_INGEST` — opcional, endpoint de eventos.
 - Reverb / Pusher si usáis tiempo real (`NEXT_PUBLIC_REVERB_*` o Pusher).
 

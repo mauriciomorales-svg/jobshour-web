@@ -48,6 +48,14 @@ export default function BarcodeScanModal({ open, onClose, onDetected }: Props) {
       return
     }
 
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setCamError(
+        'La cámara requiere HTTPS (o localhost). En el VPS usá un dominio con certificado SSL, no solo http:// con IP.'
+      )
+      setStarting(false)
+      return
+    }
+
     const video = videoRef.current
     if (!video) return
 

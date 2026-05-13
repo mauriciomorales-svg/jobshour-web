@@ -9,6 +9,17 @@ const { withSentryConfig } = process.env.NEXT_PUBLIC_SENTRY_DSN
 /** @type {import('next').NextConfig} */
 const isExport = process.env.NEXT_EXPORT === 'true'
 
+/**
+ * Rewrites internos (solo servidor Next). En el VPS deben apuntar a donde escuchan
+ * la API Laravel y el servicio de inventario (mismo host suele ser 127.0.0.1).
+ * Definí INTERNAL_* en el entorno del build (`npm run build`) o en `.env.production`.
+ */
+const internalApiOrigin = (process.env.INTERNAL_API_ORIGIN || 'http://127.0.0.1:8095').replace(/\/$/, '')
+const internalInventarioOrigin = (process.env.INTERNAL_INVENTARIO_ORIGIN || 'http://127.0.0.1:8003').replace(
+  /\/$/,
+  '',
+)
+
 const nextConfig = {
   // Asegura @/ → src/ en webpack (evita fallos de resolución en Linux / CI)
   webpack: (config) => {
@@ -32,27 +43,27 @@ const nextConfig = {
       return [
         {
           source: '/api/:path*',
-          destination: 'http://localhost:8095/api/:path*',
+          destination: `${internalApiOrigin}/api/:path*`,
         },
         {
           source: '/broadcasting/auth',
-          destination: 'http://localhost:8095/broadcasting_auth.php',
+          destination: `${internalApiOrigin}/broadcasting_auth.php`,
         },
         {
           source: '/cancel_demand.php',
-          destination: 'http://localhost:8095/cancel_demand.php',
+          destination: `${internalApiOrigin}/cancel_demand.php`,
         },
         {
           source: '/inventario/:path*',
-          destination: 'http://localhost:8003/api/:path*',
+          destination: `${internalInventarioOrigin}/api/:path*`,
         },
         {
           source: '/cancel_request.php',
-          destination: 'http://localhost:8095/cancel_request.php',
+          destination: `${internalApiOrigin}/cancel_request.php`,
         },
         {
           source: '/take_demand.php',
-          destination: 'http://localhost:8095/take_demand.php',
+          destination: `${internalApiOrigin}/take_demand.php`,
         },
       ]
     },

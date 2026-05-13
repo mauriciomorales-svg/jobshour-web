@@ -27,7 +27,16 @@ El cliente envía `Authorization: Bearer` al sumidero `/api/jh-analytics` cuando
 
 ## Rewrites (Next.js)
 
-En `next.config.js`, en modo servidor (no export estático), `/api/*` se reescribe a `http://localhost:8095/api/*` para el backend en la misma máquina. Ajusta el puerto **8095** si tu API escucha en otro.
+En `next.config.js`, en modo servidor (no export estático), el navegador pide rutas relativas (`/api/...`, `/inventario/...`) y **Next las reescribe** hacia backends internos. Esos destinos se leen en **build time** desde:
+
+| Variable | Default | Uso |
+|----------|---------|-----|
+| `INTERNAL_API_ORIGIN` | `http://127.0.0.1:8095` | Laravel: `/api/*`, `take_demand.php`, `cancel_*`, `broadcasting_auth.php`. |
+| `INTERNAL_INVENTARIO_ORIGIN` | `http://127.0.0.1:8003` | Servicio inventario: `/inventario/*` → `{origen}/api/*`. |
+
+En el **VPS** típico (API + inventario en el mismo servidor) los defaults bastan. Si el inventario escucha en otro puerto o host, exportá las variables **antes de** `npm run build` (el script `scripts/deploy-on-server.sh` ya exporta los mismos defaults).
+
+**Cámara / micrófono (PWA):** el sitio debe servirse por **HTTPS**; en Nginx evitá un `Permissions-Policy` global que bloquee `camera`/`microphone`. Ejemplo en `deploy/nginx-web.conf`.
 
 ## Android / export estático
 
