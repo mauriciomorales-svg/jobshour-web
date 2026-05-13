@@ -76,7 +76,7 @@ php artisan route:cache
 - Login y una llamada autenticada a `/api/...` OK.
 - Tienda de prueba: checkout llega a Mercado Pago (sandbox o prod según entorno).
 - Inventario: `GET /inventario/worker-stats/{id}` con token si aplica.
-- **QA en campo (varios celulares / ciudades):** checklist `docs/MANUAL-QA-DISPOSITIVOS.md`.
+- **QA en campo (varios celulares / ciudades):** `docs/MANUAL-QA-DISPOSITIVOS.md` — **solo mapa:** `docs/MANUAL-QA-SOLO-MAPA.md`.
 - **QA físico multi-dispositivo:** `docs/MANUAL-QA-DISPOSITIVOS.md` (celulares, mapa, tienda, pagos).
 
 ## 8. Monitoreo mínimo (recomendado)

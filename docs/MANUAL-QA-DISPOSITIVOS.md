@@ -1,5 +1,7 @@
 # QA manual multi-dispositivo — JobsHours (web)
 
+**Solo mapa (lista corta):** `docs/MANUAL-QA-SOLO-MAPA.md`.
+
 Checklist para probar en **celulares reales**, **navegadores** y **ubicaciones** distintas. Marca ✅ / ❌ y anota modelo de teléfono, OS, navegador y ciudad (o “GPS simulado”).
 
 **Preparación**
