@@ -59,6 +59,7 @@ Eso ejecuta Playwright contra la URL indicada: cierra onboarding con **Saltar** 
 |---|------|-----|--------|
 | L1 | Al mover el mapa, la lista o resultados **se actualizan** o muestran estado de carga claro | | |
 | L2 | Si falla la red: **mensaje de error** visible (toast / texto), no silencio total | | |
+| L3 | Pestaña **Demandas / feed** (si la usás): ante error de carga, **Reintentar** visible; con éxito pero sin tarjetas, texto distinto si estás **fuera de zona piloto** vs dentro | | |
 
 ---
 

@@ -6,10 +6,11 @@ Checklist para probar en **celulares reales**, **navegadores** y **ubicaciones**
 
 **Preparación**
 
-- [ ] URL de prueba acordada (p. ej. `https://jobshours.com` o staging).
+- [ ] URL de prueba acordada (p. ej. `https://jobshours.com` o staging). **Cámara / mic / geo del navegador** requieren **HTTPS** (o localhost); con `http://` + IP suele fallar el escáner de código de barras en tienda.
 - [ ] Cuentas: al menos 1 **cliente** y 1 **worker** (o dos dispositivos con cada rol).
 - [ ] Mercado Pago en **sandbox** si vas a pagar de verdad en QA.
 - [ ] Notas: capturas de pantalla solo si no hay datos personales de terceros.
+- [ ] **VPS / prod:** si cambiaste puertos de API o inventario, el front debe haberse **reconstruido** con `INTERNAL_API_ORIGIN` / `INTERNAL_INVENTARIO_ORIGIN` (ver `docs/ENV.md` y `docs/MVP-DEPLOY-RUNBOOK.md`). Nginx: no bloquear `camera`/`microphone` (ej. `deploy/nginx-web.conf` con `Permissions-Policy`).
 
 ---
 
@@ -68,6 +69,9 @@ Checklist para probar en **celulares reales**, **navegadores** y **ubicaciones**
 | 5.3 | Checkout con **delivery** on/off según diseño | |
 | 5.4 | Pago sandbox → redirección **success/pending/failure** coherente | |
 | 5.5 | Comprador recibe correo o pantalla de confirmación (según entorno) | |
+| 5.6 | **Owner — Nuevo producto:** completar código de barras **a mano** (o voz con mic) y guardar sin error | |
+| 5.7 | **Owner — Nuevo producto:** **Escanear** código con la cámara (HTTPS); al leer, el campo se rellena y podés publicar | |
+| 5.8 | **Denegar** permiso de cámara: el flujo sigue con código manual / voz (sin pantalla colgada) | |
 
 ---
 
@@ -87,7 +91,20 @@ En una petición fallida a la API, pedir (o capturar en proxy) el header de resp
 
 ---
 
-## 8. E2E automatizado (opcional, antes del despliegue)
+## 8. Post-deploy en VPS (humo rápido)
+
+Tras `scripts/deploy-on-server.sh` o equivalente:
+
+| # | Caso | OK |
+|---|------|-----|
+| 8.1 | `GET /` (o home) responde **200** sin 502 al proxy | |
+| 8.2 | Desde el mismo dominio: `GET /inventario/categorias?worker_id=1` (o ID válido) **no** 404/502 (rewrite a inventario interno) | |
+| 8.3 | Login + una llamada `/api/v1/...` autenticada OK | |
+| 8.4 | En **HTTPS**, abrir Nuevo producto → escáner: pide cámara y preview se ve (o mensaje claro si no hay permiso) | |
+
+---
+
+## 9. E2E automatizado (opcional, antes del despliegue)
 
 Con el front levantado:
 
