@@ -83,6 +83,7 @@ export default function Home() {
   const userLatRef = useRef(0)
   const userLngRef = useRef(0)
   const mapRef = useRef<HomeMapRef | null>(null)
+  const ridDeepLinkHandled = useRef(false)
 
   const openPublishDemandClean = useCallback(() => {
     setPublishDemandInitialDraft(null)
@@ -213,6 +214,33 @@ export default function Home() {
   useEffect(() => {
     trackEvent('home_app_mount', {})
   }, [])
+
+  /** Enlace compartido /d/{id} → «Abrir en la app» usa ?rid= para resaltar en el feed. */
+  useEffect(() => {
+    if (typeof window === 'undefined' || ridDeepLinkHandled.current) return
+    let sp: URLSearchParams
+    try {
+      sp = new URLSearchParams(window.location.search)
+    } catch {
+      return
+    }
+    const rid = sp.get('rid')
+    if (!rid) return
+    const n = parseInt(rid, 10)
+    if (!Number.isFinite(n) || n <= 0) return
+    ridDeepLinkHandled.current = true
+    setHighlightedRequestId(n)
+    setActiveTab('feed')
+    setDashHidden(false)
+    toast('Demanda compartida: buscala en el panel de oportunidades.', 'info')
+    try {
+      const u = new URL(window.location.href)
+      u.searchParams.delete('rid')
+      window.history.replaceState({}, '', u.pathname + (u.search || '') + u.hash)
+    } catch {
+      /* ignore */
+    }
+  }, [setHighlightedRequestId, toast])
 
   useEffect(() => {
     const onOnboardingComplete = () => {

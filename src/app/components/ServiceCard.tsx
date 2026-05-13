@@ -1,6 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { trackEvent } from '@/lib/analytics'
+import { openWhatsAppWithText, publicDemandUrl, whatsAppDemandShareText, withShareUtm } from '@/lib/marketingShare'
 
 interface ServiceRequest {
   id: number
@@ -230,15 +232,35 @@ function ActionButtons({
             💬 Chat
           </button>
         )}
-        <a
-          href={`https://wa.me/?text=${encodeURIComponent(`🔥 ¡Mira esta solicitud en JobsHours!\n${request.description || 'Servicio disponible'}\n💰 $${formatCLP(request.offered_price)}\n📍 ${request.pickup_address || 'Ver en mapa'}\n👉 ${typeof window !== 'undefined' ? window.location.origin : ''}`)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            const url = withShareUtm(publicDemandUrl(request.id), 'demand_share')
+            const priceStr = `$${formatCLP(request.offered_price)}`
+            const summary =
+              (request.description || '').trim().slice(0, 200) ||
+              (request.category?.name || 'Solicitud en JobsHours')
+            const text = `${request.category?.name || 'Demanda'} · ${priceStr}\n${summary.slice(0, 160)}`
+            trackEvent('demand_share_click', { demandId: request.id, channel: 'native' })
+            if (typeof navigator !== 'undefined' && navigator.share) {
+              void navigator.share({ title: 'Demanda en JobsHours', text, url }).catch(() => {})
+              return
+            }
+            trackEvent('demand_share_click', { demandId: request.id, channel: 'whatsapp' })
+            openWhatsAppWithText(
+              whatsAppDemandShareText({
+                categoryLabel: request.category?.name || 'Demanda',
+                summary,
+                priceFormatted: priceStr,
+                demandUrl: publicDemandUrl(request.id),
+              }),
+            )
+          }}
           className="flex items-center justify-center gap-1 py-2.5 bg-amber-500/25 hover:bg-amber-500/35 text-amber-100 rounded-xl text-sm font-bold transition active:scale-95"
         >
           📲 Compartir
-        </a>
+        </button>
       </div>
     </div>
   )

@@ -72,6 +72,7 @@ Checklist para probar en **celulares reales**, **navegadores** y **ubicaciones**
 | 5.6 | **Owner — Nuevo producto:** completar código de barras **a mano** (o voz con mic) y guardar sin error | |
 | 5.7 | **Owner — Nuevo producto:** **Escanear** código con la cámara (HTTPS); al leer, el campo se rellena y podés publicar | |
 | 5.8 | **Denegar** permiso de cámara: el flujo sigue con código manual / voz (sin pantalla colgada) | |
+| 5.9 | **Feed / mapa:** en una tarjeta de demanda, **Compartir** abre nativo o WhatsApp con enlace a ficha `/d/{id}` (preview OG) | |
 
 ---
 

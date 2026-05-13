@@ -81,6 +81,23 @@ export function publicProductUrl(workerId: string | number, productId: string | 
   return `${getSiteOrigin()}/p/${workerId}-${productId}-${safeName}`
 }
 
+/** Ficha corta pública para compartir una demanda (Publicación dorada / feed). */
+export function publicDemandUrl(demandId: string | number): string {
+  return `${getSiteOrigin()}/d/${demandId}`
+}
+
+export function whatsAppDemandShareText(opts: {
+  categoryLabel: string
+  summary: string
+  priceFormatted: string
+  demandUrl: string
+}): string {
+  const url = withShareUtm(opts.demandUrl, 'demand_share')
+  const head = opts.summary.trim() || opts.categoryLabel
+  const price = opts.priceFormatted ? `\n💰 ${opts.priceFormatted}` : ''
+  return `Mirá esta demanda en JobsHours 💼\n${head}${price}\nVer ficha:\n${url}`
+}
+
 export function whatsAppProductShareText(opts: {
   productName: string
   storeName?: string | null

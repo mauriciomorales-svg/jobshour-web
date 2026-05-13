@@ -102,3 +102,110 @@ export async function buildExpertShareMetadata(
     },
   }
 }
+
+export type DemandSharePayload = {
+  id: number
+  categoryName: string
+  description: string
+  offeredPrice: number
+  clientName: string
+  clientAvatar: string | null
+}
+
+function truncateMeta(s: string, max: number): string {
+  const t = s.replace(/\s+/g, ' ').trim()
+  if (t.length <= max) return t
+  return `${t.slice(0, max - 1)}…`
+}
+
+export async function fetchDemandSharePayload(demandId: string): Promise<DemandSharePayload | null> {
+  const origin = metadataApiOrigin()
+  const url = `${origin}/api/v1/demand/${encodeURIComponent(demandId)}`
+  try {
+    const res = await fetch(url, {
+      next: { revalidate: 60 },
+      headers: { Accept: 'application/json' },
+    })
+    if (!res.ok) return null
+    const json: unknown = await res.json().catch(() => null)
+    if (!json || typeof json !== 'object') return null
+    const root = json as { status?: string; data?: Record<string, unknown> }
+    if (root.status !== 'success' || !root.data || typeof root.data !== 'object') return null
+    const d = root.data
+    const id = typeof d.id === 'number' ? d.id : Number(d.id)
+    if (!Number.isFinite(id)) return null
+    const cat = d.category as { name?: string } | undefined
+    const client = d.client as { name?: string; avatar?: string | null } | undefined
+    const categoryName =
+      cat && typeof cat.name === 'string' && cat.name.trim() ? cat.name.trim() : 'Demanda'
+    const description = typeof d.description === 'string' ? d.description : ''
+    const offeredPrice =
+      typeof d.offered_price === 'number'
+        ? d.offered_price
+        : Number(d.offered_price) || 0
+    const clientName =
+      client && typeof client.name === 'string' && client.name.trim() ? client.name.trim() : 'JobsHours'
+    const clientAvatar =
+      client && typeof client.avatar === 'string' && client.avatar.startsWith('http') ? client.avatar : null
+    return {
+      id,
+      categoryName,
+      description,
+      offeredPrice,
+      clientName,
+      clientAvatar,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function buildDemandShareMetadata(demandId: string): Promise<Metadata> {
+  const site = metadataSiteUrl()
+  const canonical = `${site}/d/${demandId}`
+  const payload = await fetchDemandSharePayload(demandId)
+
+  const priceFmt =
+    payload && Number.isFinite(payload.offeredPrice)
+      ? `$${Math.round(payload.offeredPrice).toLocaleString('es-CL')}`
+      : ''
+
+  const title = payload
+    ? `${payload.categoryName} · ${priceFmt || 'Demanda'} — JobsHours`
+    : 'Demanda — JobsHours'
+
+  const description = payload
+    ? truncateMeta(
+        payload.description
+          ? `${payload.description} · Publicado por ${payload.clientName}.`
+          : `Solicitud en ${payload.categoryName}. ${payload.clientName} busca ayuda en JobsHours.`,
+        200,
+      )
+    : 'Mirá esta solicitud y sumate como socio en JobsHours (Chile).'
+
+  const ogImages: NonNullable<Metadata['openGraph']>['images'] =
+    payload?.clientAvatar && payload.clientAvatar.startsWith('http')
+      ? [{ url: payload.clientAvatar, width: 512, height: 512, alt: payload.clientName }]
+      : [{ url: `${site}/opengraph-image`, width: 1200, height: 630, alt: 'JobsHours' }]
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      siteName: 'JobsHours',
+      locale: 'es_CL',
+      type: 'website',
+      images: ogImages,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ogImages.map((i) => (typeof i === 'string' ? i : i instanceof URL ? i.href : i.url)),
+    },
+  }
+}
