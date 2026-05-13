@@ -36,7 +36,9 @@ function getIcon(icon?: string): string {
   return SHARED_ICON_MAP[icon] || '📌'
 }
 
-const MOTIVATIONAL = [
+/** Referencia inicial modesta (Chile); el socio sube la tarifa cuando quiera. */
+const DEFAULT_HOURLY_RATE_CLP = 8000
+const QUICK_RATE_PRESETS_CLP = [5000, 7000, 10000, 14000] as const
   'Tu talento merece ser visto',
   'Cada habilidad tiene valor',
   'Estás a un paso de conectar con tu comunidad',
@@ -47,7 +49,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
   const [step, setStep] = useState(1)
   const [data, setData] = useState<OnboardingData>({
     location: { lat: 0, lng: 0, address: '' },
-    hourly_rate: 15000,
+    hourly_rate: DEFAULT_HOURLY_RATE_CLP,
     skills: [],
     bio: '',
   })
@@ -126,7 +128,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
   const canProceed = () => {
     if (step === 1) return data.location.lat !== 0
     if (step === 2) return selectedCategories.length > 0
-    if (step === 3) return data.hourly_rate >= 5000
+    if (step === 3) return data.hourly_rate >= 3000
     return true
   }
 
@@ -328,7 +330,9 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
             <div className="space-y-4 animate-slide-up">
               <div className="text-center">
                 <h4 className="text-lg font-black text-white mb-1">Tu Tarifa Base</h4>
-                <p className="text-sm text-slate-400">Un valor de referencia inicial — lo puedes ajustar después</p>
+                <p className="text-sm text-slate-400">
+                  Referencia inicial modesta — podés subirla cuando quieras; cada trabajo puede negociarse aparte.
+                </p>
               </div>
 
               <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
@@ -357,24 +361,24 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete, userToke
               </div>
 
               <div className="grid grid-cols-4 gap-2">
-                {[8000, 12000, 18000, 25000].map(price => (
+                {QUICK_RATE_PRESETS_CLP.map((price) => (
                   <button
                     key={price}
-                    onClick={() => setData(prev => ({ ...prev, hourly_rate: price }))}
+                    onClick={() => setData((prev) => ({ ...prev, hourly_rate: price }))}
                     className={`py-2 rounded-lg text-xs font-bold transition ${
                       data.hourly_rate === price
                         ? 'bg-teal-500 text-white'
                         : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600'
                     }`}
                   >
-                    ${(price/1000)}k
+                    ${price >= 1000 ? `${Math.round(price / 1000)}k` : price}
                   </button>
                 ))}
               </div>
 
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
                 <p className="text-amber-400 text-xs">
-                  💡 Esta tarifa es solo una referencia. Cada trabajo puede tener un precio diferente.
+                  💡 Es solo una referencia en tu perfil. En Chile muchos arrancan bajo y suben con reseñas y demanda.
                 </p>
               </div>
             </div>
