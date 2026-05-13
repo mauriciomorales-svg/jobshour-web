@@ -17,6 +17,7 @@
     "mvp:verify": "node scripts/mvp-verify-web.mjs",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:map": "playwright test e2e/map-simulacion.spec.ts",
     "test:e2e:install": "playwright install chromium",
     "test:watch": "vitest",
     "analyze": "cross-env ANALYZE=true next build"

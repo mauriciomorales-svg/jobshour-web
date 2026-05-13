@@ -7,6 +7,16 @@ Usá esta lista cuando quieras **refinar solo la experiencia del mapa** en vario
 - [ ] URL fija (p. ej. `https://jobshours.com`).
 - [ ] Saber si probás **con sesión** (para ver estados worker) o **sin login** (solo exploración pública del mapa).
 
+### Simulación automática (antes de salir a campo)
+
+Desde la raíz de `jobshour-web` (una vez: `npm run test:e2e:install`):
+
+```bash
+PLAYWRIGHT_BASE_URL=https://jobshours.com npm run test:e2e:map
+```
+
+Eso ejecuta Playwright contra la URL indicada: cierra onboarding con **Saltar** si aparece, comprueba tiles del mapa, **rueda** (zoom), **arrastre** (pan), **recarga**, un caso sin permiso de geo explícito, y un GET a `experts/nearby` en el mismo origen. Si tu API está en otro host, definí `PLAYWRIGHT_API_ROOT` (ej. `https://api.tudominio.com/api/v1`).
+
 ---
 
 ## Carga y red (impacto directo en el mapa)
