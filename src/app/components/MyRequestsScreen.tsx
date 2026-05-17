@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api'
 import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog, jhFlowSummarizeRequest } from '@/lib/jhFlowLog'
 import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
+import { notifyUser } from '@/lib/notifyUser'
 
 const LiveTrackingModal = dynamic(() => import('./LiveTrackingModal'), { ssr: false })
 const PaymentModal = dynamic(() => import('./PaymentModal'), { ssr: false })
@@ -142,10 +143,10 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
       })
       const data = await res.json().catch(() => ({}))
       jhFlowLog('approve-adjustment → resultado', { requestId: id, ok: res.ok, http: res.status, body: data })
-      if (!res.ok) alert(data.message || 'No se pudo aprobar el ajuste')
+      if (!res.ok) notifyUser(data.message || 'No se pudo aprobar el ajuste', 'error')
       fetchRequests()
     } catch {
-      alert(feedbackCopy.networkError)
+      notifyUser(feedbackCopy.networkError, 'error')
     }
   }
 

@@ -46,6 +46,17 @@ Ese script hace `git fetch/reset`, `npm ci`, `npm run build` con `NODE_OPTIONS` 
 
 Eso envía por SSH el mismo contenido que `scripts/deploy-on-server.sh` y lo ejecuta en el servidor (misma lógica que el job de GitHub Actions, que llama a `bash /var/www/jobshour-web/scripts/deploy-on-server.sh`).
 
+**VPS con poca RAM (≈1 GB):** `npm run build` en el servidor suele morir por OOM. Alternativa probada desde Windows:
+
+```powershell
+cd c:\wamp64\www\jobshour-web
+.\scripts\deploy-web.ps1
+```
+
+Build en WSL (`/tmp`), tarball de `.next`, SCP nativo y `pm2 reload jobshour-web`. Tras cambiar variables `NEXT_PUBLIC_*` o Firebase, hay que **volver a ejecutar** el script (rebuild).
+
+**FCM en producción:** definir `NEXT_PUBLIC_FIREBASE_VAPID_KEY` (y el resto de `NEXT_PUBLIC_FIREBASE_*` del `.env.example`) **antes del build**, no solo en runtime. Sin VAPID verás en consola `No VAPID key, trying without...`; el token puede registrarse igual, pero conviene la clave para push fiable en Chrome/Edge.
+
 ### 4.1 Inventario API (`inventario-api`, mismo VPS)
 
 Mismo patrón que el web: script en el servidor + PowerShell opcional desde Windows.

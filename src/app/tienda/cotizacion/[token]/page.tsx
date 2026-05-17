@@ -1,6 +1,9 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
+import { useToast } from '@/hooks/useToast'
+import ToastContainer from '@/app/components/Toast'
+import { notifyUser, registerAppToast } from '@/lib/notifyUser'
 import { useParams } from 'next/navigation'
 import { CheckCircle2, Clock3, CreditCard, FileText, FileDown, Info, Loader2, MessageCircle } from 'lucide-react'
 import { trackEvent } from '@/lib/analytics'
@@ -61,6 +64,12 @@ export default function PublicQuotePage() {
   const [buyerName, setBuyerName] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
+
+  const { toasts, toast, removeToast } = useToast()
+  useEffect(() => {
+    registerAppToast((msg, type, body) => toast(msg, type ?? 'info', body))
+    return () => registerAppToast(null)
+  }, [toast])
 
   const load = async () => {
     if (!token) return
@@ -150,14 +159,14 @@ export default function PublicQuotePage() {
       brandTagline: 'Comparte productos con estilo y convierte por WhatsApp o web',
       campaignCta: 'Escanea el QR y abre la cotización al instante',
     }).catch(() => {
-      alert(feedbackCopy.pdfGenerateError)
+      notifyUser(feedbackCopy.pdfGenerateError, 'error')
     })
   }
 
   const doCheckout = async () => {
     if (!token || !data) return
     if (!buyerName.trim() || !buyerEmail.trim()) {
-      alert(feedbackCopy.completeNameEmail)
+      notifyUser(feedbackCopy.completeNameEmail, 'warning')
       return
     }
     setProcessing(true)
@@ -174,14 +183,14 @@ export default function PublicQuotePage() {
       })
       const json = await r.json()
       if (!r.ok) {
-        alert(json?.message || feedbackCopy.paymentStartFailed)
+        notifyUser(json?.message || feedbackCopy.paymentStartFailed, 'error')
         return
       }
       if (json?.payment_link) {
         window.location.href = json.payment_link
       }
     } catch {
-      alert(feedbackCopy.networkError)
+      notifyUser(feedbackCopy.networkError, 'error')
     } finally {
       setProcessing(false)
     }
@@ -329,6 +338,7 @@ export default function PublicQuotePage() {
           </div>
         )}
       </div>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   )
 }

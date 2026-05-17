@@ -232,7 +232,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
     if (!raw) return
     const amount = Math.max(0, parseInt(raw.replace(/[^\d]/g, ''), 10) || 0)
     if (!amount) {
-      alert('Ingresa un monto válido mayor a 0')
+      notifyUser('Ingresa un monto válido mayor a 0', 'warning')
       return
     }
     jhFlowLog('POST /requests/:id/adjust-price', { requestId, adjusted_price: amount })

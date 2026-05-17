@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { ArrowLeft, CreditCard, Truck } from 'lucide-react'
 import { useStoreCart } from '@/lib/storeCartContext'
 import { apiFetch } from '@/lib/api'
+import { notifyUser } from '@/lib/notifyUser'
 
 interface Props {
   onClose: () => void
@@ -33,7 +34,7 @@ export default function StoreCheckout({ onClose, onBack }: Props) {
   const handlePay = async () => {
     if (!workerId) return
     if (!buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim()) {
-      alert('Ingresa nombre, correo y WhatsApp para continuar')
+      notifyUser('Ingresa nombre, correo y WhatsApp para continuar', 'warning')
       return
     }
     setLoading(true)
@@ -73,10 +74,10 @@ export default function StoreCheckout({ onClose, onBack }: Props) {
         clearCart()
       } else {
         const traceHint = data?.trace_id ? ` (trace: ${data.trace_id})` : ''
-        alert((data.message || feedbackCopy.orderProcessError) + traceHint)
+        notifyUser((data.message || feedbackCopy.orderProcessError) + traceHint, 'error')
       }
     } catch {
-      alert(feedbackCopy.networkError)
+      notifyUser(feedbackCopy.networkError, 'error')
     } finally {
       setLoading(false)
     }
