@@ -1,8 +1,25 @@
 'use client'
 
-import { useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from 'react'
+import { useEffect, useLayoutEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from 'react'
 
 import type { MapPoint } from '@/app/components/MapSection'
+
+const notifyDedup = new Map<string, number>()
+const NOTIFY_DEDUP_MS = 5000
+
+function shouldShowNotify(key: string): boolean {
+  const now = Date.now()
+  const last = notifyDedup.get(key) ?? 0
+  if (now - last < NOTIFY_DEDUP_MS) return false
+  notifyDedup.set(key, now)
+  if (notifyDedup.size > 200) {
+    const cutoff = now - NOTIFY_DEDUP_MS * 2
+    for (const [k, t] of notifyDedup) {
+      if (t < cutoff) notifyDedup.delete(k)
+    }
+  }
+  return true
+}
 
 export interface UseEchoRealtimeParams {
   user: { id: number } | null
@@ -40,6 +57,13 @@ export function useEchoRealtime({
   chatNotifySubscribedIdsRef,
   setChatBadge,
 }: UseEchoRealtimeParams) {
+  const activeChatIdsRef = useRef(activeChatRequestIds)
+  const showChatRef = useRef(showChat)
+  useLayoutEffect(() => {
+    activeChatIdsRef.current = activeChatRequestIds
+    showChatRef.current = showChat
+  }, [activeChatRequestIds, showChat])
+
   useEffect(() => {
     if (!user?.id) return
 
@@ -54,7 +78,9 @@ export function useEchoRealtime({
 
       const pusher = (echo as any)?.connector?.pusher
 
-      const notify = (title: string, body?: string) => {
+      const notify = (title: string, body?: string, dedupKey?: string) => {
+        const key = dedupKey ?? `${title}|${body ?? ''}`
+        if (!shouldShowNotify(key)) return
         toast(title, 'info', body, 7000)
         setNotifBadge((prev) => prev + 1)
         if (hideTimer) clearTimeout(hideTimer)
@@ -109,7 +135,11 @@ export function useEchoRealtime({
           if (typeof reqId === 'number') setActiveRequestId(reqId)
           const clientName = e?.client?.name || e?.client_name || ''
           const desc = e?.description ? String(e.description).slice(0, 60) : ''
-          notify(`🔔 Nueva solicitud${clientName ? ` de ${clientName}` : ''}`, desc || 'Alguien quiere contratarte')
+          notify(
+            `🔔 Nueva solicitud${clientName ? ` de ${clientName}` : ''}`,
+            desc || 'Alguien quiere contratarte',
+            `request.new:${reqId ?? ''}`,
+          )
           playNotifSound()
         })
         .listen('.request.updated', (e: any) => {
@@ -129,7 +159,11 @@ export function useEchoRealtime({
           completed: '🎉 Servicio completado. ¡Califica al trabajador!',
           cancelled: '🚫 Solicitud cancelada',
         }
-        notify('Actualización de solicitud', statusMap[e?.status] || `Estado: ${e?.status ?? 'actualizado'}`)
+        notify(
+          'Actualización de solicitud',
+          statusMap[e?.status] || `Estado: ${e?.status ?? 'actualizado'}`,
+          `request.updated.user:${e?.id ?? ''}:${e?.status ?? ''}`,
+        )
       })
 
       userChannel.listen('.chat.message', (e: any) => {
@@ -141,9 +175,12 @@ export function useEchoRealtime({
             : senderEmail || senderName || 'Nuevo mensaje'
         const preview = e?.preview ? String(e.preview).slice(0, 80) : 'Revisa tu chat'
         const requestId = Number(e?.request_id ?? 0)
+        const msgId = Number(e?.message_id ?? e?.id ?? 0)
         setChatBadge((prev) => prev + 1)
         if (requestId > 0) setActiveRequestId(requestId)
-        notify(`💬 ${senderLabel}`, preview)
+        // Si ya escuchamos el canal privado del chat, evitar doble toast.
+        if (requestId > 0 && activeChatIdsRef.current.includes(requestId)) return
+        notify(`💬 ${senderLabel}`, preview, `chat.user:${requestId}:${msgId || preview.slice(0, 40)}`)
         playNotifSound()
       })
     })
@@ -246,6 +283,8 @@ export function useEchoRealtime({
         if (!shouldNotify) return
 
         console.log('[ChatNotify] message.new', { id: msgId, sender: senderName, sender_email: senderEmail || undefined })
+        const dedupKey = `chat.private:${rid}:${msgId}`
+        if (!shouldShowNotify(dedupKey)) return
         toast(title, 'info', text, 5000)
         playNotifSound()
 

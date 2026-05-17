@@ -3,6 +3,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
 import { notifyUser } from '@/lib/notifyUser'
+import {
+  getMisSolicitudesEmptyState,
+  matchesMisSolicitudesTab,
+  REQUEST_STATUS_CONFIG,
+} from '@/lib/requestFlow'
+import { trackFunnelEvent } from '@/lib/analyticsFunnel'
+import TrustPolicyPanel from './TrustPolicyPanel'
 import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog, jhFlowSummarizeRequest } from '@/lib/jhFlowLog'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
@@ -49,14 +56,7 @@ interface Props {
   onHighlightOnMap?: (requestId: number) => void
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  pending:     { label: 'Esperando respuesta', color: 'text-yellow-300', bg: 'bg-yellow-500/20', icon: '⏳' },
-  accepted:    { label: 'Coordinado',          color: 'text-teal-300',   bg: 'bg-teal-500/20',   icon: '✅' },
-  in_progress: { label: 'En ejecución',        color: 'text-teal-300',   bg: 'bg-teal-500/20',   icon: '🚚' },
-  completed:   { label: 'Finalizado',          color: 'text-teal-300',   bg: 'bg-teal-500/20',   icon: '🎉' },
-  cancelled:   { label: 'Cancelado',           color: 'text-gray-400',   bg: 'bg-gray-500/20',   icon: '❌' },
-  disputed:    { label: 'Requiere revisión',   color: 'text-red-300',    bg: 'bg-red-500/20',    icon: '⚠️' },
-}
+const STATUS_CONFIG = REQUEST_STATUS_CONFIG
 
 function normalizeCategoryLabel(s: Solicitud): string {
   const raw = (s.category?.display_name || s.category_type || s.type || '').toLowerCase()
@@ -480,16 +480,10 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
               >
                 <div className="text-5xl mb-3">📋</div>
                 <h3 className="text-white font-bold text-base mb-2">
-                  {activeTab === 'active'
-                    ? 'Sin solicitudes activas'
-                    : activeTab === 'in_progress'
-                      ? 'Sin servicios en curso'
-                      : 'Sin historial archivado'}
+                  {getMisSolicitudesEmptyState(activeTab).title}
                 </h3>
                 <p className="text-slate-400 text-sm max-w-xs mx-auto leading-relaxed">
-                  {activeTab === 'archived'
-                    ? 'Aquí verás servicios finalizados, cancelados o pendientes vencidas.'
-                    : 'Cuando publiques un trabajo o tomes una demanda del feed, aparecerá aquí.'}
+                  {getMisSolicitudesEmptyState(activeTab).hint}
                 </p>
               </motion.div>
             ) : (
@@ -752,7 +746,10 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                               <>
                                 {canPayNow ? (
                                   <button
-                                    onClick={() => setPaymentRequestId(s.id)}
+                                    onClick={() => {
+                                      trackFunnelEvent('payment_start', { request_id: s.id })
+                                      setPaymentRequestId(s.id)
+                                    }}
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl text-xs font-black transition active:scale-95 border border-amber-500/35"
                                   >
                                     💳 Pagar
@@ -846,6 +843,10 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
               </div>
             )}
           </AnimatePresence>
+        )}
+
+        {user && !loading && (
+          <TrustPolicyPanel className="mt-4" />
         )}
       </div>
 

@@ -3,7 +3,21 @@
 import { useCallback, useEffect, useRef, useLayoutEffect, type MutableRefObject, type RefObject } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 
+import { readStoredGpsCoords } from '@/lib/formAssist'
 import { LS_MAP_VIEW_LAT, LS_MAP_VIEW_LNG, readInitialMapCoords } from '@/lib/mapStorage'
+
+function geolocationErrorMessage(error: GeolocationPositionError): string {
+  switch (error.code) {
+    case error.PERMISSION_DENIED:
+      return 'Permiso de ubicación denegado. Actívalo en el navegador o en ajustes del teléfono.'
+    case error.POSITION_UNAVAILABLE:
+      return 'No se pudo obtener tu posición. Revisa que el GPS esté activo.'
+    case error.TIMEOUT:
+      return 'La ubicación tardó demasiado. Intenta de nuevo en un lugar con mejor señal.'
+    default:
+      return 'No se pudo obtener la ubicación. Activa el GPS y revisa permisos.'
+  }
+}
 
 export type FetchNearbyFn = (categoryId?: number | null, overrideLat?: number, overrideLng?: number) => void
 
@@ -125,8 +139,14 @@ export function useMapViewport({
         const lng = pos.coords.longitude
         applyLocationToViewport(lat, lng, 15)
       },
-      () => {
-        toast('No se pudo obtener la ubicación. Activa el GPS y revisa permisos.', 'error')
+      (err) => {
+        const stored = readStoredGpsCoords()
+        if (stored) {
+          applyLocationToViewport(stored.lat, stored.lng, 14)
+          toast('Ubicación aproximada', 'info', 'Usamos tu última posición guardada. Activa el GPS para mayor precisión.')
+          return
+        }
+        toast(geolocationErrorMessage(err), 'error')
       },
       // maximumAge 0: evita caché del navegador (a veces devolvía un punto fijo / zona Renaico).
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },

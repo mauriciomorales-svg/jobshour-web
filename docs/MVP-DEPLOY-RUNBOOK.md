@@ -55,7 +55,7 @@ cd c:\wamp64\www\jobshour-web
 
 Build en WSL (`/tmp`), tarball de `.next`, SCP nativo y `pm2 reload jobshour-web`. Tras cambiar variables `NEXT_PUBLIC_*` o Firebase, hay que **volver a ejecutar** el script (rebuild).
 
-**FCM en producción:** definir `NEXT_PUBLIC_FIREBASE_VAPID_KEY` (y el resto de `NEXT_PUBLIC_FIREBASE_*` del `.env.example`) **antes del build**, no solo en runtime. Sin VAPID verás en consola `No VAPID key, trying without...`; el token puede registrarse igual, pero conviene la clave para push fiable en Chrome/Edge.
+**FCM en producción:** definir el resto de `NEXT_PUBLIC_FIREBASE_*` del `.env.example` **antes del build**. La VAPID debe copiarse del mismo proyecto (`Cloud Messaging` → par Web Push). Si `getToken with VAPID failed` (401/400), el cliente hace fallback sin VAPID; si sigue fallando, revisa API key en Google Cloud (FCM API habilitada, sin bloqueo a `fcmregistrations.googleapis.com`).
 
 ### 4.1 Inventario API (`inventario-api`, mismo VPS)
 

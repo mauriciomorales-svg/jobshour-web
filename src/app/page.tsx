@@ -107,6 +107,8 @@ export default function Home() {
   const mapDiscoveryActiveRef = useRef(false)
   const prevEmptyKindRef = useRef<'outside' | 'empty' | null>(null)
   const ridDeepLinkHandled = useRef(false)
+  const mpReturnHandledRef = useRef(false)
+  const chatOpenDeepLinkHandledRef = useRef(false)
   const pubdemandaHandledRef = useRef(false)
   const pubdemandaReturnRef = useRef<string | null>(null)
 
@@ -656,6 +658,126 @@ export default function Home() {
       setChatContext({})
     }
   }, [setShowRequestModal, setActiveRequestId, setShowChat, setChatContext, toast, selectedDetail, user?.id])
+
+  const openChatFromRequestId = useCallback(async (requestId: number) => {
+    const token =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('auth_token') || localStorage.getItem('token')
+        : null
+    if (!token || !user) {
+      toast('Iniciá sesión para abrir el chat', 'info')
+      setShowLoginModal(true)
+      return
+    }
+    try {
+      const res = await fetch(`${getPublicApiBase()}/api/v1/requests/${requestId}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      })
+      const data = await res.json().catch(() => ({}))
+      const sr = data?.data ?? data
+      if (!res.ok || !sr?.id) {
+        toast('No se pudo abrir el chat de esta solicitud', 'error')
+        return
+      }
+      const myRole: 'cliente' | 'trabajador' =
+        Number(sr.client_id) === Number(user.id) ? 'cliente' : 'trabajador'
+      const other = myRole === 'cliente' ? sr.worker?.user : sr.client
+      setActiveRequestId(requestId)
+      setChatContext({
+        description: typeof sr.description === 'string' ? sr.description : undefined,
+        name: other?.name ?? 'Chat',
+        avatar: other?.avatar ?? null,
+        email: other?.email ?? null,
+        myRole,
+      })
+      setShowChat(true)
+      setChatBadge(0)
+      setActiveTab('map')
+      setDashHidden(true)
+    } catch {
+      toast('Error al abrir el chat', 'error')
+    }
+  }, [user, toast, setShowLoginModal, setActiveRequestId, setChatContext, setShowChat, setChatBadge])
+
+  /** Retorno Mercado Pago (créditos/boost) y clic en notificación push (?request_id=&open_chat=1). */
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const stripParams = (keys: string[]) => {
+      try {
+        const u = new URL(window.location.href)
+        keys.forEach((k) => u.searchParams.delete(k))
+        window.history.replaceState({}, '', u.pathname + (u.search || '') + u.hash)
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (!mpReturnHandledRef.current) {
+      let sp: URLSearchParams
+      try {
+        sp = new URLSearchParams(window.location.search)
+      } catch {
+        sp = new URLSearchParams()
+      }
+      const credits = sp.get('credits')
+      if (credits === 'ok') {
+        mpReturnHandledRef.current = true
+        toast('Créditos acreditados. Ya puedes ver teléfonos de profesionales.', 'success')
+        stripParams(['credits', 'pack'])
+      } else if (credits === 'fail') {
+        mpReturnHandledRef.current = true
+        toast('El pago de créditos no se completó.', 'error')
+        stripParams(['credits', 'pack'])
+      } else if (credits === 'pending') {
+        mpReturnHandledRef.current = true
+        toast('Pago en proceso. Los créditos se acreditarán al confirmarse.', 'info')
+        stripParams(['credits', 'pack'])
+      }
+      const boost = sp.get('boost')
+      if (boost === 'ok') {
+        mpReturnHandledRef.current = true
+        toast('Tu demanda quedó destacada en el mapa.', 'success')
+        stripParams(['boost'])
+      }
+    }
+
+    if (!chatOpenDeepLinkHandledRef.current) {
+      let sp: URLSearchParams
+      try {
+        sp = new URLSearchParams(window.location.search)
+      } catch {
+        sp = new URLSearchParams()
+      }
+      const openChat = sp.get('open_chat')
+      const ridRaw = sp.get('request_id')
+      if (openChat === '1' && ridRaw) {
+        const n = parseInt(ridRaw, 10)
+        if (Number.isFinite(n) && n > 0) {
+          chatOpenDeepLinkHandledRef.current = true
+          void openChatFromRequestId(n)
+          stripParams(['open_chat', 'request_id'])
+        }
+      }
+    }
+
+    const onSwMessage = (event: MessageEvent) => {
+      const payload = event.data as { type?: string; url?: string } | null
+      if (payload?.type !== 'DEEPLINK_OPEN_CHAT' || !payload.url) return
+      try {
+        const u = new URL(payload.url, window.location.origin)
+        if (u.searchParams.get('open_chat') !== '1') return
+        const rid = u.searchParams.get('request_id')
+        const n = rid ? parseInt(rid, 10) : NaN
+        if (Number.isFinite(n) && n > 0) void openChatFromRequestId(n)
+      } catch {
+        /* ignore */
+      }
+    }
+
+    navigator.serviceWorker?.addEventListener('message', onSwMessage)
+    return () => navigator.serviceWorker?.removeEventListener('message', onSwMessage)
+  }, [openChatFromRequestId, toast])
 
   const createQuickChatRequest = useCallback(async (): Promise<number | null> => {
     if (!selectedDetail || selectedDetail.status === 'demand') return null

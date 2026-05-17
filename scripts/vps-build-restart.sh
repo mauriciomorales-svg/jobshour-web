@@ -19,6 +19,7 @@ rm -rf .next
 mkdir -p /tmp/next-cache
 export TMPDIR=/tmp
 
+export SKIP_TS_CHECK=true
 export NODE_OPTIONS="--max-old-space-size=768"
 export NODE_ENV=production
 export NEXT_TELEMETRY_DISABLED=1

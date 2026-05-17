@@ -1,6 +1,6 @@
 // En producción, deploy-on-server.sh reemplaza CACHE_NAME por jobshours-YYYYMMDD-<commit>.
 // Valor por defecto para desarrollo / repo.
-const CACHE_NAME = 'jobshours-v7';
+const CACHE_NAME = 'jobshours-fcm-v8';
 const OFFLINE_URL = '/offline.html';
 
 const PRECACHE_URLS = [
@@ -30,6 +30,12 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // Fetch - Network first, fallback to cache
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
@@ -56,37 +62,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push notifications
-self.addEventListener('push', (event) => {
-  let data = { title: 'JobsHours', body: 'Tienes una nueva notificación' };
-
-  try {
-    if (event.data) data = event.data.json().notification || event.data.json();
-  } catch {
-    if (event.data) data.body = event.data.text();
-  }
-
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'JobsHours', {
-      body: data.body || '',
-      icon: '/icon-192x192.png',
-      badge: '/icon-192x192.png',
-      vibrate: [200, 100, 200],
-      data: data,
-      actions: [{ action: 'open', title: 'Ver' }],
-    })
-  );
-});
-
-// Notification click
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes('jobshour') && 'focus' in client) return client.focus();
-      }
-      return clients.openWindow('/');
-    })
-  );
-});
+// Firebase Cloud Messaging (generado en build → public/sw-fcm.generated.js)
+// @fcm-auto-start
+importScripts('/sw-fcm.generated.js');
+// @fcm-auto-end

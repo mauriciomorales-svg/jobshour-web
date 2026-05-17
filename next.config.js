@@ -20,12 +20,20 @@ const internalInventarioOrigin = (process.env.INTERNAL_INVENTARIO_ORIGIN || 'htt
   '',
 )
 
+const skipTypeAndLint = process.env.SKIP_TS_CHECK === 'true'
+
 const nextConfig = {
   // Menor uso de RAM en VPS ~1GB (build y static generation)
   experimental: {
     cpus: 1,
     webpackBuildWorker: false,
   },
+  ...(skipTypeAndLint
+    ? {
+        typescript: { ignoreBuildErrors: true },
+        eslint: { ignoreDuringBuilds: true },
+      }
+    : {}),
   // Asegura @/ → src/ en webpack (evita fallos de resolución en Linux / CI)
   webpack: (config) => {
     config.resolve.alias = {

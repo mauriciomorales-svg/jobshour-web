@@ -184,17 +184,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: JSON.stringify(jsonLdOrganization),
           }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').catch(function() {});
-                });
-              }
-            `,
-          }}
-        />
+        <script src="/sw-register.js" defer />
       </head>
       <body className="antialiased font-sans bg-white"><StoreCartProvider>{children}</StoreCartProvider></body>
     </html>

@@ -4,6 +4,8 @@ import { uiTone } from '@/lib/uiTone'
 
 import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
+import { getWorkerRequestsEmptyState } from '@/lib/requestFlow'
+import { trackFunnelEvent } from '@/lib/analyticsFunnel'
 import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog, jhFlowSummarizeRequest } from '@/lib/jhFlowLog'
 import dynamic from 'next/dynamic'
 
@@ -115,7 +117,10 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
       const data = await res.json().catch(() => ({}))
       jhFlowLog('respond → resultado', { requestId, ok: res.ok, http: res.status, body: data })
       if (!res.ok) setError(data.message || 'Error al procesar')
-      else fetchRequests()
+      else {
+        if (action === 'accept') trackFunnelEvent('request_accept', { request_id: requestId })
+        fetchRequests()
+      }
     } catch (err) {
       setError(feedbackCopy.networkError)
     }
@@ -135,7 +140,10 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
       const data = await res.json().catch(() => ({}))
       jhFlowLog('complete → resultado', { requestId, ok: res.ok, http: res.status, body: data })
       if (!res.ok) setError(data.message || 'Error al completar')
-      else fetchRequests()
+      else {
+        trackFunnelEvent('request_complete', { request_id: requestId })
+        fetchRequests()
+      }
     } catch (err) {
       setError(feedbackCopy.networkError)
     }
@@ -294,9 +302,9 @@ export default function WorkerRequestsScreen({ isOpen, onClose, userToken, worke
               <svg className="w-16 h-16 text-slate-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
-              <p className="text-slate-400 font-semibold">No hay solicitudes</p>
-              <p className="text-slate-500 text-sm mt-1">
-                {filter === 'pending' ? 'No tienes solicitudes nuevas' : filter === 'accepted' ? 'No tienes servicios en curso' : 'Aún no has recibido solicitudes'}
+              <p className="text-slate-300 font-bold">{getWorkerRequestsEmptyState(filter).title}</p>
+              <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto leading-relaxed">
+                {getWorkerRequestsEmptyState(filter).hint}
               </p>
             </div>
           ) : (

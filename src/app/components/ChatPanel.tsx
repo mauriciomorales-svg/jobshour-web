@@ -7,8 +7,11 @@ import ChatImageUpload from './ChatImageUpload'
 import { apiFetch } from '@/lib/api'
 import { jhFlowLog } from '@/lib/jhFlowLog'
 import { chatEmailBadge } from '@/lib/chatIdentity'
+import { getChatNextStep } from '@/lib/requestFlow'
+import { trackFunnelEvent } from '@/lib/analyticsFunnel'
 import dynamic from 'next/dynamic'
 const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
+const ReportProblemModal = dynamic(() => import('./ReportProblemModal'), { ssr: false })
 
 interface ChatMessage {
   id: number
@@ -66,6 +69,7 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
   const [chatPricing, setChatPricing] = useState<ChatPricingFromApi | null>(null)
   const [offeredPriceHint, setOfferedPriceHint] = useState<number | null>(null)
   const [paymentStatusHint, setPaymentStatusHint] = useState<string | null>(null)
+  const [showReportProblem, setShowReportProblem] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const subscribedRequestIdRef = useRef<number | null>(null)
   const boundConnectionRef = useRef(false)
@@ -197,6 +201,10 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
   useEffect(() => {
     setInterlocutorEmail(otherPersonEmail ?? null)
   }, [otherPersonEmail])
+
+  useEffect(() => {
+    trackFunnelEvent('chat_open', { request_id: requestId, role: myRole ?? 'unknown' })
+  }, [requestId, myRole])
 
   // Estado del servicio, correo del interlocutor y montos (misma fuente que el cobro MP)
   useEffect(() => {
@@ -438,6 +446,28 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
           </div>
         </div>
 
+        {(() => {
+          const nextStep = getChatNextStep({
+            status: serviceStatus,
+            myRole,
+            paymentStatus: paymentStatusHint,
+            isSelf,
+          })
+          if (!nextStep) return null
+          return (
+            <div className="px-3 py-2.5 border-b border-slate-700/80 bg-gradient-to-r from-amber-500/10 to-teal-500/10">
+              <p className="text-[10px] font-black uppercase tracking-wide text-amber-300/90 mb-1">
+                Siguiente paso
+              </p>
+              <p className="text-sm font-bold text-white flex items-center gap-2">
+                <span aria-hidden>{nextStep.icon}</span>
+                {nextStep.title}
+              </p>
+              <p className="text-xs text-slate-400 mt-1 leading-snug">{nextStep.detail}</p>
+            </div>
+          )
+        })()}
+
         {!isSelf && onOpenPublishDemandFromChat && (
           <div className="px-3 py-2 border-b border-slate-700/80 bg-slate-800/50">
             <button
@@ -507,6 +537,18 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
             {paymentStatusHint === 'completed' && (
               <p className="text-[11px] text-emerald-400/95 mt-1 font-medium">{chatMoneyCopy.paymentDone}</p>
             )}
+          </div>
+        )}
+
+        {!isSelf && myRole && serviceStatus && ['accepted', 'in_progress', 'completed', 'disputed'].includes(serviceStatus) && (
+          <div className="px-3 py-2 border-b border-slate-700/80 bg-slate-900/80">
+            <button
+              type="button"
+              onClick={() => setShowReportProblem(true)}
+              className="w-full py-2 rounded-xl border border-red-500/30 bg-red-500/10 text-red-200 text-xs font-bold hover:bg-red-500/20 transition"
+            >
+              ⚠️ Tuve un problema con este servicio
+            </button>
           </div>
         )}
 
@@ -748,6 +790,14 @@ export default function ChatPanel({ requestId, currentUserId, onClose, requestDe
         </div>
         )}
       </div>
+
+      {showReportProblem && myRole && (
+        <ReportProblemModal
+          serviceRequestId={requestId}
+          myRole={myRole}
+          onClose={() => setShowReportProblem(false)}
+        />
+      )}
 
       {/* Modal de Reseña */}
       {showReviewModal && (

@@ -2,6 +2,16 @@
 import { feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { isJhFlowDebugEnabled, jhFlowLog } from '@/lib/jhFlowLog'
 import { uiTone } from '@/lib/uiTone'
+import { trackFunnelEvent } from '@/lib/analyticsFunnel'
+import {
+  hasLastDirectRequest,
+  loadLastDirectRequest,
+  readStoredGpsCoords,
+  recordRecentLocation,
+  saveLastDirectRequest,
+  suggestNextDepartureLocal,
+} from '@/lib/formAssist'
+import RecentLocationChips from './RecentLocationChips'
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
@@ -54,23 +64,42 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
   const [seats, setSeats] = useState(1)
   const [distanceKm, setDistanceKm] = useState<number | null>(null)
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [canReuseLastRequest, setCanReuseLastRequest] = useState(false)
+
+  const isRecados = expert?.category?.icon === 'package'
+  const hasActiveRoute = !!(expert?.active_route && expert.active_route.destination)
+
+  const applyCoords = (lat: number, lng: number) => {
+    setUserCoords({ lat, lng })
+    if (!expert?.pos?.lat || !expert?.pos?.lng) return
+    const R = 6371
+    const dLat = (expert.pos.lat - lat) * Math.PI / 180
+    const dLng = (expert.pos.lng - lng) * Math.PI / 180
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat * Math.PI / 180) * Math.cos(expert.pos.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+    setDistanceKm(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
+  }
 
   // Calcular distancia aproximada al worker usando GPS del usuario
   useEffect(() => {
     if (!expert?.pos?.lat || !expert?.pos?.lng) return
+    const stored = readStoredGpsCoords()
+    if (stored) applyCoords(stored.lat, stored.lng)
     if (!navigator.geolocation) return
-    navigator.geolocation.getCurrentPosition((pos) => {
-      setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-      const R = 6371
-      const dLat = (expert.pos!.lat - pos.coords.latitude) * Math.PI / 180
-      const dLng = (expert.pos!.lng - pos.coords.longitude) * Math.PI / 180
-      const a = Math.sin(dLat/2)**2 + Math.cos(pos.coords.latitude * Math.PI/180) * Math.cos(expert.pos!.lat * Math.PI/180) * Math.sin(dLng/2)**2
-      setDistanceKm(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)))
-    }, () => {}, { enableHighAccuracy: false, timeout: 5000 })
+    navigator.geolocation.getCurrentPosition(
+      (pos) => applyCoords(pos.coords.latitude, pos.coords.longitude),
+      () => {},
+      { enableHighAccuracy: false, timeout: 5000 },
+    )
   }, [expert?.pos])
 
-  const isRecados = expert?.category?.icon === 'package'
-  const hasActiveRoute = !!(expert?.active_route && expert.active_route.destination)
+  useEffect(() => {
+    setCanReuseLastRequest(hasLastDirectRequest())
+  }, [])
+
+  useEffect(() => {
+    if (requestType !== 'ride_share' || departureTime || hasActiveRoute) return
+    setDepartureTime(suggestNextDepartureLocal(15))
+  }, [requestType, departureTime, hasActiveRoute])
 
   // Detectar tipo de solicitud automáticamente
   useEffect(() => {
@@ -101,6 +130,23 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
     if (pickupAddress.trim()) return
     setPickupAddress('Mi ubicación actual')
   }, [requestType, pickupAddress])
+
+  const applyLastDirectDraft = () => {
+    const draft = loadLastDirectRequest()
+    if (!draft) return
+    if (!hasActiveRoute) setRequestType(draft.requestType)
+    if (draft.description) setDescription(draft.description.slice(0, 500))
+    if (draft.urgency) setUrgency(draft.urgency)
+    if (draft.pickupAddress) setPickupAddress(draft.pickupAddress)
+    if (draft.rideDeliveryAddress) setRideDeliveryAddress(draft.rideDeliveryAddress)
+    if (draft.departureTime) setDepartureTime(draft.departureTime)
+    if (draft.seats != null) setSeats(draft.seats)
+    if (draft.storeName) setStoreName(draft.storeName)
+    if (draft.deliveryAddress) setDeliveryAddress(draft.deliveryAddress)
+    if (draft.itemsCount) setItemsCount(draft.itemsCount)
+    if (draft.loadType) setLoadType(draft.loadType)
+    if (draft.requiresVehicle != null) setRequiresVehicle(draft.requiresVehicle)
+  }
 
   if (!expert || !expert.id) {
     console.error('❌ ServiceRequestModal: expert no válido', expert)
@@ -289,6 +335,29 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
         jhFlowLog('solicitud directa → resultado', { ok: r.ok, http: r.status, body: data })
       }
       if (r.ok) {
+        if (pickupAddress.trim()) recordRecentLocation(pickupAddress.trim(), userCoords?.lat, userCoords?.lng)
+        if (rideDeliveryAddress.trim()) recordRecentLocation(rideDeliveryAddress.trim())
+        if (storeName.trim()) recordRecentLocation(storeName.trim())
+        if (deliveryAddress.trim()) recordRecentLocation(deliveryAddress.trim())
+        saveLastDirectRequest({
+          requestType,
+          description: description.trim() || undefined,
+          urgency,
+          pickupAddress: pickupAddress.trim() || undefined,
+          rideDeliveryAddress: rideDeliveryAddress.trim() || undefined,
+          departureTime: departureTime || undefined,
+          seats,
+          storeName: storeName.trim() || undefined,
+          deliveryAddress: deliveryAddress.trim() || undefined,
+          itemsCount: itemsCount || undefined,
+          loadType,
+          requiresVehicle,
+        })
+        trackFunnelEvent('request_submit', {
+          request_id: data.data.id,
+          type: requestType,
+          direct: true,
+        })
         setSent(true)
         setTimeout(() => onSent(data.data.id), 2000)
       } else {
@@ -376,6 +445,16 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             <span className="text-[10px] text-slate-400">Completa primero lo minimo</span>
           </div>
 
+          {canReuseLastRequest && !hasActiveRoute && (
+            <button
+              type="button"
+              onClick={applyLastDirectDraft}
+              className="w-full py-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs font-bold hover:bg-amber-500/20 transition"
+            >
+              ↺ Usar datos de tu última solicitud
+            </button>
+          )}
+
           {/* Selector de tipo */}
           {!hasActiveRoute && (
             <div>
@@ -402,11 +481,26 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             <div className="space-y-3 bg-teal-500/5 border border-teal-500/20 rounded-2xl p-4">
               <p className="text-xs font-black text-teal-400 uppercase tracking-wider">Detalles del viaje</p>
               <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Origen</label>
-                <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} placeholder="Ej: Renaico, Plaza" /></div>
+                <AddressAutocomplete value={pickupAddress} onChange={setPickupAddress} placeholder="Ej: Renaico, Plaza" />
+                <RecentLocationChips onPick={(entry) => setPickupAddress(entry.label)} />
+              </div>
               <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Destino</label>
-                <AddressAutocomplete value={rideDeliveryAddress} onChange={setRideDeliveryAddress} placeholder="Ej: Angol, Hospital" /></div>
-              <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Hora de salida</label>
-                <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} className={inputCls} /></div>
+                <AddressAutocomplete value={rideDeliveryAddress} onChange={setRideDeliveryAddress} placeholder="Ej: Angol, Hospital" />
+                <RecentLocationChips onPick={(entry) => setRideDeliveryAddress(entry.label)} />
+              </div>
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <label className="text-xs font-semibold text-slate-400">Hora de salida</label>
+                  <button
+                    type="button"
+                    onClick={() => setDepartureTime(suggestNextDepartureLocal(30))}
+                    className="text-[10px] font-bold text-teal-300 hover:text-teal-200"
+                  >
+                    Sugerir +30 min
+                  </button>
+                </div>
+                <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} className={inputCls} />
+              </div>
               <div>
                 <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Asientos necesarios</label>
                 <div className="flex items-center gap-3">
@@ -428,6 +522,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
                   <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Ej: Supermercado Angol" className={inputCls + ' pr-10'} />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2"><VoiceInput onTranscript={t => setStoreName(prev => prev ? prev + ' ' + t : t)} /></div>
                 </div>
+                <RecentLocationChips onPick={(entry) => setStoreName(entry.label)} />
               </div>
               <div><label className="text-xs font-semibold text-slate-400 mb-1.5 block">Cantidad de artículos</label>
                 <input type="number" min="1" value={itemsCount} onChange={(e) => setItemsCount(e.target.value)} placeholder="Ej: 15" className={inputCls} /></div>
@@ -455,6 +550,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
                   <input type="text" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="Ej: Los Robles 123, Renaico" className={inputCls + ' pr-10'} />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2"><VoiceInput onTranscript={t => setDeliveryAddress(prev => prev ? prev + ' ' + t : t)} /></div>
                 </div>
+                <RecentLocationChips onPick={(entry) => setDeliveryAddress(entry.label)} />
                 {deliveryAddress.trim().length > 3 && (
                   <a href={`https://maps.google.com/maps?saddr=Mi+ubicaci%C3%B3n&daddr=${encodeURIComponent(deliveryAddress)}`} target="_blank" rel="noopener noreferrer"
                     className="mt-1.5 flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 transition">

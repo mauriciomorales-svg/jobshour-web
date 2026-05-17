@@ -510,6 +510,12 @@ export const feedbackCopy = {
   mustLoginFirst: 'Debes iniciar sesión primero',
   mustLoginWorkerQuote: 'Debes iniciar sesión como trabajador para crear cotizaciones',
   notificationsEnabled: 'Notificaciones activadas correctamente',
+  notificationsDenied:
+    'Las notificaciones están bloqueadas para este sitio. Haz clic en el candado de la barra de direcciones → Notificaciones → Permitir, y recarga la página.',
+  notificationsDismissed:
+    'No se activaron las notificaciones. Puedes volver a intentarlo cuando quieras desde este menú.',
+  notificationsSetupFailed:
+    'No se pudo obtener el token de notificaciones. Revisa la consola (F12) o intenta de nuevo en unos minutos.',
   sessionClosed: 'Sesión cerrada',
 
   savePreferencesError: 'Error al guardar preferencias',

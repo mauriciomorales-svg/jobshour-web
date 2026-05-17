@@ -264,11 +264,20 @@ export function HomeSidebar({
                   onClick={async () => {
                     const { setupNotifications } = await import('@/lib/firebase')
                     const token = localStorage.getItem('auth_token')
-                    if (token) {
-                      await setupNotifications(token)
-                      alert(feedbackCopy.notificationsEnabled)
-                    } else {
-                      alert(feedbackCopy.mustLoginFirst)
+                    if (!token) {
+                      toast(feedbackCopy.mustLoginFirst, 'warning')
+                      onClose()
+                      return
+                    }
+                    const status = await setupNotifications(token)
+                    if (status === 'success') {
+                      toast(feedbackCopy.notificationsEnabled, 'success')
+                    } else if (status === 'permission_denied') {
+                      toast('Notificaciones bloqueadas', 'warning', feedbackCopy.notificationsDenied)
+                    } else if (status === 'permission_dismissed') {
+                      toast('Notificaciones', 'info', feedbackCopy.notificationsDismissed)
+                    } else if (status !== 'sw_reload') {
+                      toast('Notificaciones', 'warning', feedbackCopy.notificationsSetupFailed)
                     }
                     onClose()
                   }}

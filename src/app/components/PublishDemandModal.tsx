@@ -12,6 +12,16 @@ import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog } from '@/lib/jhFlowLog
 import { demandTypeGlossary, feedbackCopy, surfaceCopy, type DemandTypeKey } from '@/lib/userFacingCopy'
 import { ModalShell } from '@/app/components/ui/ModalShell'
 import type { MapPoint } from '@/app/components/MapSection'
+import {
+  hasLastPublishDemand,
+  loadLastPublishDemand,
+  readStoredGpsCoords,
+  recordRecentLocation,
+  saveLastPublishDemand,
+  suggestNextDepartureLocal,
+  type LastPublishDemandDraft,
+} from '@/lib/formAssist'
+import RecentLocationChips from './RecentLocationChips'
 
 interface Category {
   id: number
@@ -284,6 +294,8 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string,string>>({})
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [canReuseLastDraft, setCanReuseLastDraft] = useState(false)
 
   // Asignar categoría automáticamente según tipo (usar primera disponible si no hay match)
   useEffect(() => {
@@ -331,6 +343,53 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
     initialDraft?.destinationName,
     initialDraft?.departureTime,
   ])
+
+  useEffect(() => {
+    setCanReuseLastDraft(hasLastPublishDemand())
+  }, [])
+
+  useEffect(() => {
+    if (demandType !== 'ride_share' || departureTime) return
+    setDepartureTime(suggestNextDepartureLocal(30))
+  }, [demandType, departureTime])
+
+  useEffect(() => {
+    if (initialDraft?.lat != null && initialDraft?.lng != null) return
+    const gps = readStoredGpsCoords()
+    if (gps) {
+      setPickupLat(gps.lat)
+      setPickupLng(gps.lng)
+    }
+  }, [initialDraft?.lat, initialDraft?.lng])
+
+  const applyLastPublishDraft = () => {
+    const draft = loadLastPublishDemand()
+    if (!draft) return
+    setDemandType(draft.demandType)
+    if (draft.categoryId != null) setCategoryId(draft.categoryId)
+    if (draft.description) setDescription(draft.description.slice(0, 500))
+    if (draft.offeredPrice) setOfferedPrice(draft.offeredPrice)
+    if (draft.urgency) setUrgency(draft.urgency)
+    if (draft.ttlMinutes) setTtlMinutes(draft.ttlMinutes)
+    if (draft.pickupAddress) setPickupAddress(draft.pickupAddress)
+    if (draft.deliveryAddress) setDeliveryAddress(draft.deliveryAddress)
+    if (draft.pickupLat != null && draft.pickupLng != null) {
+      setPickupLat(draft.pickupLat)
+      setPickupLng(draft.pickupLng)
+    }
+    if (draft.departureTime) setDepartureTime(draft.departureTime)
+    if (draft.seats) setSeats(draft.seats)
+    if (draft.destinationName) setDestinationName(draft.destinationName)
+    if (draft.storeName) setStoreName(draft.storeName)
+    if (draft.itemsCount) setItemsCount(draft.itemsCount)
+    if (draft.loadType) setLoadType(draft.loadType)
+    if (typeof draft.requiresVehicle === 'boolean') setRequiresVehicle(draft.requiresVehicle)
+    if (draft.scheduledAt) setScheduledAt(draft.scheduledAt)
+    if (draft.workersNeeded) setWorkersNeeded(draft.workersNeeded)
+    if (draft.recurrence) setRecurrence(draft.recurrence)
+    setFieldErrors({})
+    setError('')
+  }
 
   useEffect(() => {
     if (initialDraft?.lat != null && initialDraft?.lng != null) return
@@ -501,6 +560,35 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
           type: demandType,
           category_type: demandType === 'ride_share' ? 'travel' : demandType === 'express_errand' ? 'errand' : 'fixed',
         })
+        if (pickupAddress.trim()) recordRecentLocation(pickupAddress.trim(), pickupLat, pickupLng)
+        if (deliveryAddress.trim()) recordRecentLocation(deliveryAddress.trim(), deliveryLat ?? undefined, deliveryLng ?? undefined)
+        if (storeName.trim()) recordRecentLocation(storeName.trim(), pickupLat, pickupLng)
+
+        const publishDraft: Omit<LastPublishDemandDraft, 'savedAt'> = {
+          demandType: demandType === 'buscar_producto' ? 'fixed_job' : demandType,
+          categoryId,
+          description: description.trim(),
+          offeredPrice,
+          urgency,
+          ttlMinutes,
+          pickupAddress: pickupAddress.trim(),
+          deliveryAddress: deliveryAddress.trim(),
+          pickupLat,
+          pickupLng,
+          departureTime,
+          seats,
+          destinationName: destinationName.trim(),
+          storeName: storeName.trim(),
+          itemsCount,
+          loadType,
+          requiresVehicle,
+          scheduledAt,
+          workersNeeded,
+          recurrence,
+        }
+        if (demandType !== 'buscar_producto') {
+          saveLastPublishDemand(publishDraft)
+        }
         setError('')
         const requestId = Number(data?.data?.request_id)
         let snapshot: PublishedDemandSnapshot | undefined
@@ -547,8 +635,6 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
     }
   }
 
-  const [showAdvanced, setShowAdvanced] = useState(false)
-
   const inputCls = "w-full bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
 
   return (
@@ -571,6 +657,16 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
             <span className="text-xs font-black text-teal-300 uppercase tracking-wide">Esencial</span>
             <span className="text-[10px] text-slate-400">Lo minimo para publicar</span>
           </div>
+
+          {canReuseLastDraft && demandType !== 'buscar_producto' && (
+            <button
+              type="button"
+              onClick={applyLastPublishDraft}
+              className="w-full py-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs font-bold hover:bg-amber-500/20 transition"
+            >
+              ↺ Usar datos del último servicio publicado
+            </button>
+          )}
 
           {/* Tipo de servicio — PRIMERO y visible */}
           <div>
@@ -703,13 +799,44 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
               <p className="text-xs font-black text-teal-400 uppercase tracking-wider">Detalles del viaje</p>
               <div>
                 <input type="text" value={pickupAddress} onChange={e => { setPickupAddress(e.target.value); setFieldErrors(er => ({...er, pickup: ''})) }} placeholder="Origen (ej: Plaza de Renaico)" className={inputCls} />
+                <RecentLocationChips
+                  onPick={(entry) => {
+                    setPickupAddress(entry.label)
+                    if (entry.lat != null && entry.lng != null) {
+                      setPickupLat(entry.lat)
+                      setPickupLng(entry.lng)
+                    }
+                    setFieldErrors((er) => ({ ...er, pickup: '' }))
+                  }}
+                />
                 {fieldErrors.pickup && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.pickup}</p>}
               </div>
               <div>
                 <input type="text" value={deliveryAddress} onChange={e => { setDeliveryAddress(e.target.value); setDestinationName(e.target.value); setFieldErrors(er => ({...er, delivery: ''})) }} placeholder="Destino (ej: Hospital de Angol)" className={inputCls} />
+                <RecentLocationChips
+                  onPick={(entry) => {
+                    setDeliveryAddress(entry.label)
+                    setDestinationName(entry.label)
+                    if (entry.lat != null && entry.lng != null) {
+                      setDeliveryLat(entry.lat)
+                      setDeliveryLng(entry.lng)
+                    }
+                    setFieldErrors((er) => ({ ...er, delivery: '' }))
+                  }}
+                />
                 {fieldErrors.delivery && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.delivery}</p>}
               </div>
               <div>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <label className="text-xs font-semibold text-slate-400">Hora de salida</label>
+                  <button
+                    type="button"
+                    onClick={() => setDepartureTime(suggestNextDepartureLocal(30))}
+                    className="text-[10px] font-bold text-teal-300 hover:text-teal-200"
+                  >
+                    Sugerir +30 min
+                  </button>
+                </div>
                 <input type="datetime-local" value={departureTime} onChange={e => { setDepartureTime(e.target.value); setFieldErrors(er => ({...er, departure: ''})) }} className={inputCls} />
                 {fieldErrors.departure && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.departure}</p>}
               </div>
@@ -722,6 +849,12 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
               <p className="text-xs font-black text-amber-400 uppercase tracking-wider">Detalles de compra/recado</p>
               <div>
                 <input type="text" value={storeName} onChange={e => { setStoreName(e.target.value); setFieldErrors(er => ({...er, storeName: ''})) }} placeholder="Nombre del negocio (ej: Supermercado Angol)" className={inputCls} />
+                <RecentLocationChips
+                  onPick={(entry) => {
+                    setStoreName(entry.label)
+                    setFieldErrors((er) => ({ ...er, storeName: '' }))
+                  }}
+                />
                 {fieldErrors.storeName && <p data-field-error className="text-red-400 text-xs mt-1">{fieldErrors.storeName}</p>}
               </div>
               {storeName.trim().length > 2 && (
