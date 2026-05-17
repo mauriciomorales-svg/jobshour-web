@@ -1,9 +1,7 @@
 'use client'
 
-import { useState, useCallback, useEffect, Dispatch, SetStateAction } from 'react'
+import { useState, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react'
 import { apiUrl, getPublicApiBase, JSON_REQUEST_HEADERS } from '@/lib/api'
-import { feedbackCopy } from '@/lib/userFacingCopy'
-
 type WorkerStatus = 'guest' | 'inactive' | 'intermediate' | 'active'
 
 export interface AuthUser {
@@ -18,18 +16,27 @@ export interface AuthUser {
 interface UseUserAuthOptions {
   fetchWorkerData: (token: string) => Promise<void>
   setWorkerStatus: Dispatch<SetStateAction<WorkerStatus>>
+  onSessionClosed?: () => void
 }
 
-export function useUserAuth({ fetchWorkerData, setWorkerStatus }: UseUserAuthOptions) {
+export function useUserAuth({ fetchWorkerData, setWorkerStatus, onSessionClosed }: UseUserAuthOptions) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showWelcomeSlides, setShowWelcomeSlides] = useState(false)
 
-  // Onboarding de primera vez
-  useEffect(() => {
-    const seen = localStorage.getItem('welcome_slides_done')
-    if (!seen) setShowWelcomeSlides(true)
+  const welcomeEligibleRef = useRef(
+    typeof window !== 'undefined' && !localStorage.getItem('welcome_slides_done'),
+  )
+
+  const tryShowWelcomeSlides = useCallback(() => {
+    if (!welcomeEligibleRef.current) return
+    if (typeof window !== 'undefined' && localStorage.getItem('welcome_slides_done')) {
+      welcomeEligibleRef.current = false
+      return
+    }
+    welcomeEligibleRef.current = false
+    setShowWelcomeSlides(true)
   }, [])
 
   const checkAuthAndProfile = useCallback((): { canInteract: boolean; reason?: 'login' | 'profile' } => {
@@ -195,8 +202,8 @@ export function useUserAuth({ fetchWorkerData, setWorkerStatus }: UseUserAuthOpt
     localStorage.removeItem('auth_token')
     setUser(null)
     setWorkerStatus('guest')
-    alert(feedbackCopy.sessionClosed)
-  }, [setWorkerStatus])
+    onSessionClosed?.()
+  }, [setWorkerStatus, onSessionClosed])
 
   const handleLoginSuccess = useCallback(
     (_u: unknown, token: string) => {
@@ -230,6 +237,7 @@ export function useUserAuth({ fetchWorkerData, setWorkerStatus }: UseUserAuthOpt
     showOnboarding,
     setShowOnboarding,
     showWelcomeSlides,
+    tryShowWelcomeSlides,
     checkAuthAndProfile,
     fetchUserProfile,
     handleLogout,

@@ -7,11 +7,10 @@ import html2canvas from 'html2canvas'
 import { ArrowLeft, Share2, MessageCircle, FileDown, Package, ShoppingCart, BadgeCheck, Truck, ShieldCheck, ImageDown } from 'lucide-react'
 import { trackEvent } from '@/lib/analytics'
 import { downloadBrandedProductPdf } from '@/lib/brandedProductPdf'
-import { conditionLabel, inferProductCondition, marketingCopyByCategory, ProductShareTemplate } from '@/lib/productShare'
+import { conditionLabel, extractDeliveryBadgeFromDescription, inferProductCondition, marketingCopyByCategory, ProductShareTemplate } from '@/lib/productShare'
 import { openWhatsAppWithText, withShareUtm } from '@/lib/marketingShare'
 
 const INVENTARIO_API = '/inventario'
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://jobshours.com/api').replace(/\/api$/, '')
 
 type Product = {
   idproducto: number
@@ -28,6 +27,8 @@ type Worker = {
   id: number
   name: string
   store_name?: string | null
+  is_verified?: boolean
+  is_seller?: boolean
 }
 
 function formatPrice(n: number) {
@@ -84,17 +85,32 @@ export default function ProductShareView({ workerId, productId }: { workerId: nu
       setLoading(true)
       setError('')
       try {
+        const origin = getSiteOriginSafe()
         const [pRes, wRes] = await Promise.all([
           fetch(`${INVENTARIO_API}/productos/buscar?worker_id=${workerId}&limite=200`),
-          fetch(`${API_BASE}/api/v1/workers/${workerId}`),
+          fetch(`${origin}/api/v1/experts/${workerId}`, { headers: { Accept: 'application/json' } }),
         ])
         const pData = await pRes.json()
         const list = Array.isArray(pData.data) ? pData.data : []
         const found = list.find((p: Product) => Number(p.idproducto) === productId) || null
         const wData = await wRes.json().catch(() => null)
+        const expert =
+          wData && typeof wData === 'object' && wData.status === 'success' && wData.data && typeof wData.data === 'object'
+            ? (wData.data as Worker & { is_verified?: boolean; is_seller?: boolean })
+            : null
         if (!active) return
         setProduct(found)
-        setWorker(wData?.data ?? null)
+        setWorker(
+          expert
+            ? {
+                id: expert.id,
+                name: expert.name,
+                store_name: expert.store_name ?? null,
+                is_verified: Boolean(expert.is_verified),
+                is_seller: Boolean(expert.is_seller),
+              }
+            : null,
+        )
         if (!found) setError('Producto no encontrado en esta tienda')
         trackEvent('product_view_shared', { workerId, productId, found: !!found })
       } catch {
@@ -116,6 +132,11 @@ export default function ProductShareView({ workerId, productId }: { workerId: nu
   }, [searchParams])
 
   const storeName = worker?.store_name || worker?.name || `Tienda ${workerId}`
+  const deliveryBadge = extractDeliveryBadgeFromDescription(product?.descripcion)
+  const showVerifiedPill = Boolean(worker?.is_verified)
+  const showDeliveryPill = deliveryBadge.enabled
+  const showProtectedPaymentPill = Boolean(worker?.is_seller)
+  const hasTrustPills = showVerifiedPill || showDeliveryPill || showProtectedPaymentPill
   const cond = inferProductCondition(product?.descripcion)
   const cleanDescription = (product?.descripcion || '').replace(/\[estado:[^\]]+\]/i, '').trim()
   const autoCopy = product ? marketingCopyByCategory(product.nombre, product.descripcion) : ''
@@ -158,6 +179,11 @@ export default function ProductShareView({ workerId, productId }: { workerId: nu
       publicUrl: withShareUtm(publicUrl, 'product_pdf'),
       productImageUrl: product.imagen_url || null,
       template,
+      trust: {
+        sellerVerified: Boolean(worker?.is_verified),
+        sellerHasCheckout: Boolean(worker?.is_seller),
+        delivery: extractDeliveryBadgeFromDescription(product.descripcion),
+      },
     })
   }
 
@@ -202,11 +228,31 @@ export default function ProductShareView({ workerId, productId }: { workerId: nu
               <p className="text-[11px] font-bold tracking-wide text-orange-300 uppercase">Publicado con JobsHours</p>
               <h1 className="text-2xl font-black">{product.nombre}</h1>
               <p className="text-sm text-slate-300">{storeName}</p>
-              <div className="flex flex-wrap gap-2 text-[11px]">
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/70 px-2 py-1"><BadgeCheck className="w-3 h-3 text-emerald-300" /> Vendedor verificado</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/70 px-2 py-1"><Truck className="w-3 h-3 text-orange-300" /> Entrega coordinable</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/70 px-2 py-1"><ShieldCheck className="w-3 h-3 text-cyan-300" /> Pago protegido</span>
-              </div>
+              {hasTrustPills ? (
+                <div className="flex flex-wrap gap-2 text-[11px]">
+                  {showVerifiedPill && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/70 px-2 py-1">
+                      <BadgeCheck className="w-3 h-3 text-emerald-300 shrink-0" aria-hidden />
+                      Vendedor verificado
+                    </span>
+                  )}
+                  {showDeliveryPill && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/70 px-2 py-1">
+                      <Truck className="w-3 h-3 text-orange-300 shrink-0" aria-hidden />
+                      Delivery por vendedor
+                      {deliveryBadge.fee > 0 ? ` (+${formatPrice(deliveryBadge.fee)})` : ''}
+                    </span>
+                  )}
+                  {showProtectedPaymentPill && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/70 px-2 py-1">
+                      <ShieldCheck className="w-3 h-3 text-cyan-300 shrink-0" aria-hidden />
+                      Pago protegido
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-400 leading-snug">Coordiná condiciones de entrega y pago directamente con el vendedor.</p>
+              )}
             </section>
 
             <section className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-900">

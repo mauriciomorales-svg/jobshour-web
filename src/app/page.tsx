@@ -1,19 +1,21 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { getPublicApiBase } from '@/lib/api'
-import { clearMapLocalStorageFull } from '@/lib/mapStorage'
+import { clearMapLocalStorageFull, LS_MAP_VIEW_LAT, LS_MAP_VIEW_LNG } from '@/lib/mapStorage'
+import { centroidOfCoords, mapPointsToCoords } from '@/lib/mapFitBounds'
+import type { MapPoint } from './components/MapSection'
 const WorkerProfileHub = dynamic(() => import('./components/WorkerProfileHub'), { ssr: false })
 const WorkerJobs = dynamic(() => import('./components/WorkerJobs'), { ssr: false })
 const Friends = dynamic(() => import('./components/Friends'), { ssr: false })
 const VerificationCard = dynamic(() => import('./components/VerificationCard'), { ssr: false })
-const WorkerFAB = dynamic(() => import('./components/WorkerFAB'), { ssr: false })
 const CategoryManagement = dynamic(() => import('./components/CategoryManagement'), { ssr: false })
 const StoreOrdersPanel = dynamic(() => import('./components/StoreOrdersPanel'), { ssr: false })
 const WorkerQuotesPanel = dynamic(() => import('./components/WorkerQuotesPanel'), { ssr: false })
 const WorkerDetailModal = dynamic(() => import('./components/WorkerDetailModal'), { ssr: false })
 const NoCoverageOverlay = dynamic(() => import('./components/NoCoverageOverlay'), { ssr: false })
+const ProfileRequiredModal = dynamic(() => import('./components/ProfileRequiredModal'), { ssr: false })
 const ZoneBadge = dynamic(() => import('./components/ZoneBadge'), { ssr: false })
 
 import { useNotifications } from '@/hooks/useNotifications'
@@ -33,8 +35,10 @@ import { MapScreen } from './components/MapScreen'
 import { HomeModals } from './components/HomeModals'
 import type { PublishedDemandSnapshot, PublishDemandInitialDraft } from './components/PublishDemandModal'
 import { HomeSidebar } from './components/HomeSidebar'
-import { HomeLoadingScreen } from './components/HomeLoadingScreen'
 import { HomeBottomBar } from './components/HomeBottomBar'
+import { MapFetchErrorBanner } from './components/MapFetchErrorBanner'
+import { feedbackCopy } from '@/lib/userFacingCopy'
+import { registerAppToast } from '@/lib/notifyUser'
 import { HomeChatPanels } from './components/HomeChatPanels'
 import { OpenRequestsBanner } from './components/OpenRequestsBanner'
 import { WorkerAvailabilityBanner } from './components/WorkerAvailabilityBanner'
@@ -42,12 +46,26 @@ import ToastContainer from './components/Toast'
 import OfflineBanner from './components/OfflineBanner'
 import { TabKey } from './components/BottomTabBar'
 import { trackEvent } from '@/lib/analytics'
+import { isPremiumStoreMapPoint } from '@/lib/mapPremiumPin'
+import {
+  consumePubdemandaDraft,
+  parsePubdemandaSearchParams,
+  persistPubdemandaDraft,
+  sanitizePubdemandaReturnUrl,
+} from '@/lib/integrateDemandFromUrl'
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeSection, setActiveSection] = useState<'map' | 'profile' | 'jobs'>('map')
   const [activeTab, setActiveTab] = useState<TabKey>('map')
+  /** Filtro opcional de pines: servicios (trabajadores + demandas) vs tiendas premium. */
+  const [mapLayersExpanded, setMapLayersExpanded] = useState(false)
+  const [mapLayers, setMapLayers] = useState({ services: true, stores: true })
+
+  useEffect(() => {
+    if (activeSection !== 'map' || activeTab !== 'map') setMapLayersExpanded(false)
+  }, [activeSection, activeTab])
   const [showSidebar, setShowSidebar] = useState(false)
   const [showFriends, setShowFriends] = useState(false)
   const [showVerificationCard, setShowVerificationCard] = useState(false)
@@ -63,6 +81,8 @@ export default function Home() {
   const [dismissEmptyMap, setDismissEmptyMap] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [showLocationPrompt, setShowLocationPrompt] = useState(false)
+  const [showProfileRequired, setShowProfileRequired] = useState(false)
+  const welcomeSlidesScheduledRef = useRef(false)
   const [openRequestsBannerDismissed, setOpenRequestsBannerDismissed] = useState(() => {
     if (typeof window === 'undefined') return false
     return sessionStorage.getItem('jh_open_requests_banner') === '1'
@@ -83,12 +103,24 @@ export default function Home() {
   const userLatRef = useRef(0)
   const userLngRef = useRef(0)
   const mapRef = useRef<HomeMapRef | null>(null)
+  const didFitWorkersRef = useRef(false)
+  const mapDiscoveryActiveRef = useRef(false)
+  const prevEmptyKindRef = useRef<'outside' | 'empty' | null>(null)
   const ridDeepLinkHandled = useRef(false)
+  const pubdemandaHandledRef = useRef(false)
+  const pubdemandaReturnRef = useRef<string | null>(null)
+
+  const syncPublishDemandReturnRef = useCallback((draft: PublishDemandInitialDraft | null) => {
+    pubdemandaReturnRef.current = draft?.returnAfterPublish
+      ? sanitizePubdemandaReturnUrl(draft.returnAfterPublish)
+      : null
+  }, [])
 
   const openPublishDemandClean = useCallback(() => {
     setPublishDemandInitialDraft(null)
+    syncPublishDemandReturnRef(null)
     setShowPublishDemand(true)
-  }, [])
+  }, [syncPublishDemandReturnRef])
 
   const { categories } = useHomeBootstrap(openPublishDemandClean)
   const {
@@ -101,6 +133,11 @@ export default function Home() {
   } = useHomeChatState()
 
   const { toasts, toast, removeToast } = useToast()
+  useEffect(() => {
+    registerAppToast((msg, type, body) => toast(msg, type ?? 'info', body))
+    return () => registerAppToast(null)
+  }, [toast])
+
   const {
     workerProfile, setWorkerProfile,
     isSeller, setIsSeller,
@@ -119,17 +156,96 @@ export default function Home() {
     handleLoginSuccess,
     handleCompleteOnboarding,
     handleWelcomeSlidesDone,
-  } = useUserAuth({ fetchWorkerData, setWorkerStatus })
-
-  const { points, setPoints, meta, loading, outsideZone, fetchNearby, fetchNearbyRef } = useNearbyFetch({
-    user, userLatRef, userLngRef, workerStatus, toast,
+    tryShowWelcomeSlides,
+  } = useUserAuth({
+    fetchWorkerData,
+    setWorkerStatus,
+    onSessionClosed: () => toast(feedbackCopy.sessionClosed, 'info'),
   })
 
-  // Reiniciar el dismiss del overlay cada vez que llegan nuevos datos del mapa
-  // (permite que el overlay reaparezca si la nueva zona también está vacía)
+  /** Mapa a pantalla: sección mapa + pestaña inferior Mapa. */
+  const mapDiscoveryActive = activeSection === 'map' && activeTab === 'map'
+
   useEffect(() => {
-    if (!loading) setDismissEmptyMap(false)
-  }, [points, loading])
+    mapDiscoveryActiveRef.current = mapDiscoveryActive
+  }, [mapDiscoveryActive])
+
+  const handleNearbyResults = useCallback((pts: MapPoint[]) => {
+    if (didFitWorkersRef.current) return
+    if (!mapDiscoveryActiveRef.current) return
+    const coords = mapPointsToCoords(pts)
+    if (coords.length === 0) return
+    didFitWorkersRef.current = true
+    void mapRef.current?.fitToPoints(coords)
+    const center = centroidOfCoords(coords)
+    if (!center) return
+    const [cLat, cLng] = center
+    userLatRef.current = cLat
+    userLngRef.current = cLng
+    setUserLat(cLat)
+    setUserLng(cLng)
+    try {
+      localStorage.setItem(LS_MAP_VIEW_LAT, String(cLat))
+      localStorage.setItem(LS_MAP_VIEW_LNG, String(cLng))
+    } catch {
+      /* ignore */
+    }
+  }, [setUserLat, setUserLng])
+
+  const {
+    points, setPoints, meta, loading, outsideZone, fetchError, fetchNearby, fetchNearbyRef, retryFetch,
+  } = useNearbyFetch({
+    user, userLatRef, userLngRef, workerStatus, toast, onNearbyResults: handleNearbyResults,
+  })
+
+  useEffect(() => {
+    const onRetryMap = () => {
+      fetchNearbyRef.current.lastCall = 0
+      retryFetch(activeCategory)
+    }
+    window.addEventListener('jh:retry-map-fetch', onRetryMap)
+    return () => window.removeEventListener('jh:retry-map-fetch', onRetryMap)
+  }, [activeCategory, retryFetch, fetchNearbyRef])
+
+  useEffect(() => {
+    if (!mapDiscoveryActive || loading) return
+    try {
+      if (sessionStorage.getItem('jh_location_prompt_dismissed') === '1') return
+      const lat = localStorage.getItem('user_lat')
+      const lng = localStorage.getItem('user_lng')
+      if (lat && lng && !Number.isNaN(parseFloat(lat))) return
+    } catch {
+      /* ignore */
+    }
+    const t = window.setTimeout(() => setShowLocationPrompt(true), 2000)
+    return () => window.clearTimeout(t)
+  }, [mapDiscoveryActive, loading])
+
+  useEffect(() => {
+    if (loading || !mapDiscoveryActive || welcomeSlidesScheduledRef.current) return
+    welcomeSlidesScheduledRef.current = true
+    tryShowWelcomeSlides()
+  }, [loading, mapDiscoveryActive, tryShowWelcomeSlides])
+
+  const openProfileOrLogin = useCallback(
+    (reason?: 'login' | 'profile') => {
+      if (reason === 'profile') {
+        setShowProfileRequired(true)
+        return
+      }
+      setShowLoginModal(true)
+    },
+    [setShowLoginModal],
+  )
+
+  const handleDismissLocationPrompt = useCallback(() => {
+    try {
+      sessionStorage.setItem('jh_location_prompt_dismissed', '1')
+    } catch {
+      /* ignore */
+    }
+    setShowLocationPrompt(false)
+  }, [])
 
   const syncWorkerLocation = useCallback(async (lat: number, lng: number) => {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
@@ -171,6 +287,7 @@ export default function Home() {
   const { handleMapViewportMove, handleCenterOnMyLocation, handleLeafletMapReady } = useMapViewport({
     userLatRef, userLngRef, setUserLat, setUserLng,
     activeCategory, fetchNearby, fetchNearbyRef, toast, mapRef, onResolvedLocation: handleResolvedLocation,
+    mapDiscoveryActive,
   })
 
   const {
@@ -200,8 +317,13 @@ export default function Home() {
     handleDetailRequest, handleDetailCallPhone,
     handleDetailVerWorkerProfile,
   } = usePointDetail({
-    checkAuthAndProfile, setShowLoginModal, setShowChat,
-    fetchNearby, activeCategory, toast,
+    checkAuthAndProfile,
+    setShowLoginModal,
+    onProfileRequired: () => setShowProfileRequired(true),
+    setShowChat,
+    fetchNearby,
+    activeCategory,
+    toast,
   })
 
   const authTokenForFcm = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
@@ -242,6 +364,97 @@ export default function Home() {
       /* ignore */
     }
   }, [setHighlightedRequestId, toast])
+
+  /** Enlace desde tienda externa: ?pubdemanda=1&lat=&lng=&q=… — abre publicar demanda en JobsHours (tras login si hace falta). */
+  useEffect(() => {
+    if (typeof window === 'undefined' || pubdemandaHandledRef.current) return
+    let sp: URLSearchParams
+    try {
+      sp = new URLSearchParams(window.location.search)
+    } catch {
+      return
+    }
+    const draft = parsePubdemandaSearchParams(sp)
+    if (!draft) return
+    pubdemandaHandledRef.current = true
+
+    const stripParams = () => {
+      try {
+        const u = new URL(window.location.href)
+        const keys = [
+          'pubdemanda', 'jh_pubdemanda', 'lat', 'lng', 'q', 'descripcion', 'desc', 'tipo', 'tienda', 'store',
+          'origen', 'pickup', 'destino', 'delivery', 'destino_nombre', 'salida', 'source',
+          'return', 'redirect',
+          'utm_source', 'utm_medium', 'utm_campaign',
+        ]
+        keys.forEach(k => u.searchParams.delete(k))
+        window.history.replaceState({}, '', u.pathname + (u.search || '') + u.hash)
+      } catch {
+        /* ignore */
+      }
+    }
+    stripParams()
+
+    setUserLat(draft.lat)
+    setUserLng(draft.lng)
+    userLatRef.current = draft.lat
+    userLngRef.current = draft.lng
+    setActiveTab('map')
+    setDashHidden(true)
+
+    trackEvent('pubdemanda_deep_link', {
+      tipo: draft.demandType ?? 'express_errand',
+      has_source: Boolean(draft.externalSource),
+      has_return: Boolean(draft.returnAfterPublish),
+    })
+
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+    if (!token) {
+      persistPubdemandaDraft(draft)
+      setShowLoginModal(true)
+      toast('Iniciá sesión en JobsHours para publicar la demanda desde tu tienda.', 'info')
+      return
+    }
+    if (!user) {
+      persistPubdemandaDraft(draft)
+      return
+    }
+
+    const a = checkAuthAndProfile()
+    if (!a.canInteract) {
+      persistPubdemandaDraft(draft)
+      openProfileOrLogin(a.reason)
+      toast('Completá tu perfil (foto y nombre) para publicar la demanda.', 'info')
+      return
+    }
+
+    setPublishDemandInitialDraft(draft)
+    syncPublishDemandReturnRef(draft)
+    setShowPublishDemand(true)
+    toast('Pedido enlazado: revisá y publicá la demanda en JobsHours.', 'success')
+  }, [checkAuthAndProfile, openProfileOrLogin, syncPublishDemandReturnRef, toast, user])
+
+  useEffect(() => {
+    if (!user) return
+    const draft = consumePubdemandaDraft()
+    if (!draft) return
+    const a = checkAuthAndProfile()
+    if (!a.canInteract) {
+      persistPubdemandaDraft(draft)
+      openProfileOrLogin(a.reason)
+      return
+    }
+    setUserLat(draft.lat)
+    setUserLng(draft.lng)
+    userLatRef.current = draft.lat
+    userLngRef.current = draft.lng
+    setActiveTab('map')
+    setDashHidden(true)
+    setPublishDemandInitialDraft(draft)
+    syncPublishDemandReturnRef(draft)
+    setShowPublishDemand(true)
+    toast('Pedido enlazado: revisá y publicá la demanda en JobsHours.', 'success')
+  }, [user, checkAuthAndProfile, openProfileOrLogin, syncPublishDemandReturnRef, toast])
 
   useEffect(() => {
     const onOnboardingComplete = () => {
@@ -332,14 +545,15 @@ export default function Home() {
   }, [ratingRequestId, user])
 
   const handleTabChange = useCallback((tab: TabKey) => {
+    if (tab === 'profile' && !user) {
+      setShowLoginModal(true)
+      return
+    }
     setActiveTab(tab)
     if (tab === 'map') { setDashHidden(true); setShowSolicitudesPanel(false); setActiveSection('map') }
     if (tab === 'feed') { setDashHidden(false); setShowSolicitudesPanel(false); setActiveSection('map') }
     if (tab === 'requests') { setDashHidden(true); setShowSolicitudesPanel(true); setActiveSection('map'); setChatBadge(0) }
-    if (tab === 'profile') {
-      if (!user) { setShowLoginModal(true); return }
-      setActiveSection('profile')
-    }
+    if (tab === 'profile') setActiveSection('profile')
   }, [user, setShowLoginModal])
 
   const handleMenuToggle = useCallback(() => {
@@ -347,6 +561,9 @@ export default function Home() {
   }, [])
 
   const handlePublishDemandSuccess = useCallback((snapshot?: PublishedDemandSnapshot) => {
+    const returnUrl = pubdemandaReturnRef.current
+    syncPublishDemandReturnRef(null)
+
     setShowPublishDemand(false)
     setPublishDemandInitialDraft(null)
     setShowPublishSuccess(true)
@@ -371,7 +588,14 @@ export default function Home() {
       fetchNearby()
       if (!skipFeedReload) window.dispatchEvent(new Event('reload-feed'))
     }, 1000)
-  }, [fetchNearby, toast, setPoints])
+
+    const safeReturn = returnUrl ? sanitizePubdemandaReturnUrl(returnUrl) : null
+    if (safeReturn) {
+      window.setTimeout(() => {
+        window.location.assign(safeReturn)
+      }, 450)
+    }
+  }, [fetchNearby, syncPublishDemandReturnRef, toast, setPoints])
 
   const handleDashboardRefresh = useCallback(() => {
     setPoints([]); fetchNearby()
@@ -386,12 +610,11 @@ export default function Home() {
   const checkAuthAndAct = useCallback((action: () => void) => {
     const a = checkAuthAndProfile()
     if (!a.canInteract) {
-      if (a.reason === 'login') setShowLoginModal(true)
-      else setShowOnboarding(true)
+      openProfileOrLogin(a.reason)
       return
     }
     action()
-  }, [checkAuthAndProfile, setShowLoginModal, setShowOnboarding])
+  }, [checkAuthAndProfile, openProfileOrLogin])
 
   const handleSidebarTryPublish = useCallback(() => {
     checkAuthAndAct(() => { openPublishDemandClean(); setShowSidebar(false) })
@@ -476,15 +699,53 @@ export default function Home() {
     }
   }, [selectedDetail, toast])
 
-  const filtered = (() => {
+  const searchFiltered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return points
     if (meta?.city && meta.city.toLowerCase().includes(q)) return points
-    return points.filter((p) =>
-      p.name.toLowerCase().includes(q) ||
-      (p.category_slug && p.category_slug.toLowerCase().includes(q))
+    return points.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.category_slug && p.category_slug.toLowerCase().includes(q)) ||
+        (p.category_name && p.category_name.toLowerCase().includes(q)) ||
+        (p.description && p.description.toLowerCase().includes(q)),
     )
-  })()
+  }, [points, searchQuery, meta?.city])
+
+  const filtered = useMemo(() => {
+    if (mapLayers.services && mapLayers.stores) return searchFiltered
+    return searchFiltered.filter((p) => {
+      const store = isPremiumStoreMapPoint(p)
+      if (store) return mapLayers.stores
+      return mapLayers.services
+    })
+  }, [searchFiltered, mapLayers.services, mapLayers.stores])
+
+  useEffect(() => {
+    if (loading) return
+    const kind = outsideZone ? 'outside' : filtered.length === 0 ? 'empty' : null
+    if (kind && prevEmptyKindRef.current !== kind) {
+      prevEmptyKindRef.current = kind
+      setDismissEmptyMap(false)
+    }
+    if (!kind) prevEmptyKindRef.current = null
+  }, [outsideZone, loading, filtered.length])
+
+  const toggleMapLayer = useCallback((key: 'services' | 'stores') => {
+    setMapLayers((prev) => {
+      const next = { ...prev, [key]: !prev[key] }
+      if (!next.services && !next.stores) return prev
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!selectedDetail) return
+    if (filtered.some((p) => p.id === selectedDetail.id)) return
+    setSelectedDetail(null)
+    setLoadingDetail(false)
+    dismissPremiumHandoff()
+  }, [filtered, selectedDetail, setSelectedDetail, setLoadingDetail, dismissPremiumHandoff])
 
   const handleCategoryClick = (catId: number) => {
     const next = activeCategory === catId ? null : catId
@@ -492,7 +753,11 @@ export default function Home() {
   }
 
   const showEmptyMapOverlay =
-    activeTab === 'map' && !loading && (outsideZone || (filtered.length === 0)) && !selectedDetail && !dismissEmptyMap
+    mapDiscoveryActive &&
+    !loading &&
+    (outsideZone || (filtered.length === 0)) &&
+    !selectedDetail &&
+    !dismissEmptyMap
 
   const openRequestsCintilloVisible =
     !!user &&
@@ -500,6 +765,7 @@ export default function Home() {
     !showChat &&
     !showSolicitudesPanel &&
     activeSection === 'map' &&
+    activeTab === 'map' &&
     openActiveRequestsCount >= 1
 
   const workerAvailabilityCintilloVisible =
@@ -510,6 +776,7 @@ export default function Home() {
     !showChat &&
     !showSolicitudesPanel &&
     activeSection === 'map' &&
+    activeTab === 'map' &&
     !statusLoading
 
   return (
@@ -543,11 +810,9 @@ export default function Home() {
         highlightedRequestId={highlightedRequestId}
         onLeafletReady={handleLeafletMapReady}
         onMapMove={handleMapViewportMove}
-        showLocationFab={activeTab === 'map'}
+        showLocationFab={mapDiscoveryActive}
         onCenterOnMyLocation={handleCenterOnMyLocation}
-        showEmptyOverlay={showEmptyMapOverlay}
-        onDismissEmptyMap={() => setDismissEmptyMap(true)}
-        onPublishFromEmpty={handlePublishFromEmptyMap}
+        mapLoading={mapDiscoveryActive && loading}
         notifBadge={notifBadge}
         onMenuToggle={handleMenuToggle}
         headerUser={user ? { id: user.id, firstName: user.firstName, avatarUrl: user.avatarUrl } : null}
@@ -579,9 +844,9 @@ export default function Home() {
         onDetailChat={async (explicitRequestId) => {
           const auth = checkAuthAndProfile()
           if (!auth.canInteract) {
-            setShowLoginModal(true)
+            openProfileOrLogin(auth.reason)
             toast(
-              auth.reason === 'login' ? 'Inicia sesión para continuar' : 'Completa tu perfil',
+              auth.reason === 'login' ? 'Iniciá sesión para continuar' : 'Completá foto y nombre en tu perfil',
               auth.reason === 'login' ? 'info' : 'warning',
             )
             return
@@ -611,7 +876,7 @@ export default function Home() {
               setShowChat(true)
             } else {
               setShowRequestModal(true)
-              toast('Primero enviemos una solicitud para habilitar el chat.', 'info')
+              toast('Creando conversación…', 'info', 'Un momento y podés chatear.')
             }
             return
           }
@@ -639,7 +904,7 @@ export default function Home() {
         setShowRequestModal={setShowRequestModal}
         setDashHidden={setDashHidden}
         setShowLoginModal={setShowLoginModal}
-        setShowOnboarding={setShowOnboarding}
+        onProfileRequired={() => setShowProfileRequired(true)}
         setActiveRequestId={setActiveRequestId}
         setChatContext={setChatContext}
         setShowChat={setShowChat}
@@ -648,10 +913,15 @@ export default function Home() {
         checkAuthAndProfile={checkAuthAndProfile}
         toast={toast}
         showLocationPrompt={showLocationPrompt}
-        onDismissLocationPrompt={() => setShowLocationPrompt(false)}
+        onDismissLocationPrompt={handleDismissLocationPrompt}
         outsideZone={outsideZone}
         premiumHandoff={premiumHandoff}
         onDismissPremiumHandoff={dismissPremiumHandoff}
+        mapLayersExpanded={mapLayersExpanded}
+        onMapLayersExpandedChange={setMapLayersExpanded}
+        mapLayers={mapLayers}
+        onToggleMapLayer={toggleMapLayer}
+        mapDiscoveryActive={mapDiscoveryActive}
       />
 
       <HomeChatPanels
@@ -692,7 +962,9 @@ export default function Home() {
         }}
         onOpenPublishDemandFromChat={(draft) => {
           checkAuthAndAct(() => {
-            setPublishDemandInitialDraft(draft ?? null)
+            const d = draft ?? null
+            setPublishDemandInitialDraft(d)
+            syncPublishDemandReturnRef(d)
             setShowPublishDemand(true)
           })
         }}
@@ -750,18 +1022,6 @@ export default function Home() {
         />
       )}
 
-      <WorkerFAB
-        user={user}
-        onActivate={() => fetchNearby()}
-        onShowLogin={() => setShowLoginModal(true)}
-        onRequireCategory={() => { if (user) { setActiveSection('profile'); setShowSidebar(true) } }}
-        onStatusChange={() => {
-          fetchNearby()
-          const token = localStorage.getItem('auth_token')
-          if (token) fetchUserProfile(token)
-        }}
-      />
-
       <OpenRequestsBanner
         count={openActiveRequestsCount}
         hidden={
@@ -769,7 +1029,8 @@ export default function Home() {
           openRequestsBannerDismissed ||
           showChat ||
           showSolicitudesPanel ||
-          activeSection !== 'map'
+          activeSection !== 'map' ||
+          activeTab !== 'map'
         }
         onOpen={() => handleTabChange('requests')}
         onDismiss={() => {
@@ -825,9 +1086,14 @@ export default function Home() {
         </button>
       )}
 
-      {loading && <HomeLoadingScreen />}
+      {mapDiscoveryActive && fetchError !== 'none' && (
+        <MapFetchErrorBanner
+          error={fetchError}
+          onRetry={() => retryFetch(activeCategory)}
+        />
+      )}
 
-      {activeTab === 'map' && <ZoneBadge />}
+      {mapDiscoveryActive && <ZoneBadge />}
 
       {showEmptyMapOverlay && (
         <NoCoverageOverlay
@@ -854,6 +1120,7 @@ export default function Home() {
         onClosePublishDemand={() => {
           setShowPublishDemand(false)
           setPublishDemandInitialDraft(null)
+          syncPublishDemandReturnRef(null)
         }}
         publishDemandInitialDraft={publishDemandInitialDraft}
         publishDemandPublisher={
@@ -878,6 +1145,16 @@ export default function Home() {
         onCloseRegister={() => setShowRegisterModal(false)}
         onRegisterSuccess={(u: any, token: string) => { setShowRegisterModal(false); handleLoginSuccess(u, token) }}
         onSwitchToLogin={() => { setShowRegisterModal(false); setShowLoginModal(true) }}
+      />
+
+      <ProfileRequiredModal
+        open={showProfileRequired}
+        onClose={() => setShowProfileRequired(false)}
+        onGoProfile={() => {
+          setShowProfileRequired(false)
+          if (user) setActiveSection('profile')
+          else setShowLoginModal(true)
+        }}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

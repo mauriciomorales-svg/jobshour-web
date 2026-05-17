@@ -1020,6 +1020,7 @@ export default function TiendaPage() {
   const [showQuickPublish, setShowQuickPublish] = useState(false)
   const [editingProducto, setEditingProducto] = useState<Producto | null>(null)
   const [tab, setTab] = useState<'catalogo' | 'stats'>('catalogo')
+  const [ownerToolsOpen, setOwnerToolsOpen] = useState(false)
   const [stats, setStats] = useState<any>(null)
   const [loadingStats, setLoadingStats] = useState(false)
   const [marketingStats, setMarketingStats] = useState<{
@@ -1758,8 +1759,33 @@ export default function TiendaPage() {
         </div>
       </div>
 
+      {!isOwner && canUseCart && (
+        <div className="max-w-5xl mx-auto px-4 -mt-4 pb-2">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm">
+            <p className="w-full text-xs text-gray-500 sm:w-auto sm:flex-1">
+              Explora el catálogo, arma tu carrito o pide una cotización al vendedor.
+            </p>
+            <button
+              type="button"
+              onClick={() => document.getElementById('tienda-catalogo')?.scrollIntoView({ behavior: 'smooth' })}
+              className="text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition"
+            >
+              Ver catálogo
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCart(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-400 px-3 py-1.5 rounded-lg transition"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              Carrito{cartCount > 0 ? ` (${cartCount})` : ''}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Buscador + Categorías */}
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-3">
+      <div id="tienda-catalogo" className="max-w-5xl mx-auto px-4 py-6 space-y-3">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input type="text" value={buscar} onChange={e => setBuscar(e.target.value)}
@@ -1781,136 +1807,134 @@ export default function TiendaPage() {
           </div>
         )}
         {isOwner && (
-          <div className="rounded-xl border border-orange-200 bg-orange-50/90 p-3 max-w-2xl">
-            <p className="text-xs font-bold text-orange-700">Categorías de tienda</p>
-            <p className="text-[11px] text-orange-700/80 mt-1">
-              Estas categorías organizan tus productos. Tus categorías de servicios se configuran en Mi Perfil.
-            </p>
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {categorias.map((c) => (
-                <span key={c.idcategoria} className="px-2 py-0.5 bg-white text-orange-700 border border-orange-200 rounded-full text-xs font-semibold">
-                  {c.nombre}
-                </span>
-              ))}
-              {categorias.length === 0 && <span className="text-xs text-orange-700/70">Sin categorías de tienda aún.</span>}
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              {!showAddStoreCategory ? (
-                <button
-                  type="button"
-                  onClick={() => setShowAddStoreCategory(true)}
-                  className="text-xs font-bold text-orange-700 bg-white border border-orange-300 px-2.5 py-1 rounded-lg hover:bg-orange-100 transition"
-                >
-                  + Agregar categoría de tienda
-                </button>
-              ) : (
-                <>
-                  <input
-                    value={newStoreCategory}
-                    onChange={(e) => setNewStoreCategory(e.target.value)}
-                    placeholder="Ej: Herramientas, Usados, Ferretería..."
-                    className="flex-1 min-w-[240px] bg-white border border-orange-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-800 outline-none focus:ring-2 focus:ring-orange-300"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddStoreCategory}
-                    disabled={savingStoreCategory || !newStoreCategory.trim()}
-                    className="text-xs font-bold text-white bg-orange-500 px-2.5 py-1.5 rounded-lg disabled:opacity-50"
-                  >
-                    {savingStoreCategory ? 'Guardando...' : 'Guardar'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setShowAddStoreCategory(false); setNewStoreCategory('') }}
-                    className="text-xs font-bold text-orange-700 bg-white border border-orange-300 px-2.5 py-1.5 rounded-lg"
-                  >
-                    Cancelar
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-        {isOwner && (
-          <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
-            <p className="text-xs font-bold text-orange-500">✏️ Modo propietario — toca cualquier producto para editar</p>
-            <button onClick={() => { setTab('stats'); fetchStats() }}
-              className="text-xs font-bold text-orange-600 bg-white border border-orange-300 px-3 py-1 rounded-lg hover:bg-orange-100 transition ml-2 whitespace-nowrap">
-              📊 Ver estadísticas
-            </button>
-          </div>
-        )}
-        {isOwner && (
-          <StorePublicHostPanel
-            storeUrl={publicTiendaUrl(workerId, { publicHost: worker?.public_store_host })}
-          />
-        )}
-        {isOwner && (
-          <div className="space-y-2">
-            <div className="rounded-xl border border-teal-200 bg-teal-50 p-3 max-w-2xl">
-              <p className="text-xs font-black text-teal-800">Publicacion Express</p>
-              <p className="text-[11px] text-teal-700 mt-1">5 campos, publica rapido y comparte por WhatsApp al instante.</p>
-              <div className="mt-2 flex gap-2">
+          <div className="rounded-xl border border-orange-200 bg-white max-w-2xl overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 bg-orange-50 border-b border-orange-100">
+              <p className="text-xs font-bold text-orange-800">Panel de vendedor</p>
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => setShowQuickPublish(true)}
                   className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-500 px-3 py-1.5 rounded-lg transition"
                 >
-                  Publicar en 30 segundos
+                  + Publicar producto
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(true)}
-                  className="text-xs font-bold text-teal-700 bg-white border border-teal-300 px-3 py-1.5 rounded-lg transition hover:bg-teal-100"
+                  onClick={() => setOwnerToolsOpen((o) => !o)}
+                  className="text-xs font-bold text-orange-700 bg-white border border-orange-300 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition"
                 >
-                  Modo avanzado
+                  {ownerToolsOpen ? 'Ocultar opciones' : 'Más opciones'}
                 </button>
               </div>
             </div>
-            <div className="flex gap-2 bg-white border border-gray-200 rounded-xl p-1 w-fit">
-              <button
-                type="button"
-                onClick={() => {
-                  setCheckoutMode('purchase')
-                  trackEvent('tienda_owner_mode', { mode: 'purchase', worker_id: workerId })
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${checkoutMode === 'purchase' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                Catálogo normal
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCheckoutMode('quote')
-                  trackEvent('tienda_owner_mode', { mode: 'quote', worker_id: workerId })
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${checkoutMode === 'quote' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                🧺 {surfaceCopy.tiendaModeLoteListo}
-              </button>
-            </div>
-            {checkoutMode === 'quote' && (
-              <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-left text-xs text-amber-950 leading-relaxed max-w-lg">
-                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" aria-hidden />
-                <p>
-                  <span className="font-bold">{surfaceCopy.tiendaLoteListoHintTitle}:</span> {surfaceCopy.tiendaLoteListoHintBody}
-                </p>
+            {ownerToolsOpen && (
+              <div className="p-3 space-y-3 border-b border-orange-100">
+                <div className="rounded-xl border border-orange-200 bg-orange-50/90 p-3">
+                  <p className="text-xs font-bold text-orange-700">Categorías de tienda</p>
+                  <p className="text-[11px] text-orange-700/80 mt-1">
+                    Estas categorías organizan tus productos. Tus categorías de servicios se configuran en Mi Perfil.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {categorias.map((c) => (
+                      <span key={c.idcategoria} className="px-2 py-0.5 bg-white text-orange-700 border border-orange-200 rounded-full text-xs font-semibold">
+                        {c.nombre}
+                      </span>
+                    ))}
+                    {categorias.length === 0 && <span className="text-xs text-orange-700/70">Sin categorías de tienda aún.</span>}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    {!showAddStoreCategory ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddStoreCategory(true)}
+                        className="text-xs font-bold text-orange-700 bg-white border border-orange-300 px-2.5 py-1 rounded-lg hover:bg-orange-100 transition"
+                      >
+                        + Agregar categoría de tienda
+                      </button>
+                    ) : (
+                      <>
+                        <input
+                          value={newStoreCategory}
+                          onChange={(e) => setNewStoreCategory(e.target.value)}
+                          placeholder="Ej: Herramientas, Usados, Ferretería..."
+                          className="flex-1 min-w-[240px] bg-white border border-orange-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-800 outline-none focus:ring-2 focus:ring-orange-300"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddStoreCategory}
+                          disabled={savingStoreCategory || !newStoreCategory.trim()}
+                          className="text-xs font-bold text-white bg-orange-500 px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+                        >
+                          {savingStoreCategory ? 'Guardando...' : 'Guardar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setShowAddStoreCategory(false); setNewStoreCategory('') }}
+                          className="text-xs font-bold text-orange-700 bg-white border border-orange-300 px-2.5 py-1.5 rounded-lg"
+                        >
+                          Cancelar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs font-bold text-orange-500 px-1">✏️ Toca un producto para editarlo</p>
+                <StorePublicHostPanel
+                  storeUrl={publicTiendaUrl(workerId, { publicHost: worker?.public_store_host })}
+                />
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(true)}
+                    className="text-xs font-bold text-teal-700 bg-white border border-teal-300 px-3 py-1.5 rounded-lg transition hover:bg-teal-100"
+                  >
+                    Modo avanzado (formulario completo)
+                  </button>
+                  <div className="flex gap-2 bg-white border border-gray-200 rounded-xl p-1 w-fit">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCheckoutMode('purchase')
+                        trackEvent('tienda_owner_mode', { mode: 'purchase', worker_id: workerId })
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${checkoutMode === 'purchase' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      Catálogo normal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCheckoutMode('quote')
+                        trackEvent('tienda_owner_mode', { mode: 'quote', worker_id: workerId })
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${checkoutMode === 'quote' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      🧺 {surfaceCopy.tiendaModeLoteListo}
+                    </button>
+                  </div>
+                  {checkoutMode === 'quote' && (
+                    <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-left text-xs text-amber-950 leading-relaxed max-w-lg">
+                      <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" aria-hidden />
+                      <p>
+                        <span className="font-bold">{surfaceCopy.tiendaLoteListoHintTitle}:</span> {surfaceCopy.tiendaLoteListoHintBody}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Tabs solo owner */}
-        {isOwner && (
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-            <button onClick={() => setTab('catalogo')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${tab === 'catalogo' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-              🛍️ Catálogo
-            </button>
-            <button onClick={() => { setTab('stats'); fetchStats() }}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${tab === 'stats' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-              📊 Estadísticas
-            </button>
+            <div className="px-3 py-2.5">
+              <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+                <button onClick={() => setTab('catalogo')}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${tab === 'catalogo' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
+                  🛍️ Catálogo
+                </button>
+                <button onClick={() => { setTab('stats'); fetchStats() }}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${tab === 'stats' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
+                  📊 Estadísticas
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

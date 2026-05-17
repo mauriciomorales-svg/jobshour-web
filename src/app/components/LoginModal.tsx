@@ -4,8 +4,10 @@ import { uiTone } from '@/lib/uiTone'
 import LegalSupportLinks from './LegalSupportLinks'
 
 import { useState, useEffect } from 'react'
-import { isCapacitor, openExternalBrowser, onAppResume } from '@/lib/capacitor'
+import { isCapacitor, openExternalBrowser } from '@/lib/capacitor'
 import { apiUrl, JSON_REQUEST_HEADERS } from '@/lib/api'
+
+type RecoverStep = 'email' | 'code' | 'password' | 'done'
 
 interface Props {
   isOpen: boolean
@@ -15,16 +17,20 @@ interface Props {
   onForgotPassword: () => void
 }
 
-export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegister, onForgotPassword }: Props) {
+export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegister }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [recoverStep, setRecoverStep] = useState<RecoverStep | null>(null)
+  const [recoverEmail, setRecoverEmail] = useState('')
+  const [recoverCode, setRecoverCode] = useState('')
+  const [recoverPassword, setRecoverPassword] = useState('')
+  const [recoverMessage, setRecoverMessage] = useState<string | null>(null)
   const [recovering, setRecovering] = useState(false)
 
-  // Cargar credenciales guardadas al abrir
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedEmail = localStorage.getItem('saved_email')
@@ -35,6 +41,16 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
     }
   }, [])
 
+  useEffect(() => {
+    if (!isOpen) {
+      setRecoverStep(null)
+      setRecoverCode('')
+      setRecoverPassword('')
+      setRecoverMessage(null)
+      setError(null)
+    }
+  }, [isOpen])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -44,7 +60,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: JSON_REQUEST_HEADERS,
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       })
 
       const data = await res.json()
@@ -55,7 +71,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
         return
       }
 
-      // Guardar credenciales si "Recordarme" está activo
       if (rememberMe) {
         localStorage.setItem('saved_email', email)
       } else {
@@ -64,48 +79,76 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
 
       onSuccess(data.user, data.token)
       onClose()
-    } catch (err) {
+    } catch {
       setError(feedbackCopy.networkErrorRetry)
       setLoading(false)
     }
   }
 
-  const handleForgotPassword = async () => {
-    const targetEmail = (email || '').trim() || window.prompt('Ingresa tu correo para recuperar contrasena:', '') || ''
-    if (!targetEmail) return
+  const startRecover = () => {
+    setRecoverEmail((email || '').trim())
+    setRecoverStep('email')
+    setRecoverMessage(null)
+    setError(null)
+  }
+
+  const sendRecoverCode = async () => {
+    const target = recoverEmail.trim()
+    if (!target) {
+      setRecoverMessage('Ingresá tu correo.')
+      return
+    }
     setRecovering(true)
+    setRecoverMessage(null)
     try {
       const r = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: JSON_REQUEST_HEADERS,
-        body: JSON.stringify({ email: targetEmail }),
+        body: JSON.stringify({ email: target }),
       })
       const d = await r.json().catch(() => ({}))
-      alert(d.message || 'Si el correo existe, te enviamos un codigo.')
+      setRecoverMessage(d.message || 'Si el correo existe, te enviamos un código.')
+      setRecoverStep('code')
+    } catch {
+      setRecoverMessage(feedbackCopy.networkError)
+    } finally {
+      setRecovering(false)
+    }
+  }
 
-      const code = window.prompt('Ingresa el codigo de 6 digitos que recibiste:')
-      if (!code) return
-      const newPassword = window.prompt('Ingresa tu nueva contrasena (min 8 caracteres):')
-      if (!newPassword || newPassword.length < 8) {
-        alert('La contrasena debe tener al menos 8 caracteres.')
-        return
-      }
-
+  const submitNewPassword = async () => {
+    const code = recoverCode.trim()
+    if (code.length < 4) {
+      setRecoverMessage('Ingresá el código de 6 dígitos.')
+      return
+    }
+    if (!recoverPassword || recoverPassword.length < 8) {
+      setRecoverMessage('La contraseña debe tener al menos 8 caracteres.')
+      return
+    }
+    setRecovering(true)
+    setRecoverMessage(null)
+    try {
       const rr = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: JSON_REQUEST_HEADERS,
-        body: JSON.stringify({ email: targetEmail, code: code.trim(), password: newPassword }),
+        body: JSON.stringify({
+          email: recoverEmail.trim(),
+          code,
+          password: recoverPassword,
+        }),
       })
       const rd = await rr.json().catch(() => ({}))
       if (!rr.ok) {
-        alert(rd.message || 'No se pudo restablecer la contrasena')
+        setRecoverMessage(rd.message || 'No se pudo restablecer la contraseña.')
         return
       }
-      alert(rd.message || 'Contrasena actualizada')
-      setEmail(targetEmail)
+      setRecoverMessage(rd.message || 'Contraseña actualizada. Ya podés iniciar sesión.')
+      setEmail(recoverEmail.trim())
       setPassword('')
+      setRecoverStep('done')
     } catch {
-      alert(feedbackCopy.networkError)
+      setRecoverMessage(feedbackCopy.networkError)
     } finally {
       setRecovering(false)
     }
@@ -118,7 +161,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
     await openExternalBrowser(authUrl)
   }
 
-  // Escuchar retorno de OAuth en Capacitor via deep link
   useEffect(() => {
     if (!isCapacitor()) return
 
@@ -127,9 +169,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
         const urlObj = new URL(url)
         const token = urlObj.searchParams.get('token')
         const user = urlObj.searchParams.get('user')
-        const error = urlObj.searchParams.get('error')
+        const oauthError = urlObj.searchParams.get('error')
 
-        if (error) {
+        if (oauthError) {
           setError(feedbackCopy.oauthGoogleFailed)
           return
         }
@@ -144,7 +186,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
       }
     }
 
-    // Escuchar appUrlOpen (deep link jobshour://auth?token=...)
     let removeListener: () => void = () => {}
     import('@capacitor/app').then(({ App }) => {
       App.addListener('appUrlOpen', (data: { url: string }) => {
@@ -157,10 +198,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
     return () => removeListener()
   }, [onSuccess, onClose])
 
+  if (!isOpen) return null
+
   return (
     <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto py-4">
       <div className="bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl w-[90%] max-w-md mx-4 overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className={uiTone.authHeader}>
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
           <button
@@ -179,170 +221,222 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToRegis
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <h3 className="text-white text-2xl font-black text-center">{surfaceCopy.loginWelcome}</h3>
-            <p className="text-white/80 text-sm text-center mt-1">{surfaceCopy.loginContinueSubtitle}</p>
+            <h3 className="text-white text-2xl font-black text-center">
+              {recoverStep ? 'Recuperar contraseña' : surfaceCopy.loginWelcome}
+            </h3>
+            <p className="text-white/80 text-sm text-center mt-1">
+              {recoverStep ? 'Te guiamos paso a paso' : surfaceCopy.loginContinueSubtitle}
+            </p>
           </div>
         </div>
 
-        {/* Body */}
         <div className="p-6">
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4 animate-slide-up">
-              <p className="text-red-400 text-sm font-semibold flex items-center gap-2">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                {error}
-              </p>
+          {error && !recoverStep && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4">
+              <p className="text-red-400 text-sm font-semibold">{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-bold text-slate-300 mb-2">
-                Email
-              </label>
-              <div className="relative">
+          {recoverMessage && (
+            <div className="bg-teal-500/10 border border-teal-500/30 rounded-xl p-3 mb-4">
+              <p className="text-teal-300 text-sm">{recoverMessage}</p>
+            </div>
+          )}
+
+          {recoverStep ? (
+            <div className="space-y-4">
+              {recoverStep === 'email' && (
+                <>
+                  <label className="block text-sm font-bold text-slate-300 mb-2">Correo</label>
+                  <input
+                    type="email"
+                    value={recoverEmail}
+                    onChange={(e) => setRecoverEmail(e.target.value)}
+                    placeholder="tu@email.com"
+                    className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 text-white rounded-xl outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    disabled={recovering}
+                    onClick={sendRecoverCode}
+                    className={uiTone.ctaFormSaveWide}
+                  >
+                    {recovering ? 'Enviando…' : 'Enviar código'}
+                  </button>
+                </>
+              )}
+
+              {recoverStep === 'code' && (
+                <>
+                  <label className="block text-sm font-bold text-slate-300 mb-2">Código (6 dígitos)</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={recoverCode}
+                    onChange={(e) => setRecoverCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 text-white rounded-xl outline-none focus:border-amber-500 tracking-widest text-center text-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setRecoverStep('password')}
+                    disabled={recoverCode.trim().length < 4}
+                    className={uiTone.ctaFormSaveWide}
+                  >
+                    Siguiente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={sendRecoverCode}
+                    disabled={recovering}
+                    className="w-full text-sm text-amber-400 font-semibold"
+                  >
+                    Reenviar código
+                  </button>
+                </>
+              )}
+
+              {recoverStep === 'password' && (
+                <>
+                  <label className="block text-sm font-bold text-slate-300 mb-2">Nueva contraseña</label>
+                  <input
+                    type="password"
+                    value={recoverPassword}
+                    onChange={(e) => setRecoverPassword(e.target.value)}
+                    placeholder="Mínimo 8 caracteres"
+                    minLength={8}
+                    className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 text-white rounded-xl outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    disabled={recovering}
+                    onClick={submitNewPassword}
+                    className={uiTone.ctaFormSaveWide}
+                  >
+                    {recovering ? 'Guardando…' : 'Guardar contraseña'}
+                  </button>
+                </>
+              )}
+
+              {recoverStep === 'done' && (
+                <button
+                  type="button"
+                  onClick={() => setRecoverStep(null)}
+                  className={uiTone.ctaFormSaveWide}
+                >
+                  Volver a iniciar sesión
+                </button>
+              )}
+
+              {recoverStep !== 'done' && (
+                <button
+                  type="button"
+                  onClick={() => setRecoverStep(null)}
+                  className="w-full text-sm text-slate-400 hover:text-white"
+                >
+                  ← Volver al login
+                </button>
+              )}
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-300 mb-2">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu@email.com"
                   required
-                  className="w-full px-4 py-3 pl-11 bg-slate-800 border-2 border-slate-700 text-white placeholder-slate-500 rounded-xl outline-none transition-all focus:border-amber-500"
+                  className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 text-white rounded-xl outline-none focus:border-amber-500"
                 />
-                <svg className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                </svg>
               </div>
-            </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-bold text-slate-300 mb-2">
-                Contraseña
-              </label>
-              <div className="relative">
+              <div>
+                <label className="block text-sm font-bold text-slate-300 mb-2">Contraseña</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={8}
+                    className="w-full px-4 py-3 pr-11 bg-slate-800 border-2 border-slate-700 text-white rounded-xl outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  >
+                    {showPassword ? '🙈' : '👁'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  minLength={8}
-                  className="w-full px-4 py-3 pl-11 pr-11 bg-slate-800 border-2 border-slate-700 text-white placeholder-slate-500 rounded-xl outline-none transition-all focus:border-amber-500"
+                  type="checkbox"
+                  id="remember"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-amber-500 rounded border-slate-600 bg-slate-800"
                 />
-                <svg className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
+                <label htmlFor="remember" className="text-sm text-slate-400">
+                  {surfaceCopy.rememberMe}
+                </label>
+              </div>
+
+              <div className="text-right">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
+                  onClick={startRecover}
+                  className="text-sm text-amber-400 hover:text-amber-300 font-semibold"
                 >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
+                  {surfaceCopy.forgotPassword}
                 </button>
               </div>
-            </div>
 
-            {/* Remember Me */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="remember"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 text-amber-500 rounded border-slate-600 bg-slate-800 focus:ring-amber-500"
-              />
-              <label htmlFor="remember" className="text-sm text-slate-400">
-                {surfaceCopy.rememberMe}
-              </label>
-            </div>
-
-            {/* Forgot Password */}
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                disabled={recovering}
-                className="text-sm text-amber-400 hover:text-amber-300 font-semibold transition"
-              >
-                {recovering ? 'Recuperando...' : surfaceCopy.forgotPassword}
+              <button type="submit" disabled={loading} className={uiTone.ctaFormSaveWide}>
+                {loading ? surfaceCopy.loginSigningIn : surfaceCopy.loginSubmit}
               </button>
-            </div>
+            </form>
+          )}
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className={uiTone.ctaFormSaveWide}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>{surfaceCopy.loginSigningIn}</span>
+          {!recoverStep && (
+            <>
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-700" />
                 </div>
-              ) : (
-                surfaceCopy.loginSubmit
-              )}
-            </button>
-          </form>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-slate-900 px-3 text-slate-500 font-semibold">{surfaceCopy.oauthOrContinue}</span>
+                </div>
+              </div>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-700" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-slate-900 px-3 text-slate-500 font-semibold">{surfaceCopy.oauthOrContinue}</span>
-            </div>
-          </div>
-
-          {/* OAuth */}
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={(e) => handleOAuth(e, 'google')}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 hover:bg-slate-700 text-sm text-slate-200 font-semibold transition"
-            >
-              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              <span>Google</span>
-            </button>
-
-          </div>
-
-          {/* Register Link */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-slate-400">
-              {surfaceCopy.registerPrompt}{' '}
               <button
                 type="button"
-                onClick={onSwitchToRegister}
-                className="text-amber-400 hover:text-amber-300 font-bold transition"
+                onClick={(e) => handleOAuth(e, 'google')}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-700 bg-slate-800 hover:bg-slate-700 text-sm text-slate-200 font-semibold"
               >
-                {surfaceCopy.registerHere}
+                Google
               </button>
-            </p>
-          </div>
 
-          <div className="mt-5 pt-4 border-t border-slate-700/80">
-            <LegalSupportLinks variant="dark" className="text-center text-[11px] leading-relaxed" />
-          </div>
+              <div className="mt-6 text-center">
+                <p className="text-sm text-slate-400">
+                  {surfaceCopy.registerPrompt}{' '}
+                  <button type="button" onClick={onSwitchToRegister} className="text-amber-400 font-bold">
+                    {surfaceCopy.registerHere}
+                  </button>
+                </p>
+              </div>
+
+              <div className="mt-5 pt-4 border-t border-slate-700/80">
+                <LegalSupportLinks variant="dark" className="text-center text-[11px]" />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { Package, Search, Loader2, Share2, FileDown } from 'lucide-react'
 import { useStoreCart } from '@/lib/storeCartContext'
 import { emptyStateCopy } from '@/lib/userFacingCopy'
-import { downloadBrandedProductPdf } from '@/lib/brandedProductPdf'
+import { downloadBrandedProductPdf, type BrandedProductPdfTrust } from '@/lib/brandedProductPdf'
+import { extractDeliveryBadgeFromDescription } from '@/lib/productShare'
 import { openWhatsAppWithText, publicProductUrl, whatsAppProductShareText, withShareUtm } from '@/lib/marketingShare'
 import { trackEvent } from '@/lib/analytics'
 import { useSearchParams } from 'next/navigation'
@@ -26,13 +27,15 @@ interface Producto {
 interface Props {
   workerId: number
   storeName?: string
+  /** Nombre del vendedor (persona); si falta, el PDF usa el nombre de tienda. */
+  sellerName?: string
 }
 
 function formatPrice(price: number) {
   return '$' + Math.round(price).toLocaleString('es-CL')
 }
 
-export default function StoreProductGrid({ workerId, storeName }: Props) {
+export default function StoreProductGrid({ workerId, storeName, sellerName }: Props) {
   const [productos, setProductos] = useState<Producto[]>([])
   const [loading, setLoading] = useState(true)
   const [buscar, setBuscar] = useState('')
@@ -64,9 +67,29 @@ export default function StoreProductGrid({ workerId, storeName }: Props) {
   }
 
   const downloadProductPdf = async (p: Producto) => {
+    let trust: BrandedProductPdfTrust = {
+      sellerVerified: false,
+      sellerHasCheckout: false,
+      delivery: extractDeliveryBadgeFromDescription(p.descripcion),
+    }
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : ''
+      const r = await fetch(`${origin}/api/v1/experts/${workerId}`, { headers: { Accept: 'application/json' } })
+      const data = (await r.json()) as { status?: string; data?: { is_verified?: boolean; is_seller?: boolean } }
+      if (data?.status === 'success' && data.data) {
+        trust = {
+          sellerVerified: Boolean(data.data.is_verified),
+          sellerHasCheckout: Boolean(data.data.is_seller),
+          delivery: extractDeliveryBadgeFromDescription(p.descripcion),
+        }
+      }
+    } catch {
+      /* trust ya tiene delivery desde descripcion y flags en false */
+    }
+    const displaySeller = (sellerName?.trim() || storeName?.trim() || 'Vendedor')
     await downloadBrandedProductPdf({
       storeName: storeName ?? 'Tienda',
-      sellerName: storeName ?? 'Vendedor',
+      sellerName: displaySeller,
       productName: p.nombre,
       conditionLabel: 'Nuevo o usado (segun publicacion)',
       price: p.precio_venta ?? p.precio,
@@ -76,6 +99,7 @@ export default function StoreProductGrid({ workerId, storeName }: Props) {
       publicUrl: withShareUtm(publicProductUrl(workerId, p.idproducto, p.nombre), 'product_pdf'),
       productImageUrl: p.imagen_url ?? null,
       template: 'premium',
+      trust,
     })
   }
 

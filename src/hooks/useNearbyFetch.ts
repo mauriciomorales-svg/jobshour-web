@@ -16,6 +16,8 @@ export interface SearchMeta {
   zone_name?: string
 }
 
+export type NearbyFetchError = 'none' | 'network' | 'server' | 'timeout'
+
 type WorkerStatus = 'guest' | 'inactive' | 'intermediate' | 'active'
 
 export interface UseNearbyFetchParams {
@@ -24,6 +26,8 @@ export interface UseNearbyFetchParams {
   userLngRef: MutableRefObject<number>
   workerStatus: WorkerStatus
   toast: (title: string, type?: 'success' | 'error' | 'info' | 'warning', body?: string, duration?: number) => void
+  /** Tras la primera respuesta exitosa con pines (misma secuencia de fetch). */
+  onNearbyResults?: (points: MapPoint[]) => void
 }
 
 export function useNearbyFetch({
@@ -32,13 +36,16 @@ export function useNearbyFetch({
   userLngRef,
   workerStatus,
   toast,
+  onNearbyResults,
 }: UseNearbyFetchParams) {
   const [points, setPoints] = useState<MapPoint[]>([])
   const [meta, setMeta] = useState<SearchMeta | null>(null)
   const [loading, setLoading] = useState(true)
   const [outsideZone, setOutsideZone] = useState(false)
+  const [fetchError, setFetchError] = useState<NearbyFetchError>('none')
   const hasLoadedOnceRef = useRef(false)
   const fetchSeqRef = useRef(0)
+  const abortedByTimeoutRef = useRef(false)
   const fetchNearbyRef = useRef<{
     lastCall: number
     timeoutId: ReturnType<typeof setTimeout> | null
@@ -50,12 +57,11 @@ export function useNearbyFetch({
     (categoryId?: number | null, overrideLat?: number, overrideLng?: number) => {
       const now = Date.now()
       const timeSinceLastCall = now - fetchNearbyRef.current.lastCall
-      const throttleMs = 2000
+      const throttleMs = 1200
 
       if (timeSinceLastCall < throttleMs && fetchNearbyRef.current.lastCall !== 0) {
         if (fetchNearbyRef.current.timeoutId) clearTimeout(fetchNearbyRef.current.timeoutId)
         const delay = throttleMs - timeSinceLastCall
-        console.log(`⏭️ fetchNearby: throttling ${Math.round(delay)}ms`)
         fetchNearbyRef.current.timeoutId = setTimeout(() => {
           fetchNearbyRef.current.timeoutId = null
           fetchNearbyRef.current.lastCall = 0
@@ -70,6 +76,7 @@ export function useNearbyFetch({
       }
 
       fetchNearbyRef.current.lastCall = now
+      abortedByTimeoutRef.current = false
 
       if (fetchNearbyRef.current.networkTimeoutId) {
         clearTimeout(fetchNearbyRef.current.networkTimeoutId)
@@ -82,17 +89,19 @@ export function useNearbyFetch({
       fetchNearbyRef.current.abortController = abortController
 
       const seq = ++fetchSeqRef.current
-      /** Evita que en móvil/red lenta el fetch cuelgue sin fin y la app quede en la pantalla de carga. */
       const NETWORK_MS = 30_000
       const myNetworkTimeoutId = setTimeout(() => {
         if (fetchNearbyRef.current.networkTimeoutId === myNetworkTimeoutId) {
           fetchNearbyRef.current.networkTimeoutId = null
         }
+        abortedByTimeoutRef.current = true
         abortController.abort()
       }, NETWORK_MS)
       fetchNearbyRef.current.networkTimeoutId = myNetworkTimeoutId
 
       if (!overrideLat && !hasLoadedOnceRef.current) setLoading(true)
+      setFetchError('none')
+
       let token: string | null = null
       try {
         token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -119,13 +128,16 @@ export function useNearbyFetch({
 
       Promise.all([
         fetch(`${getPublicApiBase()}/api/v1/experts/nearby?${params}`, { headers, signal: abortController.signal })
-          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))),
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`experts HTTP ${r.status}`)))),
         fetch(`${getPublicApiBase()}/api/v1/demand/nearby?${params}`, { headers, signal: abortController.signal })
-          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-          .catch(() => ({ data: [], meta: {} })),
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`demands HTTP ${r.status}`))))
+          .catch((demandErr) => {
+            console.warn('demand/nearby falló:', demandErr)
+            toast('No se pudieron cargar las demandas en el mapa.', 'warning')
+            return { data: [], meta: {} }
+          }),
       ])
         .then(([expertsData, demandsData]) => {
-          // Geofencing: el servidor indica que el usuario está fuera de la zona activa
           if (expertsData?.meta?.outside_zone) {
             setOutsideZone(true)
             setPoints([])
@@ -177,14 +189,27 @@ export function useNearbyFetch({
             }
           }
 
-          setPoints([...workers, ...demands])
+          const allPoints: MapPoint[] = [...workers, ...demands]
+          if (seq !== fetchSeqRef.current) return
+          setPoints(allPoints)
           setMeta(expertsData.meta ?? null)
           hasLoadedOnceRef.current = true
+          onNearbyResults?.(allPoints)
         })
         .catch((err) => {
-          if (err?.name === 'AbortError') return
+          if (err?.name === 'AbortError') {
+            if (abortedByTimeoutRef.current && seq === fetchSeqRef.current) {
+              setFetchError('timeout')
+            }
+            return
+          }
           console.error('Error fetching experts/demands:', err)
-          toast('No se pudieron cargar los expertos. Revisa tu conexión e intenta de nuevo.', 'error')
+          const msg = String(err?.message ?? err)
+          if (msg.includes('HTTP 5')) {
+            setFetchError('server')
+          } else {
+            setFetchError('network')
+          }
           hasLoadedOnceRef.current = true
         })
         .finally(() => {
@@ -194,14 +219,17 @@ export function useNearbyFetch({
           }
           if (seq !== fetchSeqRef.current) return
           setLoading(false)
-          if (!hasLoadedOnceRef.current) {
-            hasLoadedOnceRef.current = true
-            toast('La red tardó demasiado. Revisa tu conexión o intenta de nuevo.', 'warning')
-          }
         })
     },
-    // userLatRef / userLngRef: refs estables; leer .current dentro del callback
-    [user, workerStatus, toast],
+    [user, workerStatus, toast, onNearbyResults, userLatRef, userLngRef],
+  )
+
+  const retryFetch = useCallback(
+    (categoryId?: number | null) => {
+      fetchNearbyRef.current.lastCall = 0
+      fetchNearby(categoryId, userLatRef.current, userLngRef.current)
+    },
+    [fetchNearby, fetchNearbyRef, userLatRef, userLngRef],
   )
 
   return {
@@ -210,7 +238,9 @@ export function useNearbyFetch({
     meta,
     loading,
     outsideZone,
+    fetchError,
     fetchNearby,
     fetchNearbyRef,
+    retryFetch,
   }
 }

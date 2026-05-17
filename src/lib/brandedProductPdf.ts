@@ -5,6 +5,13 @@ const BRAND = 'JobsHours'
 const BRAND_URL = 'https://jobshours.com'
 const BRAND_TAGLINE = 'Compra y vende productos nuevos o usados con confianza'
 
+/** Mismas reglas que la ficha compartida: solo afirmar lo que la API / la descripcion respaldan. */
+export type BrandedProductPdfTrust = {
+  sellerVerified: boolean
+  sellerHasCheckout: boolean
+  delivery: { enabled: boolean; fee: number }
+}
+
 export type BrandedProductPdfParams = {
   storeName: string
   sellerName: string
@@ -17,10 +24,36 @@ export type BrandedProductPdfParams = {
   publicUrl: string
   productImageUrl?: string | null
   template?: 'premium' | 'minimal' | 'oferta'
+  /** Si no se envia, el PDF solo muestra el aviso neutro (sin claims de verificacion ni checkout). */
+  trust?: BrandedProductPdfTrust
 }
 
 function formatMoney(n: number): string {
   return '$' + Math.round(n).toLocaleString('es-CL')
+}
+
+function trustSectionLines(trust: BrandedProductPdfTrust | undefined): string[] {
+  if (trust == null) {
+    return ['Coordina condiciones de entrega y pago directamente con el vendedor.']
+  }
+  const out: string[] = []
+  if (trust.sellerVerified) {
+    out.push('Vendedor verificado en JobsHours.')
+  }
+  if (trust.delivery.enabled) {
+    out.push(
+      trust.delivery.fee > 0
+        ? `Delivery por vendedor indicado en la publicacion (adicional: ${formatMoney(trust.delivery.fee)}).`
+        : 'Delivery por vendedor indicado en la publicacion.',
+    )
+  }
+  if (trust.sellerHasCheckout) {
+    out.push('Pago protegido: checkout disponible en la tienda JobsHours de este vendedor.')
+  }
+  if (out.length === 0) {
+    return ['Coordina condiciones de entrega y pago directamente con el vendedor.']
+  }
+  return out
 }
 
 async function buildQrDataUrl(value: string): Promise<string | null> {
@@ -107,7 +140,23 @@ export async function downloadBrandedProductPdf(params: BrandedProductPdfParams)
 
   y += 14
   pdf.setFont('helvetica', 'bold')
+  pdf.setFontSize(9)
+  pdf.setTextColor(71, 85, 105)
+  pdf.text('Confianza (segun cuenta y publicacion)', margin, y)
+  y += 5
+  pdf.setFont('helvetica', 'normal')
+  pdf.setFontSize(8.5)
+  pdf.setTextColor(15, 23, 42)
+  for (const line of trustSectionLines(params.trust)) {
+    const wrapped = pdf.splitTextToSize(line, pageW - margin * 2)
+    pdf.text(wrapped, margin, y)
+    y += wrapped.length * 4.2
+  }
+  y += 6
+
+  pdf.setFont('helvetica', 'bold')
   pdf.setFontSize(10)
+  pdf.setTextColor(15, 23, 42)
   pdf.text('Descripcion comercial', margin, y)
   y += 6
   pdf.setFont('helvetica', 'normal')

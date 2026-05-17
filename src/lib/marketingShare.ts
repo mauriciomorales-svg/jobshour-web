@@ -34,7 +34,23 @@ export function publicWorkerProfileUrl(workerId: string | number | undefined | n
   return `${getSiteOrigin()}/worker/${id}`
 }
 
-export function publicTiendaUrl(workerId: string | number): string {
+const HOSTNAME_RE = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i
+
+export function publicTiendaUrl(workerId: string | number, opts?: { publicHost?: string | null }): string {
+  const h = opts?.publicHost?.trim().toLowerCase() ?? ''
+  if (h && HOSTNAME_RE.test(h)) {
+    const proto =
+      typeof window !== 'undefined'
+        ? window.location.protocol
+        : (() => {
+            try {
+              return new URL(getSiteOrigin()).protocol
+            } catch {
+              return 'https:'
+            }
+          })()
+    return `${proto}//${h}/`
+  }
   return `${getSiteOrigin()}/tienda/${workerId}`
 }
 

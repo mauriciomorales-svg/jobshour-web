@@ -55,8 +55,10 @@ export default function WorkerDetailModal({
 }: Props) {
   const [activeTab, setActiveTab] = useState<'perfil' | 'tienda'>('perfil')
   const [showCart, setShowCart] = useState(false)
-  const isActive = detail.status === 'active'
-  const isIntermediate = detail.status === 'intermediate'
+  const statusNorm = String(detail.status ?? '').toLowerCase()
+  const isActive = statusNorm === 'active' || statusNorm === 'available'
+  const isBusy = statusNorm === 'busy'
+  const isIntermediate = statusNorm === 'intermediate'
   const cats = detail.categories?.length ? detail.categories : detail.category ? [detail.category] : []
   const freshScore = (detail.fresh_score ?? 0) + (detail.rating_count ?? 0)
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/worker/${detail.id}` : ''
@@ -85,6 +87,7 @@ export default function WorkerDetailModal({
                   </div>
               }
               {isActive && <span className="absolute bottom-1 right-1 w-5 h-5 bg-teal-500 border-2 border-white rounded-full animate-pulse" />}
+              {!isActive && isBusy && <span className="absolute bottom-1 right-1 w-5 h-5 bg-amber-500 border-2 border-white rounded-full animate-pulse" />}
             </div>
           </div>
         </div>
@@ -126,11 +129,16 @@ export default function WorkerDetailModal({
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-500" />
                 </span>
+              ) : isBusy ? (
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
+                </span>
               ) : (
                 <span className={`w-3 h-3 rounded-full ${isIntermediate ? 'bg-yellow-400' : 'bg-gray-300'}`} />
               )}
-              <span className={`text-sm font-bold ${isActive ? 'text-teal-800' : isIntermediate ? 'text-yellow-700' : 'text-gray-500'}`}>
-                {isActive ? 'Disponible ahora' : isIntermediate ? 'Disponibilidad flexible' : 'No disponible'}
+              <span className={`text-sm font-bold ${isActive ? 'text-teal-800' : isBusy ? 'text-amber-800' : isIntermediate ? 'text-yellow-700' : 'text-gray-500'}`}>
+                {isActive ? 'Disponible ahora' : isBusy ? 'En servicio' : isIntermediate ? 'Disponibilidad flexible' : 'No disponible'}
               </span>
             </div>
             <div className="text-right">
@@ -194,7 +202,7 @@ export default function WorkerDetailModal({
           {/* Tab Tienda */}
           {detail.is_seller && activeTab === 'tienda' ? (
             <div className="bg-slate-800 rounded-2xl p-4">
-              <StoreProductGrid workerId={detail.id} storeName={detail.store_name ?? undefined} />
+              <StoreProductGrid workerId={detail.id} storeName={detail.store_name ?? undefined} sellerName={detail.name} />
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={() => setShowCart(true)}

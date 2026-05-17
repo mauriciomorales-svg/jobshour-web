@@ -21,8 +21,7 @@ export default function ZoneBadge() {
     >
       <div className="flex items-center gap-1.5 bg-gray-900/80 backdrop-blur-sm border border-amber-500/60 text-amber-400 text-xs font-medium px-3 py-1.5 rounded-full shadow-lg">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
-        <span>Zona piloto: {zone.zone_name}</span>
-        <span className="text-gray-500">· {zone.radius_km} km</span>
+        <span>Estás viendo: {zone.zone_name}</span>
       </div>
     </div>
   )

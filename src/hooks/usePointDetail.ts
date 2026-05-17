@@ -16,15 +16,37 @@ interface CheckAuthResult {
 interface UsePointDetailOptions {
   checkAuthAndProfile: () => CheckAuthResult
   setShowLoginModal: (v: boolean) => void
+  onProfileRequired?: () => void
   setShowChat: (v: boolean) => void
   fetchNearby: (categoryId?: number | null) => void
   activeCategory: number | null
   toast: ToastFn
 }
 
+function gateInteract(
+  checkAuthAndProfile: () => CheckAuthResult,
+  setShowLoginModal: (v: boolean) => void,
+  onProfileRequired: (() => void) | undefined,
+  toast: ToastFn,
+  loginMsg: string,
+  profileMsg: string,
+): boolean {
+  const a = checkAuthAndProfile()
+  if (a.canInteract) return true
+  if (a.reason === 'login') {
+    setShowLoginModal(true)
+    toast(loginMsg, 'info')
+  } else {
+    onProfileRequired?.()
+    toast(profileMsg, 'warning')
+  }
+  return false
+}
+
 export function usePointDetail({
   checkAuthAndProfile,
   setShowLoginModal,
+  onProfileRequired,
   setShowChat,
   fetchNearby,
   activeCategory,
@@ -135,12 +157,7 @@ export function usePointDetail({
 
   const handleDetailTravelJoin = useCallback(async (detail: ExpertDetail | null) => {
     if (!detail) return
-    const auth = checkAuthAndProfile()
-    if (!auth.canInteract) {
-      setShowLoginModal(true)
-      toast(auth.reason === 'login' ? 'Inicia sesión para continuar' : 'Completa tu perfil', 'info')
-      return
-    }
+    if (!gateInteract(checkAuthAndProfile, setShowLoginModal, onProfileRequired, toast, 'Iniciá sesión para continuar', 'Completá foto y nombre en tu perfil')) return
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     try {
       const res = await fetch(`/api/v1/demand/${detail.id}/take`, {
@@ -158,36 +175,22 @@ export function usePointDetail({
     } catch {
       toast(feedbackCopy.networkError, 'error')
     }
-  }, [checkAuthAndProfile, setShowLoginModal, toast, fetchNearby, activeCategory])
+  }, [checkAuthAndProfile, onProfileRequired, setShowLoginModal, toast, fetchNearby, activeCategory])
 
   const handleDetailChat = useCallback(() => {
-    const a = checkAuthAndProfile()
-    if (!a.canInteract) { setShowLoginModal(true); return }
+    if (!gateInteract(checkAuthAndProfile, setShowLoginModal, onProfileRequired, toast, 'Iniciá sesión para chatear', 'Completá tu perfil para chatear')) return
     setShowChat(true)
-  }, [checkAuthAndProfile, setShowLoginModal, setShowChat])
+  }, [checkAuthAndProfile, onProfileRequired, setShowLoginModal, setShowChat, toast])
 
   const handleDetailRequest = useCallback(() => {
-    const a = checkAuthAndProfile()
-    if (!a.canInteract) {
-      setShowLoginModal(true)
-      toast(
-        a.reason === 'login' ? 'Inicia sesión para continuar' : 'Completa tu perfil',
-        a.reason === 'login' ? 'info' : 'warning'
-      )
-      return
-    }
+    if (!gateInteract(checkAuthAndProfile, setShowLoginModal, onProfileRequired, toast, 'Iniciá sesión para continuar', 'Completá tu perfil para solicitar')) return
     setShowRequestModal(true)
-  }, [checkAuthAndProfile, setShowLoginModal, toast])
+  }, [checkAuthAndProfile, onProfileRequired, setShowLoginModal, toast])
 
   const handleDetailCallPhone = useCallback((phone?: string | null) => {
-    const a = checkAuthAndProfile()
-    if (!a.canInteract) {
-      setShowLoginModal(true)
-      toast('Inicia sesión para ver el teléfono', 'info')
-      return
-    }
+    if (!gateInteract(checkAuthAndProfile, setShowLoginModal, onProfileRequired, toast, 'Iniciá sesión para ver el teléfono', 'Completá tu perfil para ver el teléfono')) return
     if (phone) window.open(`tel:${phone}`, '_self')
-  }, [checkAuthAndProfile, setShowLoginModal, toast])
+  }, [checkAuthAndProfile, onProfileRequired, setShowLoginModal, toast])
 
   const handleDetailVerWorkerProfile = useCallback((detail: ExpertDetail | null) => {
     if (!detail) return

@@ -1,14 +1,11 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { forwardRef } from 'react'
+import { forwardRef, useEffect } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 
 import { ICON_MAP } from '@/lib/iconMap'
 import type { MapPoint } from '@/app/components/MapSection'
-import { surfaceCopy } from '@/lib/userFacingCopy'
-import { uiTone } from '@/lib/uiTone'
-
 const MapSection = dynamic(() => import('./MapSection'), { ssr: false })
 
 export interface HomeMapCategoryItem {
@@ -61,6 +58,7 @@ export function HomeMapCategoryBar({
 
 export type HomeMapRef = {
   flyTo: (latlng: [number, number], zoom: number) => Promise<boolean>
+  fitToPoints: (coords: [number, number][]) => Promise<boolean>
 }
 
 export interface HomeMapAreaProps {
@@ -72,9 +70,8 @@ export interface HomeMapAreaProps {
   onMapMove: (lat: number, lng: number) => void
   showLocationFab: boolean
   onCenterOnMyLocation: () => void
-  showEmptyOverlay: boolean
-  onDismissEmptyMap: () => void
-  onPublishFromEmpty: () => void
+  mapLoading?: boolean
+  layerPanelExpanded?: boolean
 }
 
 export const HomeMapArea = forwardRef<HomeMapRef | null, HomeMapAreaProps>(function HomeMapArea(
@@ -87,15 +84,27 @@ export const HomeMapArea = forwardRef<HomeMapRef | null, HomeMapAreaProps>(funct
     onMapMove,
     showLocationFab,
     onCenterOnMyLocation,
-    showEmptyOverlay,
-    onDismissEmptyMap,
-    onPublishFromEmpty,
+    mapLoading = false,
+    layerPanelExpanded = false,
   },
   ref,
 ) {
+  const mapTopPad = layerPanelExpanded ? 'pt-[286px]' : 'pt-[180px]'
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      try {
+        window.dispatchEvent(new Event('resize'))
+      } catch {
+        /* ignore */
+      }
+    }, 60)
+    return () => window.clearTimeout(t)
+  }, [layerPanelExpanded])
+
   return (
     <>
-      <div className="absolute inset-0 pt-[180px] pb-[68px]">
+      <div className={`absolute inset-0 ${mapTopPad} pb-[68px]`}>
         <MapSection
           ref={ref}
           points={mapPoints}
@@ -105,6 +114,14 @@ export const HomeMapArea = forwardRef<HomeMapRef | null, HomeMapAreaProps>(funct
           onLeafletReady={onLeafletReady}
           onMapMove={onMapMove}
         />
+        {mapLoading && (
+          <div className="pointer-events-none absolute inset-0 z-[120] flex items-center justify-center bg-slate-950/40 backdrop-blur-[2px]">
+            <div className="flex flex-col items-center gap-2 rounded-2xl bg-slate-900/90 px-5 py-4 shadow-xl ring-1 ring-slate-700">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-400 border-t-transparent" aria-hidden />
+              <p className="text-xs font-semibold text-slate-300">Buscando cerca de ti…</p>
+            </div>
+          </div>
+        )}
         {showLocationFab && (
           <button
             type="button"
@@ -126,33 +143,6 @@ export const HomeMapArea = forwardRef<HomeMapRef | null, HomeMapAreaProps>(funct
           </button>
         )}
       </div>
-
-      {showEmptyOverlay && (
-        <div className="absolute inset-0 pt-[180px] pb-[68px] flex items-center justify-center pointer-events-none z-[150]">
-          <div className="relative bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-2xl px-6 py-5 mx-6 text-center shadow-2xl pointer-events-auto">
-            <button
-              type="button"
-              onClick={onDismissEmptyMap}
-              className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white transition"
-              aria-label={surfaceCopy.close}
-            >
-              ✕
-            </button>
-            <div className="text-4xl mb-2">🔍</div>
-            <p className="text-white font-black text-base mb-1">No hay trabajadores cerca</p>
-            <p className="text-slate-400 text-xs leading-relaxed mb-3">
-              Mueve el mapa para buscar en otra zona, o publica lo que necesitas y te contactarán.
-            </p>
-            <button
-              type="button"
-              onClick={onPublishFromEmpty}
-              className={uiTone.ctaPublishCompact}
-            >
-              {surfaceCopy.publishFromMapEmpty}
-            </button>
-          </div>
-        </div>
-      )}
     </>
   )
 })

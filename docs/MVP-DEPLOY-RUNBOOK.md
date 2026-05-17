@@ -46,6 +46,29 @@ Ese script hace `git fetch/reset`, `npm ci`, `npm run build` con `NODE_OPTIONS` 
 
 Eso envía por SSH el mismo contenido que `scripts/deploy-on-server.sh` y lo ejecuta en el servidor (misma lógica que el job de GitHub Actions, que llama a `bash /var/www/jobshour-web/scripts/deploy-on-server.sh`).
 
+### 4.1 Inventario API (`inventario-api`, mismo VPS)
+
+Mismo patrón que el web: script en el servidor + PowerShell opcional desde Windows.
+
+**En el VPS** (`tmux` recomendado si la sesión es larga):
+
+```bash
+export DEPLOY_BRANCH=master   # o la rama que exista en origin
+bash /var/www/inventario-api/scripts/deploy-on-server.sh
+```
+
+Hace `git fetch/reset`, `composer install --no-dev`, `migrate --force`, cachés Laravel, ejecuta `restart_api.sh` (puerto **8003**) y health `http://127.0.0.1:8003/up`. Traza en `/var/log/inventario-api-deploy.log`.
+
+**Desde Windows (PowerShell)**, desde la raíz de `inventario-api` (repo `c:\wamp64\www\inventario-api` o donde lo tengas):
+
+```powershell
+.\scripts\deploy-from-windows.ps1 -SshConfigHost "jobshours-droplet"
+```
+
+(O `-Server "64.23.199.180"` y `-User` si no usás `~/.ssh/config`.)
+
+Log de aplicación Laravel: `/var/www/inventario-api/storage/logs/laravel.log`.
+
 ## 5. Secuencia típica (web, a mano sin el script)
 
 ```bash

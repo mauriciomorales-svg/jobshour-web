@@ -199,6 +199,23 @@ function buildOptimisticSnapshot(input: {
 export interface PublishDemandInitialDraft {
   /** Texto inicial (p. ej. últimos mensajes del chat o descripción del pedido actual) */
   description?: string
+  /** Ubicación sugerida (enlaces desde tiendas externas, p. ej. delivery) */
+  lat?: number
+  lng?: number
+  demandType?: 'fixed_job' | 'ride_share' | 'express_errand' | 'buscar_producto'
+  storeName?: string
+  pickupAddress?: string
+  deliveryAddress?: string
+  destinationName?: string
+  /** Valor para input datetime-local (viaje) */
+  departureTime?: string
+  /** Identificador del sitio que enlazó (analytics / payload) */
+  externalSource?: string
+  /**
+   * Tras publicar con éxito, redirigir al usuario aquí (p. ej. tienda externa).
+   * Solo se aceptan URLs https validadas al parsear el deep link o al recuperar el borrador.
+   */
+  returnAfterPublish?: string
 }
 
 interface Props {
@@ -285,19 +302,47 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
   }, [initialDraft])
 
   useEffect(() => {
-    // Obtener ubicación actual como pickup por defecto
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setPickupLat(position.coords.latitude)
-          setPickupLng(position.coords.longitude)
-        },
-        () => {
-          // Usar coordenadas proporcionadas si falla geolocalización
-        }
-      )
+    if (initialDraft?.demandType) {
+      setDemandType(initialDraft.demandType)
     }
-  }, [])
+  }, [initialDraft?.demandType])
+
+  useEffect(() => {
+    if (initialDraft?.lat != null && initialDraft?.lng != null) {
+      const la = Number(initialDraft.lat)
+      const ln = Number(initialDraft.lng)
+      if (Number.isFinite(la) && Number.isFinite(ln)) {
+        setPickupLat(la)
+        setPickupLng(ln)
+      }
+    }
+  }, [initialDraft?.lat, initialDraft?.lng])
+
+  useEffect(() => {
+    if (initialDraft?.storeName?.trim()) setStoreName(initialDraft.storeName.trim().slice(0, 255))
+    if (initialDraft?.pickupAddress?.trim()) setPickupAddress(initialDraft.pickupAddress.trim().slice(0, 255))
+    if (initialDraft?.deliveryAddress?.trim()) setDeliveryAddress(initialDraft.deliveryAddress.trim().slice(0, 255))
+    if (initialDraft?.destinationName?.trim()) setDestinationName(initialDraft.destinationName.trim().slice(0, 255))
+    if (initialDraft?.departureTime?.trim()) setDepartureTime(initialDraft.departureTime.trim())
+  }, [
+    initialDraft?.storeName,
+    initialDraft?.pickupAddress,
+    initialDraft?.deliveryAddress,
+    initialDraft?.destinationName,
+    initialDraft?.departureTime,
+  ])
+
+  useEffect(() => {
+    if (initialDraft?.lat != null && initialDraft?.lng != null) return
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setPickupLat(position.coords.latitude)
+        setPickupLng(position.coords.longitude)
+      },
+      () => {},
+    )
+  }, [initialDraft?.lat, initialDraft?.lng])
 
   const handlePublish = async () => {
     setError('')
@@ -398,6 +443,13 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
           load_type: loadType,
           requires_vehicle: requiresVehicle,
         }
+      }
+
+      if (initialDraft?.externalSource?.trim()) {
+        const src = initialDraft.externalSource.trim().slice(0, 120)
+        const prev =
+          payload.payload && typeof payload.payload === 'object' ? (payload.payload as Record<string, unknown>) : {}
+        payload.payload = { ...prev, external_source: src }
       }
 
       // Use FormData if there's an image, otherwise JSON

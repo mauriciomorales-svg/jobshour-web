@@ -31,6 +31,15 @@ export function parseProductSlug(slug: string): { workerId: number; productId: n
   return { workerId: Number(m[1]), productId: Number(m[2]) }
 }
 
+/** Misma lógica que la tienda: el vendedor marca en la descripción si hace delivery. */
+export function extractDeliveryBadgeFromDescription(descripcion?: string | null): { enabled: boolean; fee: number } {
+  const raw = (descripcion || '').toLowerCase()
+  if (!raw.includes('delivery por vendedor: si')) return { enabled: false, fee: 0 }
+  const feeMatch = raw.match(/\(\+\$?([0-9.,]+)/)
+  const fee = feeMatch ? Number(String(feeMatch[1]).replace(/[^\d]/g, '')) || 0 : 0
+  return { enabled: true, fee }
+}
+
 export function marketingCopyByCategory(name: string, description?: string | null): string {
   const text = `${name} ${description || ''}`.toLowerCase()
   if (/(zapat|polera|chaqueta|jean|ropa)/.test(text)) {

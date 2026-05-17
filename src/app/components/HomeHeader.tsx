@@ -20,6 +20,11 @@ export function HomeHeader({
   categories,
   activeCategory,
   onCategoryClick,
+  mapLayersExpanded,
+  onMapLayersExpandedChange,
+  mapLayers,
+  onToggleMapLayer,
+  showMapLayerControls = true,
 }: {
   notifBadge: number
   onMenuToggle: () => void
@@ -32,7 +37,15 @@ export function HomeHeader({
   categories: HomeMapCategoryItem[]
   activeCategory: number | null
   onCategoryClick: (catId: number) => void
+  mapLayersExpanded: boolean
+  onMapLayersExpandedChange: (open: boolean) => void
+  mapLayers: { services: boolean; stores: boolean }
+  onToggleMapLayer: (key: 'services' | 'stores') => void
+  /** Si es false (p. ej. perfil, trabajos, feed o solicitudes), no se muestran capas del mapa. */
+  showMapLayerControls?: boolean
 }) {
+  const layersFiltered = !mapLayers.services || !mapLayers.stores
+  const showLayers = showMapLayerControls
   return (
     <div className="absolute top-0 left-0 right-0 z-[100] pointer-events-none">
       <div className="bg-slate-950/95 backdrop-blur-md border-b border-slate-800 px-4 py-2.5 pointer-events-auto">
@@ -148,8 +161,73 @@ export function HomeHeader({
               {workerCount.label}
             </span>
           )}
+          {showLayers && (
+          <button
+            type="button"
+            onClick={() => onMapLayersExpandedChange(!mapLayersExpanded)}
+            className={`relative shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border transition active:scale-95 ${
+              mapLayersExpanded
+                ? 'bg-teal-500/20 border-teal-500/50 text-teal-300'
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+            }`}
+            aria-expanded={mapLayersExpanded}
+            aria-label="Capas del mapa: servicios y tiendas"
+            title="Mostrar u ocultar tipos de pines en el mapa"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 10h16M4 14h16M4 18h7"
+              />
+            </svg>
+            {layersFiltered && !mapLayersExpanded && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-slate-900" aria-hidden />
+            )}
+          </button>
+          )}
         </div>
       </div>
+
+      {showLayers && mapLayersExpanded && (
+        <div className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2.5 pointer-events-auto">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider w-full sm:w-auto sm:mr-1">
+              Pines en el mapa
+            </span>
+            <button
+              type="button"
+              onClick={() => onToggleMapLayer('services')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition active:scale-[0.98] ${
+                mapLayers.services
+                  ? 'bg-teal-500/20 border-teal-500/45 text-teal-200'
+                  : 'bg-slate-800/80 border-slate-700 text-slate-500 line-through decoration-slate-500'
+              }`}
+              aria-pressed={mapLayers.services}
+            >
+              <span aria-hidden>🛠️</span>
+              Servicios
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleMapLayer('stores')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition active:scale-[0.98] ${
+                mapLayers.stores
+                  ? 'bg-violet-500/20 border-violet-500/45 text-violet-200'
+                  : 'bg-slate-800/80 border-slate-700 text-slate-500 line-through decoration-slate-500'
+              }`}
+              aria-pressed={mapLayers.stores}
+            >
+              <span aria-hidden>⭐</span>
+              Tiendas
+            </button>
+            <p className="w-full text-[11px] text-slate-500 leading-snug mt-0.5">
+              Servicios incluye trabajadores y demandas públicas. Tiendas son negocios destacados. Podés apagar una capa si hay demasiados pines.
+            </p>
+          </div>
+        </div>
+      )}
 
       <HomeMapCategoryBar categories={categories} activeCategory={activeCategory} onCategoryClick={onCategoryClick} />
     </div>

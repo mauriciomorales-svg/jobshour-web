@@ -6,6 +6,7 @@ import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog, jhFlowSummarizeRequest
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 const PaymentModal = dynamic(() => import('./PaymentModal'), { ssr: false })
+const RatingModal = dynamic(() => import('./RatingModal'), { ssr: false })
 
 interface Solicitud {
   id: number
@@ -135,6 +136,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
   const [actionLoading, setActionLoading] = useState<number | null>(null)
   const [hiddenRequestIds, setHiddenRequestIds] = useState<number[]>([])
   const [activeTab, setActiveTab] = useState<'active' | 'in_progress' | 'archived'>('active')
+  const [ratingModal, setRatingModal] = useState<{ requestId: number; workerName: string; workerAvatar: string | null } | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined' || !user?.id) return
@@ -759,6 +761,27 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                                     ✅ Pagado
                                   </span>
                                 )}
+                                {s.can_rate && !s.user_has_reviewed && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setRatingModal({
+                                          requestId: s.id,
+                                          workerName: s.worker?.user?.name ?? 'Trabajador',
+                                          workerAvatar: s.worker?.user?.avatar ?? null,
+                                        })
+                                      }}
+                                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-200 rounded-xl text-xs font-black transition active:scale-95 border border-yellow-500/35"
+                                    >
+                                      ⭐ Dejar reseña
+                                    </button>
+                                  )}
+                                {s.user_has_reviewed && (
+                                  <span className="flex-1 text-center py-2.5 text-slate-400 text-xs font-bold bg-slate-700/40 rounded-xl border border-slate-600/50">
+                                    ⭐ Reseña enviada
+                                  </span>
+                                )}
                               </>
                             )}
                             {isPending && (
@@ -825,7 +848,19 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
         )}
       </div>
 
-      {/* Reseñas desactivadas temporalmente para evitar fricción en UX. */}
+      {ratingModal && (
+        <RatingModal
+          isOpen
+          serviceRequestId={ratingModal.requestId}
+          workerName={ratingModal.workerName}
+          workerAvatar={ratingModal.workerAvatar}
+          onClose={() => setRatingModal(null)}
+          onRated={() => {
+            setRatingModal(null)
+            fetchSolicitudes()
+          }}
+        />
+      )}
 
       {/* Modal Pago */}
       {paymentRequestId && (() => {

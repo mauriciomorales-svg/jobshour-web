@@ -61,6 +61,17 @@ interface ActiveWorker {
   user?: { name: string; phone: string | null }
 }
 
+/** Resultado de sondeo HTTP para el tab «Servicios». */
+interface ServiceProbeResult {
+  label: string
+  url: string
+  ok: boolean
+  httpStatus: number
+  latencyMs: number
+  checkedAt: string
+  detail?: string
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(n: number) { return new Intl.NumberFormat('es-CL').format(n) }
@@ -97,13 +108,37 @@ const DEMAND_STATUS_BADGE: Record<string, string> = {
   cancelled: 'bg-red-500/20 text-red-400',
 }
 
+/**
+ * URLs extra a vigilar: `NEXT_PUBLIC_SERVICE_STATUS_URLS`
+ * Formato: `Etiqueta|https://...;Otro|https://...` (punto y coma entre entradas).
+ */
+function parseExtraServiceTargets(): { label: string; url: string }[] {
+  const raw = process.env.NEXT_PUBLIC_SERVICE_STATUS_URLS?.trim()
+  if (!raw) return []
+  return raw
+    .split(';')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const pipe = part.indexOf('|')
+      if (pipe === -1) return { label: part.slice(0, 48), url: part }
+      const label = part.slice(0, pipe).trim()
+      const url = part.slice(pipe + 1).trim()
+      return { label: label || url, url }
+    })
+    .filter((x) => x.url.startsWith('http://') || x.url.startsWith('https://'))
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(null)
-  const [tab, setTab] = useState<'overview' | 'transactions' | 'demands' | 'workers' | 'waitlist' | 'new-demand'>('overview')
+  const [tab, setTab] = useState<
+    'overview' | 'services' | 'transactions' | 'demands' | 'workers' | 'waitlist' | 'new-demand'
+  >('overview')
 
   // Data states
+  const [serviceChecks, setServiceChecks] = useState<ServiceProbeResult[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [transactions, setTransactions] = useState<{ total: number; approved_today: number; data: Transaction[] } | null>(null)
   const [demands, setDemands] = useState<Demand[]>([])
@@ -180,15 +215,84 @@ export default function AdminPage() {
     setLoading(false)
   }, [api])
 
+  /** Sondea API JobsHours (rutas públicas) + URLs opcionales en NEXT_PUBLIC_SERVICE_STATUS_URLS. */
+  const loadServices = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    const base = getPublicApiBase()
+    const targets: { label: string; url: string }[] = [
+      { label: 'API — ping', url: `${base}/api/v1/health/ping` },
+      { label: 'API — salud (DB, Redis, cola…)', url: `${base}/api/v1/health` },
+      ...parseExtraServiceTargets(),
+    ]
+    if (typeof window !== 'undefined') {
+      targets.unshift({ label: 'Web — origen actual', url: window.location.origin })
+    }
+    const results: ServiceProbeResult[] = []
+    for (const t of targets) {
+      const t0 = performance.now()
+      try {
+        const res = await fetch(t.url, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: { Accept: 'application/json' },
+          signal: AbortSignal.timeout(18_000),
+        })
+        const latencyMs = Math.round(performance.now() - t0)
+        let detail: string | undefined
+        const ct = res.headers.get('content-type') || ''
+        if (ct.includes('json')) {
+          const j = await res.json().catch(() => null) as Record<string, unknown> | null
+          if (j && typeof j === 'object') {
+            if ('checks' in j) detail = JSON.stringify(j.checks, null, 2)
+            else if ('status' in j && typeof j.status === 'string') detail = `status=${j.status}`
+            else if ('ok' in j) detail = `ok=${String(j.ok)}`
+          }
+        }
+        results.push({
+          label: t.label,
+          url: t.url,
+          ok: res.ok,
+          httpStatus: res.status,
+          latencyMs,
+          checkedAt: new Date().toISOString(),
+          detail: detail?.slice(0, 4000),
+        })
+      } catch (e: unknown) {
+        const latencyMs = Math.round(performance.now() - t0)
+        results.push({
+          label: t.label,
+          url: t.url,
+          ok: false,
+          httpStatus: 0,
+          latencyMs,
+          checkedAt: new Date().toISOString(),
+          detail: e instanceof Error ? e.message : 'Error de red',
+        })
+      }
+    }
+    setServiceChecks(results)
+    setLoading(false)
+  }, [])
+
   useEffect(() => {
     if (!token) return
     if (tab === 'overview') loadStats()
+    if (tab === 'services') loadServices()
     if (tab === 'transactions') loadTransactions()
     if (tab === 'demands') loadDemands()
     if (tab === 'waitlist') loadWaitlist()
     if (tab === 'workers') loadActiveWorkers()
     if (tab === 'new-demand') { loadStats() }
   }, [tab, token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (tab !== 'services' || !token) return
+    const id = window.setInterval(() => {
+      void loadServices()
+    }, 60_000)
+    return () => window.clearInterval(id)
+  }, [tab, token, loadServices])
 
   const handleCancelDemand = async (id: number) => {
     if (!confirm(`¿Cancelar demanda #${id}?`)) return
@@ -236,6 +340,7 @@ export default function AdminPage() {
 
   const tabs = [
     { id: 'overview', label: '📊 Resumen' },
+    { id: 'services', label: '🟢 Servicios' },
     { id: 'transactions', label: '💳 Pagos' },
     { id: 'demands', label: '📋 Demandas' },
     { id: 'workers', label: '👷 Workers' },
@@ -251,7 +356,7 @@ export default function AdminPage() {
           <h1 className="text-lg font-bold text-amber-400">JobsHours Admin</h1>
           <p className="text-xs text-gray-400">Panel de control del fundador</p>
         </div>
-        <button onClick={() => { if (tab === 'overview') loadStats(); else if (tab === 'transactions') loadTransactions(); else if (tab === 'demands') loadDemands(); else if (tab === 'waitlist') loadWaitlist(); else if (tab === 'workers') loadActiveWorkers() }} className="text-xs text-gray-400 hover:text-white border border-gray-700 rounded-lg px-3 py-1.5">
+        <button onClick={() => { if (tab === 'overview') loadStats(); else if (tab === 'services') loadServices(); else if (tab === 'transactions') loadTransactions(); else if (tab === 'demands') loadDemands(); else if (tab === 'waitlist') loadWaitlist(); else if (tab === 'workers') loadActiveWorkers() }} className="text-xs text-gray-400 hover:text-white border border-gray-700 rounded-lg px-3 py-1.5">
           {loading ? '⏳' : '↻ Refrescar'}
         </button>
       </div>
@@ -277,6 +382,58 @@ export default function AdminPage() {
       <div className="p-4 max-w-6xl mx-auto">
 
         {/* ── OVERVIEW ── */}
+        {tab === 'services' && (
+          <div className="space-y-4">
+            <div className="bg-gray-900/80 border border-gray-800 rounded-xl p-4 text-sm text-gray-400">
+              <p className="text-gray-200 font-semibold mb-1">Estado de servicios</p>
+              <p className="text-xs leading-relaxed mb-2">
+                Comprueba si la API y el front responden. El chequeo «salud» puede devolver 503 si Redis, cola o Reverb fallan (sigue siendo útil para ver qué se cayó).
+              </p>
+              <p className="text-xs text-gray-500">
+                URLs extra: variable de entorno{' '}
+                <code className="text-amber-400/90 bg-gray-950 px-1 rounded">NEXT_PUBLIC_SERVICE_STATUS_URLS</code>
+                — formato <code className="text-gray-300">Nombre|https://…;Otro|https://…</code>. Auto-refresco cada 60s en esta pestaña.
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              {serviceChecks.map((s) => (
+                <div
+                  key={`${s.label}-${s.url}`}
+                  className={`rounded-xl border p-4 ${
+                    s.ok ? 'bg-emerald-950/30 border-emerald-800/60' : 'bg-red-950/30 border-red-800/60'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-white flex items-center gap-2">
+                        <span>{s.ok ? '🟢' : '🔴'}</span>
+                        {s.label}
+                      </p>
+                      <p className="text-xs text-gray-500 font-mono break-all mt-1">{s.url}</p>
+                    </div>
+                    <div className="text-right text-xs shrink-0">
+                      <p className={s.ok ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                        {s.httpStatus > 0 ? `HTTP ${s.httpStatus}` : 'Sin respuesta'}
+                      </p>
+                      <p className="text-gray-500">{s.latencyMs} ms</p>
+                      <p className="text-gray-600">{new Date(s.checkedAt).toLocaleTimeString('es-CL')}</p>
+                    </div>
+                  </div>
+                  {s.detail && (
+                    <pre className="mt-3 text-[11px] leading-snug text-gray-400 bg-black/40 rounded-lg p-3 overflow-x-auto max-h-56 overflow-y-auto whitespace-pre-wrap">
+                      {s.detail}
+                    </pre>
+                  )}
+                </div>
+              ))}
+              {serviceChecks.length === 0 && !loading && (
+                <p className="text-center text-gray-500 py-6">Pulsa «Refrescar» para sondear.</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {tab === 'overview' && stats && (
           <div className="space-y-4">
             {/* KPIs */}

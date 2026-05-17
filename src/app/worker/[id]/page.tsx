@@ -36,7 +36,7 @@ interface WorkerData {
   user_id: number
   bio: string | null
   hourly_rate: string
-  availability_status: 'active' | 'intermediate' | 'inactive'
+  availability_status: string
   is_verified: boolean
   rating: string
   rating_count: number
@@ -164,8 +164,10 @@ export default function WorkerPublicProfile() {
     </main>
   )
 
-  const isActive = worker.availability_status === 'active'
-  const isIntermediate = worker.availability_status === 'intermediate'
+  const avail = String(worker.availability_status ?? '').toLowerCase()
+  const isOnlineNow = avail === 'active' || avail === 'available'
+  const isBusy = avail === 'busy'
+  const isIntermediate = avail === 'intermediate'
   const avatar = worker.user.avatar_url || worker.user.avatar
   const initials = worker.user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
   const rate = Math.round(parseFloat(worker.hourly_rate)).toLocaleString('es-CL')
@@ -200,8 +202,11 @@ export default function WorkerPublicProfile() {
                   {initials}
                 </div>
               )}
-              {isActive && (
+              {isOnlineNow && (
                 <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-teal-400 border-2 border-slate-900 rounded-full" aria-hidden />
+              )}
+              {!isOnlineNow && isBusy && (
+                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-amber-400 border-2 border-slate-900 rounded-full" aria-hidden />
               )}
             </div>
             <div className="min-w-0 flex-1">
@@ -228,16 +233,21 @@ export default function WorkerPublicProfile() {
             </div>
           </div>
           <div className="flex items-center gap-2 pt-1 border-t border-white/10">
-            {isActive ? (
+            {isOnlineNow ? (
               <span className="flex h-2.5 w-2.5 relative shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-400" />
               </span>
+            ) : isBusy ? (
+              <span className="flex h-2.5 w-2.5 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
+              </span>
             ) : (
               <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isIntermediate ? 'bg-amber-400' : 'bg-slate-500'}`} />
             )}
-            <span className={`text-xs font-bold ${isActive ? 'text-teal-300' : isIntermediate ? 'text-amber-200' : 'text-slate-400'}`}>
-              {isActive ? 'Disponible ahora' : isIntermediate ? 'Disponibilidad flexible' : 'No disponible'}
+            <span className={`text-xs font-bold ${isOnlineNow ? 'text-teal-300' : isBusy ? 'text-amber-200' : isIntermediate ? 'text-amber-200' : 'text-slate-400'}`}>
+              {isOnlineNow ? 'Disponible ahora' : isBusy ? 'En servicio' : isIntermediate ? 'Disponibilidad flexible' : 'No disponible'}
             </span>
           </div>
         </section>

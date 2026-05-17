@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, type MutableRefObject, type RefObject } from 'react'
+import { useCallback, useEffect, useRef, useLayoutEffect, type MutableRefObject, type RefObject } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 
 import { LS_MAP_VIEW_LAT, LS_MAP_VIEW_LNG, readInitialMapCoords } from '@/lib/mapStorage'
@@ -22,12 +22,18 @@ export interface UseMapViewportParams {
   fetchNearby: FetchNearbyFn
   fetchNearbyRef: FetchNearbyThrottleRef
   toast: (title: string, type?: 'success' | 'error' | 'info' | 'warning', body?: string, duration?: number) => void
-  mapRef: RefObject<{ flyTo: (latlng: [number, number], zoom: number) => Promise<boolean> } | null>
+  mapRef: RefObject<{
+    flyTo: (latlng: [number, number], zoom: number) => Promise<boolean>
+    fitToPoints?: (coords: [number, number][]) => Promise<boolean>
+  } | null>
   onResolvedLocation?: (lat: number, lng: number) => void
+  /** Vista «mapa a pantalla»: sección mapa y pestaña inferior Mapa; no feed/solicitudes/perfil en la barra. */
+  mapDiscoveryActive: boolean
 }
 
 /**
- * Vista del mapa: persistencia LS, debounce de nearby al mover, GPS de perfil, setView inicial.
+ * Vista del mapa: persistencia LS, debounce de nearby al mover, GPS, setView inicial.
+ * `mapDiscoveryActive` acota nearby/flyTo/pan al tab Mapa + sección mapa.
  */
 export function useMapViewport({
   userLatRef,
@@ -40,29 +46,44 @@ export function useMapViewport({
   toast,
   mapRef,
   onResolvedLocation,
+  mapDiscoveryActive,
 }: UseMapViewportParams) {
   const mapPannedByUserRef = useRef(false)
   const mapViewportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mapDiscoveryActiveRef = useRef(mapDiscoveryActive)
+  const prevMapDiscoveryRef = useRef<boolean | null>(null)
+
+  useLayoutEffect(() => {
+    mapDiscoveryActiveRef.current = mapDiscoveryActive
+  }, [mapDiscoveryActive])
+
   const applyLocationToViewport = useCallback(
-    (lat: number, lng: number, zoom = 15) => {
+    (lat: number, lng: number, zoom = 15, opts?: { forceMapUi?: boolean }) => {
+      const discovery = opts?.forceMapUi === true || mapDiscoveryActiveRef.current
       try {
         localStorage.setItem('user_lat', String(lat))
         localStorage.setItem('user_lng', String(lng))
-        localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
-        localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
+        if (discovery) {
+          localStorage.setItem(LS_MAP_VIEW_LAT, String(lat))
+          localStorage.setItem(LS_MAP_VIEW_LNG, String(lng))
+        }
       } catch {
         /* ignore */
       }
-      mapPannedByUserRef.current = true
+      if (discovery) {
+        mapPannedByUserRef.current = true
+      }
       userLatRef.current = lat
       userLngRef.current = lng
       setUserLat(lat)
       setUserLng(lng)
-      fetchNearbyRef.current.lastCall = 0
-      queueMicrotask(() => {
-        fetchNearby(activeCategory, lat, lng)
-      })
-      void mapRef.current?.flyTo([lat, lng], zoom)
+      if (discovery) {
+        fetchNearbyRef.current.lastCall = 0
+        queueMicrotask(() => {
+          fetchNearby(activeCategory, lat, lng)
+        })
+        void mapRef.current?.flyTo([lat, lng], zoom)
+      }
       onResolvedLocation?.(lat, lng)
     },
     [activeCategory, fetchNearby, fetchNearbyRef, mapRef, onResolvedLocation, setUserLat, setUserLng, userLatRef, userLngRef],
@@ -70,6 +91,7 @@ export function useMapViewport({
 
   const handleMapViewportMove = useCallback(
     (lat: number, lng: number) => {
+      if (!mapDiscoveryActiveRef.current) return
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) < 0.01) return
       mapPannedByUserRef.current = true
       try {
@@ -112,9 +134,7 @@ export function useMapViewport({
   }, [toast, applyLocationToViewport])
 
   const handleLeafletMapReady = useCallback((map: LeafletMap) => {
-    const v = readInitialMapCoords()
-    console.log('[map] vista inicial', v.lat.toFixed(4), v.lng.toFixed(4))
-    map.setView([v.lat, v.lng], 15, { animate: false })
+    // No fijar Angol/Renaico aquí: la vista inicial la define fitToPoints al cargar workers.
     requestAnimationFrame(() => map.invalidateSize())
   }, [])
 
@@ -128,7 +148,7 @@ export function useMapViewport({
     setUserLng(v.lng)
     fetchNearbyRef.current.lastCall = 0
     queueMicrotask(() => {
-      if (!cancelled) fetchNearby(null, v.lat, v.lng)
+      if (!cancelled && mapDiscoveryActiveRef.current) fetchNearby(null, v.lat, v.lng)
     })
 
     if (navigator.geolocation) {
@@ -136,11 +156,7 @@ export function useMapViewport({
         (pos) => {
           const lat = pos.coords.latitude
           const lng = pos.coords.longitude
-          // Si el usuario no ha movido manualmente el mapa, usamos GPS real para evitar quedar pegados al fallback.
-          if (!mapPannedByUserRef.current) {
-            applyLocationToViewport(lat, lng, 15)
-            return
-          }
+          // Solo perfil / nearby en background; el mapa se centra en workers o con el FAB «Mi ubicación».
           try {
             localStorage.setItem('user_lat', String(lat))
             localStorage.setItem('user_lng', String(lng))
@@ -158,7 +174,7 @@ export function useMapViewport({
       const lat = custom.detail?.lat
       const lng = custom.detail?.lng
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
-      applyLocationToViewport(Number(lat), Number(lng), 15)
+      applyLocationToViewport(Number(lat), Number(lng), 15, { forceMapUi: true })
     }
     window.addEventListener('jh:location-selected', onExternalLocationSet as EventListener)
 
@@ -171,6 +187,17 @@ export function useMapViewport({
       }
     }
   }, [applyLocationToViewport, fetchNearby, fetchNearbyRef, setUserLat, setUserLng, userLatRef, userLngRef])
+
+  /** Al volver a la sección mapa: refrescar nearby con el último centro conocido. */
+  useEffect(() => {
+    const prev = prevMapDiscoveryRef.current
+    prevMapDiscoveryRef.current = mapDiscoveryActive
+    if (!mapDiscoveryActive || prev !== false) return
+    fetchNearbyRef.current.lastCall = 0
+    queueMicrotask(() => {
+      fetchNearby(activeCategory, userLatRef.current, userLngRef.current)
+    })
+  }, [mapDiscoveryActive, activeCategory, fetchNearby, fetchNearbyRef, userLatRef, userLngRef])
 
   return {
     handleMapViewportMove,

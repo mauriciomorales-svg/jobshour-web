@@ -327,8 +327,52 @@ const MapSection = forwardRef<any, {
     return null
   }, [])
   
+  const executeFitToPoints = useCallback((map: L.Map, coords: [number, number][]): boolean => {
+    if (coords.length === 0) return false
+    try {
+      map.invalidateSize()
+      if (coords.length === 1) {
+        map.setView(coords[0], 14, { animate: true })
+        return true
+      }
+      const bounds = L.latLngBounds(coords.map((c) => L.latLng(c[0], c[1])))
+      map.fitBounds(bounds, { padding: [52, 52], maxZoom: 15, animate: true })
+      return true
+    } catch (error) {
+      if (isDev) console.error('❌ Error en fitToPoints:', error)
+      return false
+    }
+  }, [])
+
   // Exponer el ref - siempre disponible, pero puede que mapInstance aún no esté listo
   useImperativeHandle(ref, () => ({
+    fitToPoints: (coords: [number, number][]): Promise<boolean> => {
+      if (coords.length === 0) return Promise.resolve(false)
+
+      return new Promise((resolve) => {
+        const map = getMapInstance()
+        if (map) {
+          resolve(executeFitToPoints(map, coords))
+          return
+        }
+
+        let checkCount = 0
+        const maxChecks = 40
+        const checkInterval = setInterval(() => {
+          checkCount++
+          const currentMap = getMapInstance()
+          if (currentMap) {
+            clearInterval(checkInterval)
+            resolve(executeFitToPoints(currentMap, coords))
+            return
+          }
+          if (checkCount >= maxChecks) {
+            clearInterval(checkInterval)
+            resolve(false)
+          }
+        }, 50)
+      })
+    },
     flyTo: (latlng: [number, number], zoom: number): Promise<boolean> => {
       if (isDev) console.log('🗺️ MapSection.flyTo llamado:', latlng, zoom)
 
@@ -388,7 +432,7 @@ const MapSection = forwardRef<any, {
     // Exponer también el mapInstance directamente para debugging
     getMapInstance: () => mapInstanceRef.current,
     isReady: () => mapInstanceRef.current !== null || getMapInstance() !== null
-  }), [getMapInstance])
+  }), [executeFitToPoints, getMapInstance])
   
   // Solo el centro del primer render: si el padre actualiza userLat/userLng (localStorage/GPS),
   // NO pasar nuevo `center` a MapContainer — React-Leaflet recentraría y te devuelve a Renaico.

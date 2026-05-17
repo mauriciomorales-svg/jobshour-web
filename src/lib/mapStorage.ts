@@ -207,6 +207,9 @@ export function readInitialMapCoords(): { lat: number; lng: number } {
     const v4 = readRaw(LS_MAP_VIEW_LAT, LS_MAP_VIEW_LNG)
     if (v4) return normalizeStoredMapCoords(v4.lat, v4.lng)
 
+    const gpsProfile = readRaw('user_lat', 'user_lng')
+    if (gpsProfile) return gpsProfile
+
     // Legacy (pre-nukeStaleMapLS): aplicar escape por si acaso queda algún dato viejo de Renaico
     const legacy = readRaw(LS_MAP_VIEW_LAT_LEGACY, LS_MAP_VIEW_LNG_LEGACY)
     if (!legacy) return fallback

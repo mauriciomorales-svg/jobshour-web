@@ -27,7 +27,7 @@ export function HomeDashboardPanel({
   setShowRequestModal,
   setDashHidden,
   setShowLoginModal,
-  setShowOnboarding,
+  onProfileRequired,
   setActiveRequestId,
   setChatContext,
   setShowChat,
@@ -49,7 +49,7 @@ export function HomeDashboardPanel({
   setShowRequestModal: (v: boolean) => void
   setDashHidden: (v: boolean) => void
   setShowLoginModal: (v: boolean) => void
-  setShowOnboarding: (v: boolean) => void
+  onProfileRequired: () => void
   setActiveRequestId: (id: number | null) => void
   setChatContext: Dispatch<
     SetStateAction<{ description?: string; name?: string; avatar?: string | null; myRole?: 'cliente' | 'trabajador'; isSelf?: boolean }>
@@ -130,8 +130,8 @@ export function HomeDashboardPanel({
                   setShowLoginModal(true)
                   toast('Inicia sesión para tomar solicitudes', 'info')
                 } else {
-                  setShowOnboarding(true)
-                  toast('Completa tu perfil para continuar', 'warning')
+                  onProfileRequired()
+                  toast('Completá foto y nombre en tu perfil', 'warning')
                 }
                 return
               }
@@ -262,8 +262,8 @@ export function HomeDashboardPanel({
                   setShowLoginModal(true)
                   toast('Inicia sesión para chatear', 'info')
                 } else {
-                  setShowOnboarding(true)
-                  toast('Completa tu perfil para chatear', 'warning')
+                  onProfileRequired()
+                  toast('Completá foto y nombre para chatear', 'warning')
                 }
                 return
               }

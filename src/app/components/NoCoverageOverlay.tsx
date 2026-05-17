@@ -74,7 +74,7 @@ export default function NoCoverageOverlay({
                 <h3 className="text-white font-semibold text-base leading-tight">
                   {isOutsideZone
                     ? 'Estamos creciendo barrio a barrio'
-                    : 'Sin workers activos cerca'}
+                    : 'Sin trabajadores activos cerca'}
                 </h3>
               </div>
               <button
@@ -95,21 +95,19 @@ export default function NoCoverageOverlay({
               </p>
             ) : (
               <p className="text-gray-300 text-sm mb-4 leading-relaxed">
-                No hay workers activos cerca ahora mismo.
-                Puedes <strong className="text-white">publicar tu demanda igual</strong> — cuando
-                llegue un worker a tu zona te notificaremos.
+                No hay trabajadores activos cerca ahora mismo.
+                Podés <strong className="text-white">publicar tu demanda igual</strong> — cuando
+                llegue alguien a tu zona te avisamos.
               </p>
             )}
 
             <div className="flex flex-col gap-2">
-              {!isOutsideZone && (
-                <button
-                  onClick={onPublishDemand}
-                  className="w-full py-3 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-white font-semibold rounded-xl text-sm transition-colors"
-                >
-                  ✍️ Publicar mi demanda igual
-                </button>
-              )}
+              <button
+                onClick={onPublishDemand}
+                className="w-full py-3 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-white font-semibold rounded-xl text-sm transition-colors"
+              >
+                ✍️ Publicar mi demanda
+              </button>
               <button
                 onClick={() => setStep('form')}
                 className="w-full py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium rounded-xl text-sm transition-colors"
@@ -197,7 +195,7 @@ export default function NoCoverageOverlay({
               ¡Listo! Te tenemos en la lista
             </h3>
             <p className="text-gray-300 text-sm mb-4">
-              En cuanto haya workers activos en tu zona te avisamos.
+              En cuanto haya trabajadores activos en tu zona te avisamos.
               Mientras tanto, puedes publicar tu demanda para que la vean cuando lleguen.
             </p>
             <div className="flex flex-col gap-2">

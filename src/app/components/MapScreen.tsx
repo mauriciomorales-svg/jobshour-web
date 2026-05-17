@@ -22,9 +22,7 @@ interface MapScreenProps {
   onMapMove: (lat: number, lng: number) => void
   showLocationFab: boolean
   onCenterOnMyLocation: () => void
-  showEmptyOverlay: boolean
-  onDismissEmptyMap: () => void
-  onPublishFromEmpty: () => void
+  mapLoading?: boolean
   notifBadge: number
   onMenuToggle: () => void
   headerUser: { id: number; firstName: string; avatarUrl: string | null } | null
@@ -59,7 +57,7 @@ interface MapScreenProps {
   setShowRequestModal: (v: boolean) => void
   setDashHidden: (v: boolean) => void
   setShowLoginModal: (v: boolean) => void
-  setShowOnboarding: (v: boolean) => void
+  onProfileRequired: () => void
   setActiveRequestId: (id: number | null) => void
   setChatContext: Dispatch<SetStateAction<{
     description?: string; name?: string; avatar?: string | null
@@ -77,24 +75,33 @@ interface MapScreenProps {
   /** Tienda premium: handoff antes de abrir web externa */
   premiumHandoff: PremiumStoreHandoff | null
   onDismissPremiumHandoff: () => void
+  /** Filtro opcional de capas del mapa (servicios vs tiendas). */
+  mapLayersExpanded: boolean
+  onMapLayersExpandedChange: (open: boolean) => void
+  mapLayers: { services: boolean; stores: boolean }
+  onToggleMapLayer: (key: 'services' | 'stores') => void
+  /** Controles de mapa (capas): solo con sección mapa y pestaña Mapa. */
+  mapDiscoveryActive: boolean
 }
 
 export function MapScreen(props: MapScreenProps) {
   const {
     mapRef, filtered, onPointClick, onMapClick, highlightedRequestId,
     onLeafletReady, onMapMove, showLocationFab, onCenterOnMyLocation,
-    showEmptyOverlay, onDismissEmptyMap, onPublishFromEmpty,
+    mapLoading,
     notifBadge, onMenuToggle, headerUser, onLoginClick, onProfileClick,
     searchQuery, onSearchChange, workerCount, categories, activeCategory, onCategoryClick,
     selectedDetail, loadingDetail, onCloseDetail, user, workerProfile, chatRequestIdForDetail,
     onTravelJoin, onOpenProfileSection, onVerWorkerProfile, onDetailChat, onDetailRequest, onCallPhone,
     dashHidden, userLat, userLng, currentUserId, onDashboardClose, onDashboardRefresh,
     setHighlightedRequestId, setSelectedDetail, setShowRequestModal, setDashHidden,
-    setShowLoginModal, setShowOnboarding, setActiveRequestId, setChatContext, setShowChat,
+    setShowLoginModal, onProfileRequired, setActiveRequestId, setChatContext, setShowChat,
     setPoints, fetchNearby, checkAuthAndProfile, toast,
     showLocationPrompt, onDismissLocationPrompt,
     outsideZone,
     premiumHandoff, onDismissPremiumHandoff,
+    mapLayersExpanded, onMapLayersExpandedChange, mapLayers, onToggleMapLayer,
+    mapDiscoveryActive,
   } = props
 
   return (
@@ -109,9 +116,8 @@ export function MapScreen(props: MapScreenProps) {
         onMapMove={onMapMove}
         showLocationFab={showLocationFab}
         onCenterOnMyLocation={onCenterOnMyLocation}
-        showEmptyOverlay={showEmptyOverlay}
-        onDismissEmptyMap={onDismissEmptyMap}
-        onPublishFromEmpty={onPublishFromEmpty}
+        mapLoading={mapLoading}
+        layerPanelExpanded={mapDiscoveryActive && mapLayersExpanded}
       />
 
       <HomeHeader
@@ -126,6 +132,11 @@ export function MapScreen(props: MapScreenProps) {
         categories={categories}
         activeCategory={activeCategory}
         onCategoryClick={onCategoryClick}
+        mapLayersExpanded={mapLayersExpanded}
+        onMapLayersExpandedChange={onMapLayersExpandedChange}
+        mapLayers={mapLayers}
+        onToggleMapLayer={onToggleMapLayer}
+        showMapLayerControls={mapDiscoveryActive}
       />
 
       {(selectedDetail || loadingDetail) && (
@@ -158,7 +169,7 @@ export function MapScreen(props: MapScreenProps) {
         setShowRequestModal={setShowRequestModal}
         setDashHidden={setDashHidden}
         setShowLoginModal={setShowLoginModal}
-        setShowOnboarding={setShowOnboarding}
+        onProfileRequired={onProfileRequired}
         setActiveRequestId={setActiveRequestId}
         setChatContext={setChatContext}
         setShowChat={setShowChat}
