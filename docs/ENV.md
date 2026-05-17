@@ -38,14 +38,17 @@ En el **VPS** típico (API + inventario en el mismo servidor) los defaults basta
 
 **Cámara / micrófono (PWA):** el sitio debe servirse por **HTTPS**; en Nginx evitá un `Permissions-Policy` global que bloquee `camera`/`microphone`. Ejemplo en `deploy/nginx-web.conf`.
 
-## Pagos (Mercado Pago / Flow)
+## Pagos
 
 | Variable | Uso |
 |----------|-----|
-| `NEXT_PUBLIC_MP_PUBLIC_KEY` | Clave pública MP para Brick / checkout en el navegador. Si falta, la web puede pedirla a `GET /api/v1/payments/mp/brick-config`. |
-| `NEXT_PUBLIC_PAYMENT_GATEWAY` | Opcional. Por defecto `mercadopago` (`src/lib/paymentGateway.ts`). |
+| `NEXT_PUBLIC_MP_PUBLIC_KEY` | Clave pública MP para Brick / checkout. Si falta, `GET /api/v1/payments/mp/brick-config`. |
 
-En **Laravel** (`jobshour-api/.env`): `MP_ACCESS_TOKEN`, `MP_PUBLIC_KEY`, `MERCADOPAGO_WEBHOOK_SECRET`. **`PAYMENT_GATEWAY=mercadopago`** (default). Flow ya no se usa en checkout; solo queda `GET /payments/flow/confirm` por si algún pago viejo redirige con `?token=` a `/pago/resultado`.
+**Activo:** Mercado Pago (`src/lib/paymentGateway.ts`).
+
+**Standby:** Flow.cl — código y rutas en API (`jobshour-api/docs/FLOW-STANDBY.md`). No se inicia checkout nuevo; `/pago/resultado?token=` sigue confirmando pagos Flow antiguos.
+
+En **Laravel** (`.env`): `PAYMENT_GATEWAY=mercadopago`, `MP_ACCESS_TOKEN`, `MP_PUBLIC_KEY`, `MERCADOPAGO_WEBHOOK_SECRET`. Variables `FLOW_*` opcionales hasta reactivar.
 
 ## Android / export estático
 

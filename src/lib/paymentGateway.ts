@@ -1,6 +1,6 @@
 /**
  * Pasarela de pago en el cliente (Next.js).
- * En producción se usa SOLO Mercado Pago.
+ * Activa: Mercado Pago. Flow queda en standby en API (docs/FLOW-STANDBY.md en jobshour-api).
  *
  * La clave pública del brick puede venir de NEXT_PUBLIC_MP_PUBLIC_KEY o del API
  * GET /api/v1/payments/mp/brick-config (misma MP_PUBLIC_KEY que en Laravel).
