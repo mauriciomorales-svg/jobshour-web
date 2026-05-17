@@ -5,9 +5,18 @@ import dynamic from 'next/dynamic'
 import { useParams, useSearchParams } from 'next/navigation'
 import { trackEvent } from '@/lib/analytics'
 import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
-import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info, FileDown, ScanLine } from 'lucide-react'
+import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info, FileDown, ScanLine, BadgeCheck } from 'lucide-react'
 import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
 import { displayPublicUrl, publicTiendaUrl, withShareUtm } from '@/lib/marketingShare'
+import { extractDeliveryBadgeFromDescription } from '@/lib/productShare'
+import StorePublicHostPanel from '@/app/components/StorePublicHostPanel'
+import { ProductPhotoUpload } from '@/app/components/ProductPhotoUpload'
+import {
+  emptyPhotoSlots,
+  uploadProductPhotos,
+  validatePhotoSlots,
+  type ProductPhotoMode,
+} from '@/lib/productPhotoComposite'
 
 const BarcodeScanModal = dynamic(() => import('@/app/components/BarcodeScanModal'), { ssr: false })
 
@@ -64,7 +73,44 @@ interface WorkerInfo {
   fresh_score: number
   rating_count: number
   status: string
+  /** Perfil verificado en JobsHours (QR / flujo oficial) */
+  is_verified?: boolean
+  /** Dominio o subdominio verificado que sirve la tienda en `/` (middleware). */
+  public_store_host?: string | null
   category?: { name: string; color: string; icon: string } | null
+}
+
+/** `availability_status` en API experts / workers (incluye valores legacy del mapa). */
+function isTiendaCatalogOpenStatus(status: string | undefined | null): boolean {
+  const s = String(status ?? '').toLowerCase()
+  return ['active', 'intermediate', 'available', 'busy'].includes(s)
+}
+
+function tiendaStatusBadgeClass(status: string | undefined | null): string {
+  const s = String(status ?? '').toLowerCase()
+  if (s === 'active' || s === 'available') return 'bg-teal-500/20 text-teal-300'
+  if (s === 'intermediate') return 'bg-amber-500/20 text-amber-200'
+  if (s === 'busy') return 'bg-amber-500/25 text-amber-100'
+  return 'bg-slate-600 text-slate-400'
+}
+
+function tiendaStatusBadgeLabel(status: string | undefined | null): string {
+  const s = String(status ?? '').toLowerCase()
+  switch (s) {
+    case 'active':
+    case 'available':
+      return '● Disponible'
+    case 'intermediate':
+      return '● Disponibilidad flexible'
+    case 'busy':
+      return '● En servicio'
+    case 'offline':
+      return '● Fuera de línea'
+    case 'inactive':
+      return '● Inactivo'
+    default:
+      return '● No disponible'
+  }
 }
 
 function formatPrice(n: number) {
@@ -99,14 +145,6 @@ function suggestProductTemplate(p: Producto): 'premium' | 'oferta' | 'usado' {
   if (/(usado|segunda mano|semi nuevo|seminuevo)/.test(raw)) return 'usado'
   if (/(oferta|promo|descuento|liquidacion|liquidación|rebaja)/.test(raw)) return 'oferta'
   return 'premium'
-}
-
-function extractDeliveryBadge(descripcion?: string | null): { enabled: boolean; fee: number } {
-  const raw = (descripcion || '').toLowerCase()
-  if (!raw.includes('delivery por vendedor: si')) return { enabled: false, fee: 0 }
-  const feeMatch = raw.match(/\(\+\$?([0-9\.\,]+)/)
-  const fee = feeMatch ? Number(String(feeMatch[1]).replace(/[^\d]/g, '')) || 0 : 0
-  return { enabled: true, fee }
 }
 
 // ─── Hook reconocimiento de voz ───────────────────────────────────────────────
@@ -160,12 +198,14 @@ function QuickPublishModal({
   onClose,
   workerId,
   storeName,
+  publicStoreHost,
   onSuccess,
 }: {
   isOpen: boolean
   onClose: () => void
   workerId: number
   storeName?: string | null
+  publicStoreHost?: string | null
   onSuccess: () => void
 }) {
   const [tipo, setTipo] = useState<'producto' | 'lote'>('producto')
@@ -264,7 +304,7 @@ function QuickPublishModal({
       const pid = Number(data?.idproducto || 0)
       const url = pid > 0
         ? buildPublicProductUrl(workerId, pid, finalTitle)
-        : publicTiendaUrl(workerId)
+        : publicTiendaUrl(workerId, { publicHost: publicStoreHost })
       setPublishedName(finalTitle)
       setPublishedUrl(url)
       onSuccess()
@@ -552,14 +592,13 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
   isOpen: boolean; onClose: () => void; workerId: number; onSuccess: () => void
 }) {
   const [form, setForm] = useState({ nombre: '', precio: '', precioVenta: '', stock: '1', codigo: '', descripcion: '', condition: 'nuevo' })
-  const [imagen, setImagen] = useState<File | null>(null)
-  const [preview, setPreview] = useState('')
+  const [photoMode, setPhotoMode] = useState<ProductPhotoMode>(1)
+  const [photoSlots, setPhotoSlots] = useState<(File | null)[]>(() => emptyPhotoSlots(1))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [categorias, setCategorias] = useState<{idcategoria: number, nombre: string}[]>([])
   const [categoria, setCategoria] = useState('')
   const [barcodeScanOpen, setBarcodeScanOpen] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
 
   const precioNum = parseFloat(form.precio) || 0
   const precioVentaAuto = Math.round(precioNum * 1.10)
@@ -571,7 +610,10 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
       return
     }
     setForm({ nombre: '', precio: '', precioVenta: '', stock: '1', codigo: '', descripcion: '', condition: 'nuevo' })
-    setImagen(null); setPreview(''); setError(''); setCategoria('')
+    setPhotoMode(1)
+    setPhotoSlots(emptyPhotoSlots(1))
+    setError('')
+    setCategoria('')
     fetch(`${INVENTARIO_API}/categorias?worker_id=${workerId}`)
       .then(r => r.json()).then(d => setCategorias(d.data ?? [])).catch(() => {})
   }, [isOpen, workerId])
@@ -582,11 +624,11 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
       setForm(f => ({ ...f, precioVenta: String(Math.round(precioNum * 1.10)) }))
   }, [form.precio])
 
-  const handleFile = (f: File) => { setImagen(f); setPreview(URL.createObjectURL(f)) }
-
   const handleSubmit = async () => {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return }
     if (!form.precio.trim() || precioNum <= 0) { setError('El precio costo es obligatorio'); return }
+    const photoErr = validatePhotoSlots(photoMode, photoSlots)
+    if (photoErr) { setError(photoErr); return }
     setSaving(true); setError('')
     try {
       const fd = new FormData()
@@ -599,7 +641,6 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
       fd.append('worker_id', String(workerId))
       fd.append('codigobarra', form.codigo.trim() || `SKU-${Date.now()}`)
       if (categoria) fd.append('idcategoria', categoria)
-      if (imagen) fd.append('foto', imagen)
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
       const r = await fetch(`${INVENTARIO_API}/worker-productos`, {
         method: 'POST',
@@ -609,15 +650,8 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
       const data = await r.json()
       if (!r.ok) throw new Error(data.message || 'Error al crear')
 
-      // Subir foto separado usando el codigobarra guardado en BD
-      if (imagen && data.codigobarra) {
-        const ffd = new FormData()
-        ffd.append('foto', imagen)
-        await fetch(`${INVENTARIO_API}/productos/${encodeURIComponent(data.codigobarra)}/foto`, {
-          method: 'POST',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          body: ffd
-        })
+      if (data.codigobarra) {
+        await uploadProductPhotos(INVENTARIO_API, data.codigobarra, photoSlots, token)
       }
 
       onSuccess(); onClose()
@@ -650,20 +684,12 @@ function AddProductModal({ isOpen, onClose, workerId, onSuccess }: {
 
           {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl px-3 py-2">{error}</div>}
 
-          {/* Imagen */}
-          <div
-            className="w-full h-36 bg-gray-100 rounded-xl flex items-center justify-center cursor-pointer border-2 border-dashed border-gray-300 hover:border-orange-400 transition overflow-hidden"
-            onClick={() => fileRef.current?.click()}
-          >
-            {preview ? <img src={preview} className="w-full h-full object-cover" alt="preview" /> : (
-              <div className="text-center text-gray-400">
-                <Camera className="w-8 h-8 mx-auto mb-1" />
-                <p className="text-xs font-semibold">Toca para subir imagen</p>
-                <p className="text-xs opacity-60">JPG, PNG o HEIC</p>
-              </div>
-            )}
-          </div>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+          <ProductPhotoUpload
+            mode={photoMode}
+            onModeChange={setPhotoMode}
+            slots={photoSlots}
+            onSlotsChange={setPhotoSlots}
+          />
 
           {/* Código de barras */}
           <div>
@@ -822,13 +848,12 @@ function EditProductModal({ producto, workerId, onClose, onSuccess }: {
   const [nombre, setNombre] = useState(producto.nombre)
   const [precio, setPrecio] = useState(String(producto.precio))
   const [stock, setStock] = useState(String(producto.stock_actual))
-  const [imagen, setImagen] = useState<File | null>(null)
-  const [preview, setPreview] = useState(producto.imagen_url || '')
+  const [photoMode, setPhotoMode] = useState<ProductPhotoMode>(1)
+  const [photoSlots, setPhotoSlots] = useState<(File | null)[]>(() => emptyPhotoSlots(1))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [categorias, setCategorias] = useState<{idcategoria: number, nombre: string}[]>([])
   const [categoria, setCategoria] = useState(String(producto.idcategoria ?? ''))
-  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch(`${INVENTARIO_API}/categorias?worker_id=${workerId}`)
@@ -840,9 +865,12 @@ function EditProductModal({ producto, workerId, onClose, onSuccess }: {
   const precioNum = parseFloat(precio) || 0
   const precioCliente = Math.round(precioNum * 1.10)
 
-  const handleFile = (f: File) => { setImagen(f); setPreview(URL.createObjectURL(f)) }
-
   const handleSave = async () => {
+    const filled = photoSlots.filter(Boolean).length
+    if (filled > 0) {
+      const photoErr = validatePhotoSlots(photoMode, photoSlots)
+      if (photoErr) { setError(photoErr); return }
+    }
     setSaving(true); setError('')
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
@@ -863,21 +891,9 @@ function EditProductModal({ producto, workerId, onClose, onSuccess }: {
       const data = await r.json()
       if (!r.ok) throw new Error(data.message || 'Error al actualizar datos')
 
-      // 2. Si hay imagen nueva, subirla por separado via /productos/{codigo}/foto
-      if (imagen) {
+      if (filled > 0) {
         const codigo = producto.codigobarra || `SKU-${producto.idproducto}`
-        const fd = new FormData()
-        fd.append('foto', imagen)
-        // El endpoint sobrescribe la imagen anterior del mismo código
-        const ri = await fetch(`${INVENTARIO_API}/productos/${encodeURIComponent(codigo)}/foto`, {
-          method: 'POST',
-          headers: authHeaders,
-          body: fd
-        })
-        if (!ri.ok) {
-          const di = await ri.json().catch(() => ({}))
-          throw new Error(di.message || 'Datos guardados, pero error al subir imagen')
-        }
+        await uploadProductPhotos(INVENTARIO_API, codigo, photoSlots, token)
       }
 
       onSuccess(); onClose()
@@ -894,19 +910,13 @@ function EditProductModal({ producto, workerId, onClose, onSuccess }: {
           <button onClick={onClose}><X className="w-5 h-5 text-gray-400" /></button>
         </div>
         <div className="p-4 space-y-3">
-          {/* Imagen */}
-          <div
-            className="w-full h-40 bg-gray-100 rounded-xl flex items-center justify-center cursor-pointer border-2 border-dashed border-gray-300 hover:border-orange-400 transition overflow-hidden relative group"
-            onClick={() => fileRef.current?.click()}
-          >
-            {preview ? <img src={preview} className="w-full h-full object-cover" alt="" /> : (
-              <div className="text-center text-gray-400"><Camera className="w-8 h-8 mx-auto mb-1" /><p className="text-xs">Cambiar imagen</p></div>
-            )}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-              <Camera className="w-8 h-8 text-white" />
-            </div>
-          </div>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+          <ProductPhotoUpload
+            mode={photoMode}
+            onModeChange={setPhotoMode}
+            slots={photoSlots}
+            onSlotsChange={setPhotoSlots}
+            existingUrl={producto.imagen_url}
+          />
 
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Nombre</label>
@@ -964,10 +974,15 @@ function EditProductModal({ producto, workerId, onClose, onSuccess }: {
 }
 
 // ─── Página principal ─────────────────────────────────────────────────────────
+type TiendaGate = 'loading_worker' | 'ready' | 'no_catalog' | 'profile_missing' | 'load_error'
+
 export default function TiendaPage() {
   const params = useParams()
   const searchParams = useSearchParams()
-  const workerId = Number(params.workerId)
+  const rawWorkerParam = params.workerId
+  const workerIdStr = Array.isArray(rawWorkerParam) ? rawWorkerParam[0] : rawWorkerParam
+  const workerId = Number(workerIdStr)
+  const workerIdValid = Number.isFinite(workerId) && workerId > 0
 
   const [worker, setWorker] = useState<WorkerInfo | null>(null)
   const [productos, setProductos] = useState<Producto[]>([])
@@ -990,7 +1005,9 @@ export default function TiendaPage() {
   const [buyerName, setBuyerName] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
-  const [notFound, setNotFound] = useState(false)
+  const [tiendaGate, setTiendaGate] = useState<TiendaGate>('loading_worker')
+  const [noCatalogHint, setNoCatalogHint] = useState<{ name: string; storeName: string | null } | null>(null)
+  const [workerFetchRetry, setWorkerFetchRetry] = useState(0)
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null)
   const [myWorkerId, setMyWorkerId] = useState<number | null>(null)
   const [isOwner, setIsOwner] = useState(false)
@@ -1194,18 +1211,50 @@ export default function TiendaPage() {
     if (isOwner && tab === 'stats') fetchMarketingStats()
   }, [isOwner, tab, fetchMarketingStats])
 
-  // Worker info (mismo origen vía origin)
+  // Worker + permiso de tienda (mismo origen vía origin)
   useEffect(() => {
-    if (!workerId || typeof window === 'undefined') return
+    if (typeof window === 'undefined') return
+    if (!workerIdValid) {
+      setWorker(null)
+      setNoCatalogHint(null)
+      setTiendaGate('profile_missing')
+      return
+    }
+    setTiendaGate('loading_worker')
+    setWorker(null)
+    setNoCatalogHint(null)
     const apiUrl = `${window.location.origin}/api`
     fetch(`${apiUrl}/v1/experts/${workerId}`, { headers: { Accept: 'application/json' } })
-      .then(r => r.json())
-      .then(data => {
-        if (data.data && data.data.is_seller) setWorker(data.data)
-        else setNotFound(true)
+      .then(async r => {
+        let data: { status?: string; data?: WorkerInfo & { is_seller?: boolean } } | null = null
+        try {
+          data = await r.json()
+        } catch {
+          data = null
+        }
+        if (!r.ok) {
+          if (r.status === 404) setTiendaGate('profile_missing')
+          else setTiendaGate('load_error')
+          return
+        }
+        if (!data || data.status !== 'success' || !data.data) {
+          setTiendaGate('profile_missing')
+          return
+        }
+        const d = data.data
+        if (!d.is_seller) {
+          setNoCatalogHint({
+            name: d.name || 'Este perfil',
+            storeName: d.store_name ?? null,
+          })
+          setTiendaGate('no_catalog')
+          return
+        }
+        setWorker(d)
+        setTiendaGate('ready')
       })
-      .catch(() => setNotFound(true))
-  }, [workerId])
+      .catch(() => setTiendaGate('load_error'))
+  }, [workerId, workerIdValid, workerFetchRetry])
 
   useEffect(() => {
     if (!worker) return
@@ -1262,7 +1311,13 @@ export default function TiendaPage() {
     finally { setLoading(false) }
   }, [buscar, workerId, categoriaFiltro])
 
-  useEffect(() => { if (workerId) fetchProductos() }, [fetchProductos, workerId])
+  useEffect(() => {
+    if (!workerIdValid) {
+      setLoading(false)
+      return
+    }
+    void fetchProductos()
+  }, [fetchProductos, workerId, workerIdValid])
 
   // Cart
   const addToCart = (p: Producto) => {
@@ -1488,20 +1543,85 @@ export default function TiendaPage() {
     }
   }
 
-  if (!loading && notFound) {
+  if (tiendaGate === 'loading_worker') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4 p-6">
+        <Loader2 className="w-10 h-10 text-orange-500 animate-spin" aria-hidden />
+        <p className="text-gray-600 font-semibold text-sm">Cargando tienda…</p>
+      </div>
+    )
+  }
+
+  if (tiendaGate === 'load_error') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center text-center p-6">
+        <div className="max-w-md">
+          <div className="text-5xl mb-4" aria-hidden>📡</div>
+          <h1 className="text-2xl font-black text-gray-900 mb-2">No pudimos cargar la tienda</h1>
+          <p className="text-gray-500 mb-6">Puede ser un problema de conexión o del servidor. Probá de nuevo en unos segundos.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              type="button"
+              onClick={() => setWorkerFetchRetry(c => c + 1)}
+              className="bg-orange-500 text-white font-bold px-6 py-3 rounded-xl hover:bg-orange-400 transition"
+            >
+              Reintentar
+            </button>
+            <a href="https://jobshours.com" className="inline-flex items-center justify-center border border-gray-300 text-gray-800 font-bold px-6 py-3 rounded-xl hover:bg-gray-100 transition">
+              Volver al inicio
+            </a>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (tiendaGate === 'no_catalog') {
+    const hint = noCatalogHint
+    const label = hint?.storeName ? `${hint.name} · ${hint.storeName}` : (hint?.name ?? 'Este perfil')
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center text-center p-6">
+        <div className="max-w-md">
+          <div className="text-5xl mb-4" aria-hidden>🛒</div>
+          <h1 className="text-2xl font-black text-gray-900 mb-2">Sin catálogo en JobsHours</h1>
+          <p className="text-gray-500 mb-6">
+            <span className="font-semibold text-gray-700">{label}</span>
+            {' '}aún no tiene la tienda de productos activa. Podés ver el perfil de servicios o volver al inicio.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <a
+              href={`/worker/${workerId}`}
+              className="bg-teal-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-teal-500 transition"
+            >
+              Ver perfil del vendedor
+            </a>
+            <a href="https://jobshours.com" className="inline-flex items-center justify-center border border-gray-300 text-gray-800 font-bold px-6 py-3 rounded-xl hover:bg-gray-100 transition">
+              Volver al inicio
+            </a>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (tiendaGate === 'profile_missing') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center text-center p-6">
         <div>
           <div className="text-6xl mb-4">🔍</div>
-          <h1 className="text-2xl font-black text-gray-900 mb-2">Tienda no encontrada</h1>
-          <p className="text-gray-500 mb-6">El worker que buscas no existe o no tiene tienda activa.</p>
+          <h1 className="text-2xl font-black text-gray-900 mb-2">No encontramos esta tienda</h1>
+          <p className="text-gray-500 mb-6 max-w-md mx-auto">El enlace puede estar incorrecto o el perfil ya no está disponible en JobsHours.</p>
           <a href="https://jobshours.com" className="bg-orange-500 text-white font-bold px-6 py-3 rounded-xl hover:bg-orange-400 transition">← Volver al inicio</a>
         </div>
       </div>
     )
   }
 
-  if (!loading && worker && worker.status !== 'active' && worker.status !== 'intermediate') {
+  if (!worker) {
+    return null
+  }
+
+  if (!loading && !isTiendaCatalogOpenStatus(worker.status)) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center text-center p-6">
         <div>
@@ -1523,6 +1643,7 @@ export default function TiendaPage() {
         onClose={() => setShowQuickPublish(false)}
         workerId={workerId}
         storeName={worker?.store_name}
+        publicStoreHost={worker?.public_store_host}
         onSuccess={fetchProductos}
       />
       <AddProductModal
@@ -1593,15 +1714,21 @@ export default function TiendaPage() {
                   <Star className="w-4 h-4 fill-yellow-400" /> {worker.fresh_score?.toFixed(1) ?? '0.0'}
                   <span className="text-slate-400 font-normal">({worker.rating_count} reseñas)</span>
                 </span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${worker.status === 'active' ? 'bg-teal-500/20 text-teal-300' : 'bg-slate-600 text-slate-400'}`}>
-                  {worker.status === 'active' ? '● Disponible' : '● Inactivo'}
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${tiendaStatusBadgeClass(worker.status)}`}>
+                  {tiendaStatusBadgeLabel(worker.status)}
                 </span>
+                {worker.is_verified && (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">
+                    <BadgeCheck className="w-3.5 h-3.5 text-emerald-300 shrink-0" aria-hidden />
+                    Vendedor verificado
+                  </span>
+                )}
               </div>
             )}
             {/* Botón compartir */}
             <button
               onClick={() => {
-                const url = withShareUtm(publicTiendaUrl(workerId), 'tienda_catalog')
+                const url = withShareUtm(publicTiendaUrl(workerId, { publicHost: worker?.public_store_host }), 'tienda_catalog')
                 const lista = productos.slice(0, 20).map(p =>
                   `• ${p.nombre} — ${formatPrice(p.precio_venta ?? p.precio)}`
                 ).join('\n')
@@ -1713,6 +1840,7 @@ export default function TiendaPage() {
             </button>
           </div>
         )}
+        {isOwner && <StorePublicHostPanel />}
         {isOwner && (
           <div className="space-y-2">
             <div className="rounded-xl border border-teal-200 bg-teal-50 p-3 max-w-2xl">
@@ -1900,7 +2028,7 @@ export default function TiendaPage() {
                   <p className="text-lg font-black">¡Tu tienda está lista para despegar!</p>
                   <p className="text-sm opacity-90 mt-1">Comparte tu link y haz tu primera venta hoy.</p>
                   <p className="text-xs bg-white/20 rounded-lg px-3 py-1 mt-3 font-mono">
-                    {displayPublicUrl(publicTiendaUrl(workerId))}
+                    {displayPublicUrl(publicTiendaUrl(workerId, { publicHost: worker?.public_store_host }))}
                   </p>
                 </div>
               )}
@@ -1949,8 +2077,8 @@ export default function TiendaPage() {
               <div className="bg-slate-800 rounded-2xl p-4 text-white">
                 <p className="text-sm font-bold mb-2">📲 Comparte tu tienda</p>
                 <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2">
-                  <p className="text-xs font-mono flex-1 truncate">{displayPublicUrl(publicTiendaUrl(workerId))}</p>
-                  <button onClick={() => navigator.clipboard.writeText(publicTiendaUrl(workerId))}
+                  <p className="text-xs font-mono flex-1 truncate">{displayPublicUrl(publicTiendaUrl(workerId, { publicHost: worker?.public_store_host }))}</p>
+                  <button onClick={() => navigator.clipboard.writeText(publicTiendaUrl(workerId, { publicHost: worker?.public_store_host }))}
                     className="text-xs bg-orange-500 hover:bg-orange-400 px-3 py-1 rounded-lg font-bold transition">Copiar</button>
                 </div>
               </div>
@@ -1985,7 +2113,7 @@ export default function TiendaPage() {
             {productos.map(p => {
               const precio = p.precio_venta ?? p.precio
               const enCarrito = cart.find(i => i.idproducto === p.idproducto)
-              const deliveryBadge = extractDeliveryBadge(p.descripcion)
+              const deliveryBadge = extractDeliveryBadgeFromDescription(p.descripcion)
               return (
                 <div key={p.idproducto} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group relative">
                   {/* Imagen */}
