@@ -32,7 +32,7 @@ Plan priorizado para abordar deuda técnica, operación y calidad. Cada fase pue
 |----|--------|-------------------|
 | 2.1 | Instalar **Vitest** o **Jest** + `jsdom` mínimo | Hecho (`vitest`) |
 | 2.2 | Tests unitarios: `getPublicApiBase` / `apiUrl` (`src/lib/api.ts`) | Hecho (`src/lib/api.test.ts`) |
-| 2.3 | Test opcional: `readInitialMapCoords` o helpers puros si se extraen | Pendiente (helpers en `mapStorage.ts`) |
+| 2.3 | Test opcional: `readInitialMapCoords` o helpers puros si se extraen | Hecho (`src/lib/mapStorage.test.ts`: haversine, Renaico, normalize) |
 | 2.4 | CI: paso `npm run test` | Hecho |
 
 ---
@@ -77,7 +77,7 @@ Plan priorizado para abordar deuda técnica, operación y calidad. Cada fase pue
 |----|--------|
 | 6.1 | Auditar bundle (`@next/bundle-analyzer`) | Hecho (`npm run analyze` = `ANALYZE=true next build`) |
 | 6.2 | Más `dynamic(..., { ssr: false })` en modales pesados | Parcial (ya hay varios en `page.tsx`) |
-| 6.3 | Revisar `images.unoptimized` vs necesidades Capacitor vs web | Pendiente |
+| 6.3 | Revisar `images.unoptimized` vs necesidades Capacitor vs web | Hecho: sin `next/image`; `unoptimized: true` en web y export Android (`next.config.js`) |
 
 ---
 

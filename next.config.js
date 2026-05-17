@@ -44,10 +44,14 @@ const nextConfig = {
   },
   // Para Capacitor/Android se exporta como archivos estáticos
   ...(isExport ? { output: 'export', distDir: '.next-android' } : {}),
+  // Sin uso de next/image en src/; avatares/fotos van como <img> con URLs dinámicas del API.
+  // NEXT_EXPORT (Capacitor) exige unoptimized; en web servidor dejamos true por consistencia con el export.
   images: {
     unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'i.pravatar.cc' },
+      { protocol: 'https', hostname: 'jobshours.com' },
+      { protocol: 'https', hostname: 'www.jobshours.com' },
     ],
   },
   // Los rewrites solo aplican en modo servidor (no en export estático)
