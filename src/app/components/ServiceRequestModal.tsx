@@ -65,6 +65,7 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
   const [distanceKm, setDistanceKm] = useState<number | null>(null)
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [canReuseLastRequest, setCanReuseLastRequest] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const isRecados = expert?.category?.icon === 'package'
   const hasActiveRoute = !!(expert?.active_route && expert.active_route.destination)
@@ -622,9 +623,20 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             <p className="text-right text-[10px] text-slate-600 mt-1">{description.length}/500</p>
           </div>
 
-          {/* Imagen opcional */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-sm font-semibold hover:bg-slate-700 transition"
+          >
+            <span>Más opciones</span>
+            <span className="text-slate-500 text-xs">{showAdvanced ? '▲' : '▼'}</span>
+          </button>
+
+          {showAdvanced && (
+          <div className="space-y-4 bg-slate-800/50 border border-slate-700 rounded-2xl p-4">
+            <p className="text-xs font-black text-slate-400 uppercase tracking-wide">Opcional</p>
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">📷 Foto de referencia <span className="text-slate-600 font-normal normal-case">(opcional)</span></label>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">📷 Foto de referencia</label>
             {imagePreview ? (
               <div className="relative">
                 <img src={imagePreview} alt="preview" className="w-full h-32 object-cover rounded-xl border border-slate-700" />
@@ -642,17 +654,21 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
             )}
           </div>
 
-          {/* Urgencia */}
+          <div>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Urgencia</label>
           <div className="flex gap-2">
-            <button onClick={() => setUrgency('normal')}
+            <button type="button" onClick={() => setUrgency('normal')}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${urgency === 'normal' ? 'bg-teal-500/20 text-teal-300 ring-2 ring-teal-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
               🕐 Normal
             </button>
-            <button onClick={() => setUrgency('urgent')}
+            <button type="button" onClick={() => setUrgency('urgent')}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${urgency === 'urgent' ? 'bg-red-500/20 text-red-300 ring-2 ring-red-500' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}>
               🔥 Urgente
             </button>
           </div>
+          </div>
+          </div>
+          )}
 
           {error && (
             <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
