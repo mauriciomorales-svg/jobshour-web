@@ -1840,7 +1840,11 @@ export default function TiendaPage() {
             </button>
           </div>
         )}
-        {isOwner && <StorePublicHostPanel />}
+        {isOwner && (
+          <StorePublicHostPanel
+            storeUrl={publicTiendaUrl(workerId, { publicHost: worker?.public_store_host })}
+          />
+        )}
         {isOwner && (
           <div className="space-y-2">
             <div className="rounded-xl border border-teal-200 bg-teal-50 p-3 max-w-2xl">
