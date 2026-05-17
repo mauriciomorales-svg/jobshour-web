@@ -97,6 +97,11 @@ export default function ServiceRequestModal({ expert, currentUser, onClose, onSe
   }, [])
 
   useEffect(() => {
+    if (!expert?.id) return
+    trackFunnelEvent('request_start', { type: requestType, direct: true, worker_id: expert.id })
+  }, [expert?.id, requestType])
+
+  useEffect(() => {
     if (requestType !== 'ride_share' || departureTime || hasActiveRoute) return
     setDepartureTime(suggestNextDepartureLocal(15))
   }, [requestType, departureTime, hasActiveRoute])

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, XCircle, Loader2, Clock } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
+import { trackFunnelEvent } from '@/lib/analyticsFunnel'
 import { pagoResultadoCopy } from '@/lib/userFacingCopy'
 
 type ResultKind = 'loading' | 'success' | 'error' | 'pending'
@@ -143,6 +144,7 @@ function PagoResultadoContent() {
         const sr = body.data ?? body
         const paid = sr?.payment_status === 'completed'
         if (paid) {
+          trackFunnelEvent('payment_success', { request_id: srId })
           setKind('success')
           setMessage(`${pagoResultadoCopy.mpApproved} ${pagoResultadoCopy.srSyncedPaid}`)
           redirectTimer = setTimeout(() => {

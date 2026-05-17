@@ -8,6 +8,7 @@ const VoiceInput = dynamic(() => import('./VoiceInput'), { ssr: false })
 import CategoryPicker from './CategoryPicker'
 import StoreBrowserInline from './StoreBrowserInline'
 import { trackEvent } from '@/lib/analytics'
+import { trackFunnelEvent } from '@/lib/analyticsFunnel'
 import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog } from '@/lib/jhFlowLog'
 import { demandTypeGlossary, feedbackCopy, surfaceCopy, type DemandTypeKey } from '@/lib/userFacingCopy'
 import { ModalShell } from '@/app/components/ui/ModalShell'
@@ -305,6 +306,7 @@ export default function PublishDemandModal({ userLat, userLng, categories, publi
 
   useEffect(() => {
     trackEvent('demand_publish_modal_open', {})
+    trackFunnelEvent('request_start', { type: demandType, direct: false })
     jhFlowHintOnce()
   }, [])
 

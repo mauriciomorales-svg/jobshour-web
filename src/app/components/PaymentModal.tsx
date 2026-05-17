@@ -9,6 +9,7 @@ import {
   getMercadoPagoPublicKeyFromEnv,
   fetchMercadoPagoBrickConfig,
 } from '@/lib/paymentGateway'
+import { trackFunnelEvent } from '@/lib/analyticsFunnel'
 
 const MercadoPagoPayment = dynamic(() => import('./MercadoPagoPayment'), { ssr: false })
 
@@ -77,7 +78,10 @@ export default function PaymentModal({
           serviceRequestId={serviceRequestId}
           amount={amount}
           publicKey={mpKey}
-          onSuccess={() => onClose()}
+          onSuccess={() => {
+            trackFunnelEvent('payment_success', { request_id: serviceRequestId })
+            onClose()
+          }}
           onError={(msg: string) => setError(msg)}
           onClose={onClose}
         />

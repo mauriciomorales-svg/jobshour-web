@@ -46,6 +46,7 @@ import ToastContainer from './components/Toast'
 import OfflineBanner from './components/OfflineBanner'
 import { TabKey } from './components/BottomTabBar'
 import { trackEvent } from '@/lib/analytics'
+import { trackFunnelEvent } from '@/lib/analyticsFunnel'
 import { isPremiumStoreMapPoint } from '@/lib/mapPremiumPin'
 import {
   consumePubdemandaDraft,
@@ -739,6 +740,26 @@ export default function Home() {
         mpReturnHandledRef.current = true
         toast('Tu demanda quedó destacada en el mapa.', 'success')
         stripParams(['boost'])
+      }
+      const payment = sp.get('payment')
+      const payRid = sp.get('request_id')
+      if (payment === 'ok' && payRid) {
+        mpReturnHandledRef.current = true
+        const n = parseInt(payRid, 10)
+        if (Number.isFinite(n) && n > 0) {
+          trackFunnelEvent('payment_success', { request_id: n, source: 'deeplink' })
+          toast('Pago registrado. Revisa el chat de tu solicitud.', 'success')
+          void openChatFromRequestId(n)
+        }
+        stripParams(['payment', 'request_id', 'status', 'collection_status'])
+      } else if (payment === 'fail') {
+        mpReturnHandledRef.current = true
+        toast('El pago no se completó. Puedes intentar de nuevo desde Mis solicitudes.', 'error')
+        stripParams(['payment', 'request_id', 'status', 'collection_status'])
+      } else if (payment === 'pending') {
+        mpReturnHandledRef.current = true
+        toast('Pago en proceso. Te avisaremos cuando se confirme.', 'info')
+        stripParams(['payment', 'request_id', 'status', 'collection_status'])
       }
     }
 

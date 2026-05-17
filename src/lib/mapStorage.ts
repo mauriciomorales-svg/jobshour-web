@@ -102,7 +102,7 @@ function nukeStaleMapLS() {
   }
 }
 
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371
   const toRad = (d: number) => (d * Math.PI) / 180
   const dLat = toRad(lat2 - lat1)
@@ -114,7 +114,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 }
 
 /** Vista guardada demasiado pegada al antiguo centro Renaico → Angol (resto de ciudades no toca). */
-function escapeRenaicoDeadZone(lat: number, lng: number): { lat: number; lng: number } {
+export function escapeRenaicoDeadZone(lat: number, lng: number): { lat: number; lng: number } {
   const d = haversineKm(lat, lng, LEGACY_RENAICO_LAT, LEGACY_RENAICO_LNG)
   if (d <= RENAICO_DEAD_ZONE_KM) {
     return { lat: DEFAULT_MAP_LAT, lng: DEFAULT_MAP_LNG }
@@ -122,7 +122,7 @@ function escapeRenaicoDeadZone(lat: number, lng: number): { lat: number; lng: nu
   return { lat, lng }
 }
 
-function normalizeStoredMapCoords(lat: number, lng: number): { lat: number; lng: number } {
+export function normalizeStoredMapCoords(lat: number, lng: number): { lat: number; lng: number } {
   if (
     Math.abs(lat - LEGACY_RENAICO_LAT) < LEGACY_MATCH_EPS &&
     Math.abs(lng - LEGACY_RENAICO_LNG) < LEGACY_MATCH_EPS
