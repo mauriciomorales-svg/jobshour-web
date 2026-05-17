@@ -21,6 +21,11 @@ const internalInventarioOrigin = (process.env.INTERNAL_INVENTARIO_ORIGIN || 'htt
 )
 
 const nextConfig = {
+  // Menor uso de RAM en VPS ~1GB (build y static generation)
+  experimental: {
+    cpus: 1,
+    webpackBuildWorker: false,
+  },
   // Asegura @/ → src/ en webpack (evita fallos de resolución en Linux / CI)
   webpack: (config) => {
     config.resolve.alias = {
