@@ -77,7 +77,7 @@ export const uiTone = {
   authHeader:
     'bg-gradient-to-br from-amber-500 via-orange-500 to-orange-700 p-6 relative overflow-hidden',
 
-  /** Modal pago — franja superior (Flow / checkout) */
+  /** Modal pago — franja superior (Mercado Pago) */
   paymentHeaderStrip: 'bg-gradient-to-r from-amber-500 to-orange-600',
 
   /** Monto destacado sobre fondo oscuro */
@@ -92,7 +92,10 @@ export const uiTone = {
 
   paymentAmountTextLight: 'text-2xl font-black text-amber-700',
 
-  /** Pagar con Flow (footer flex, alineado con ctaRating) */
+  /** CTA principal de pago (footer flex, alineado con ctaRating) */
+  ctaPayPrimary:
+    'flex-1 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl font-bold transition shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2',
+  /** @deprecated usar ctaPayPrimary */
   ctaPayFlow:
     'flex-1 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl font-bold transition shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2',
 

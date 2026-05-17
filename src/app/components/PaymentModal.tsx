@@ -121,7 +121,7 @@ export default function PaymentModal({
             <p className={uiTone.paymentAmountTextDark}>
               ${Math.round(amount).toLocaleString('es-CL')}
             </p>
-            <p className="text-slate-500 text-xs mt-1">{surfaceCopy.clpViaFlow}</p>
+            <p className="text-slate-500 text-xs mt-1">{surfaceCopy.clpViaMercadoPago}</p>
           </div>
 
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center">
@@ -150,7 +150,7 @@ export default function PaymentModal({
           >
             {surfaceCopy.cancel}
           </button>
-          <button type="button" onClick={onClose} disabled={loading} className={uiTone.ctaPayFlow}>
+          <button type="button" onClick={onClose} disabled={loading} className={uiTone.ctaPayPrimary}>
             <span>{surfaceCopy.close}</span>
           </button>
         </div>

@@ -348,17 +348,24 @@ export const surfaceCopy = {
   registerLoginPrompt: '¿Ya tienes cuenta?',
   loginExisting: 'Inicia sesión',
 
-  /** Pagos Flow */
+  /** Pagos (Mercado Pago — única pasarela activa) */
   paymentTitle: 'Pagar servicio',
-  paymentSecureTagline: 'Pago seguro con Flow',
+  paymentSecureTagline: 'Pago seguro con Mercado Pago',
   totalToPayShort: 'Total a pagar',
   totalToPayColon: 'Total a pagar:',
-  clpViaFlow: 'CLP · vía Flow',
-  payWithFlow: 'Pagar con Flow',
+  clpViaMercadoPago: 'CLP · Mercado Pago',
+  payWithMercadoPago: 'Pagar con Mercado Pago',
+  /** @deprecated usar clpViaMercadoPago */
+  clpViaFlow: 'CLP · Mercado Pago',
+  /** @deprecated usar payWithMercadoPago */
+  payWithFlow: 'Pagar con Mercado Pago',
   processing: 'Procesando...',
   paymentSecureHeading: 'Pago seguro',
+  paymentSecureMpDescription:
+    'Pagá con tarjeta, débito o saldo Mercado Pago. El cobro se procesa de forma segura en el checkout de MP.',
+  /** @deprecated usar paymentSecureMpDescription */
   paymentSecureFlowDescription:
-    'Serás redirigido a Flow para completar el pago de forma segura. Aceptamos WebPay, tarjetas de crédito y débito.',
+    'Pagá con tarjeta, débito o saldo Mercado Pago. El cobro se procesa de forma segura en el checkout de MP.',
   serviceShortLabel: 'Servicio',
 
   /** RUT */
@@ -420,11 +427,11 @@ export const chatMoneyCopy = {
   sourceDefault: 'Referencia del sistema',
 } as const
 
-/** Página /pago/resultado — retorno Flow y Mercado Pago */
+/** Página /pago/resultado — retorno Mercado Pago (y enlace legacy Flow si aplica) */
 export const pagoResultadoCopy = {
   verifying: 'Verificando pago...',
   flowInvalidToken: 'Enlace de confirmación no válido o incompleto.',
-  flowVerifyError: 'No pudimos confirmar el pago con Flow. Volvé al inicio e intentá de nuevo.',
+  flowVerifyError: 'No pudimos confirmar el pago. Volvé al inicio e intentá de nuevo.',
   flowSuccess: '¡Pago completado exitosamente!',
   flowFailed: 'El pago no pudo ser procesado',
   redirectHome: 'Serás redirigido al inicio en unos segundos...',

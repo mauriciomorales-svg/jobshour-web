@@ -56,7 +56,7 @@ function PagoResultadoContent() {
     const srRaw = searchParams.get('service_request_id')
     const srId = srRaw ? parseInt(srRaw, 10) : NaN
 
-    // ── Flow (token en query) ─────────────────────────────────────────
+    // ── Legacy Flow (solo pagos antiguos con ?token=; checkout actual = Mercado Pago) ──
     if (token) {
       setKind('loading')
       setMessage(pagoResultadoCopy.verifying)

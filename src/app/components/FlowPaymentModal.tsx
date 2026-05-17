@@ -1,3 +1,4 @@
+/** @deprecated Nombre histórico: delega en MercadoPagoPayment (única pasarela activa). */
 'use client'
 import { surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
