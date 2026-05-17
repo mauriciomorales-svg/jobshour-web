@@ -131,9 +131,18 @@ export function useNearbyFetch({
           .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`experts HTTP ${r.status}`)))),
         fetch(`${getPublicApiBase()}/api/v1/demand/nearby?${params}`, { headers, signal: abortController.signal })
           .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`demands HTTP ${r.status}`))))
-          .catch((demandErr) => {
+          .catch((demandErr: unknown) => {
+            // Cancelación al iniciar un fetch más nuevo (mapa, categoría, throttle): no es error real.
+            if (demandErr instanceof DOMException && demandErr.name === 'AbortError') {
+              throw demandErr
+            }
+            if (demandErr instanceof Error && demandErr.name === 'AbortError') {
+              throw demandErr
+            }
             console.warn('demand/nearby falló:', demandErr)
-            toast('No se pudieron cargar las demandas en el mapa.', 'warning')
+            if (seq === fetchSeqRef.current) {
+              toast('No se pudieron cargar las demandas en el mapa.', 'warning')
+            }
             return { data: [], meta: {} }
           }),
       ])

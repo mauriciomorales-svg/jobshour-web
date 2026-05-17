@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
+import { notifyUser } from '@/lib/notifyUser'
 import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog, jhFlowSummarizeRequest } from '@/lib/jhFlowLog'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
@@ -252,12 +253,12 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
       const data = await res.json().catch(() => ({}))
       jhFlowLog('adjust-price → resultado', { requestId, ok: res.ok, http: res.status, body: data })
       if (!res.ok) {
-        alert(data?.message || 'No se pudo proponer el monto')
+        notifyUser(data?.message || 'No se pudo proponer el monto', 'error')
       } else {
         await fetchSolicitudes()
       }
     } catch {
-      alert('Error de red al proponer monto')
+      notifyUser('Error de red al proponer monto', 'error')
     } finally {
       setActionLoading(null)
     }
@@ -281,12 +282,12 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
       const data = await res.json().catch(() => ({}))
       jhFlowLog('approve-adjustment → resultado', { requestId, ok: res.ok, http: res.status, body: data })
       if (!res.ok) {
-        alert(data?.message || 'No se pudo aprobar el ajuste')
+        notifyUser(data?.message || 'No se pudo aprobar el ajuste', 'error')
       } else {
         await fetchSolicitudes()
       }
     } catch {
-      alert('Error de red al aprobar ajuste')
+      notifyUser('Error de red al aprobar ajuste', 'error')
     } finally {
       setActionLoading(null)
     }
@@ -726,7 +727,7 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
                                       })
                                       const data = await res.json().catch(() => ({}))
                                       jhFlowLog('complete → resultado', { requestId: s.id, ok: res.ok, http: res.status, body: data })
-                                      if (!res.ok) alert(data?.message || 'No se pudo completar')
+                                      if (!res.ok) notifyUser(data?.message || 'No se pudo completar', 'error')
                                       else fetchSolicitudes()
                                     } catch {}
                                     setActionLoading(null)

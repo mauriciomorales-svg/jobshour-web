@@ -9,6 +9,7 @@ import { uiTone } from '@/lib/uiTone'
 
 const LiveTrackingModal = dynamic(() => import('./LiveTrackingModal'), { ssr: false })
 const PaymentModal = dynamic(() => import('./PaymentModal'), { ssr: false })
+const RatingModal = dynamic(() => import('./RatingModal'), { ssr: false })
 
 interface Props {
   isOpen: boolean
@@ -57,6 +58,11 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'completed' | 'cancelled'>('pending')
   const [trackingRequestId, setTrackingRequestId] = useState<number | null>(null)
   const [paymentRequestId, setPaymentRequestId] = useState<number | null>(null)
+  const [ratingModal, setRatingModal] = useState<{
+    requestId: number
+    workerName: string
+    workerAvatar: string | null
+  } | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -357,7 +363,26 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
                         {request.payment_status === 'completed' && (
                           <span className="flex-1 text-center py-2 text-amber-400 text-sm font-bold">✅ Pagado</span>
                         )}
-                        {/* Reseñas desactivadas temporalmente para priorizar flujo simple */}
+                        {request.can_rate && !request.user_has_reviewed && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRatingModal({
+                                requestId: request.id,
+                                workerName: request.worker.name,
+                                workerAvatar: request.worker.avatar,
+                              })
+                            }
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-200 rounded-xl text-sm font-bold transition border border-yellow-500/35"
+                          >
+                            ⭐ Dejar reseña
+                          </button>
+                        )}
+                        {request.user_has_reviewed && (
+                          <span className="flex-1 text-center py-2 text-slate-400 text-xs font-bold bg-slate-700/40 rounded-xl border border-slate-600/50">
+                            ⭐ Reseña enviada
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -405,6 +430,20 @@ export default function MyRequestsScreen({ isOpen, onClose, userToken, onOpenCha
           />
         )
       })()}
+
+      {ratingModal && (
+        <RatingModal
+          isOpen
+          serviceRequestId={ratingModal.requestId}
+          workerName={ratingModal.workerName}
+          workerAvatar={ratingModal.workerAvatar}
+          onClose={() => setRatingModal(null)}
+          onRated={() => {
+            setRatingModal(null)
+            fetchRequests()
+          }}
+        />
+      )}
 
     </div>
   )

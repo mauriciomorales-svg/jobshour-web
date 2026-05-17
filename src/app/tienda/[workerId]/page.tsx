@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useParams, useSearchParams } from 'next/navigation'
 import { trackEvent } from '@/lib/analytics'
+import { useToast } from '@/hooks/useToast'
+import ToastContainer from '@/app/components/Toast'
+import { notifyUser, registerAppToast } from '@/lib/notifyUser'
 import { emptyStateCopy, feedbackCopy, surfaceCopy } from '@/lib/userFacingCopy'
 import { ShoppingCart, Search, Package, Minus, Plus, Trash2, X, Star, Loader2, ArrowLeft, CreditCard, Truck, CheckCircle, Edit2, Camera, Calculator, Mic, MicOff, Link2, FileText, Info, FileDown, ScanLine, BadgeCheck } from 'lucide-react'
 import { downloadBrandedQuotePdf } from '@/lib/brandedQuotePdf'
@@ -154,7 +157,7 @@ function useSpeech(onResult: (text: string) => void) {
 
   const start = useCallback(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) { alert(feedbackCopy.browserNoSpeech); return }
+    if (!SR) { notifyUser(feedbackCopy.browserNoSpeech, 'warning'); return }
     const rec = new SR()
     rec.lang = 'es-CL'
     rec.interimResults = false
@@ -425,7 +428,7 @@ function QuickPublishModal({
                 type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(publishedUrl)
-                  alert('Link copiado')
+                  notifyUser('Link copiado', 'success')
                 }}
                 className="w-full bg-white border border-orange-300 text-orange-600 font-bold py-2.5 rounded-xl transition hover:bg-orange-50"
               >
@@ -984,6 +987,12 @@ export default function TiendaPage() {
   const workerId = Number(workerIdStr)
   const workerIdValid = Number.isFinite(workerId) && workerId > 0
 
+  const { toasts, toast, removeToast } = useToast()
+  useEffect(() => {
+    registerAppToast((msg, type, body) => toast(msg, type ?? 'info', body))
+    return () => registerAppToast(null)
+  }, [toast])
+
   const [worker, setWorker] = useState<WorkerInfo | null>(null)
   const [productos, setProductos] = useState<Producto[]>([])
   const [loading, setLoading] = useState(true)
@@ -1292,7 +1301,7 @@ export default function TiendaPage() {
       setNewStoreCategory('')
       setShowAddStoreCategory(false)
     } catch {
-      alert('No se pudo crear la categoría de tienda. Intenta nuevamente.')
+      notifyUser('No se pudo crear la categoría de tienda. Intenta nuevamente.', 'error')
     } finally {
       setSavingStoreCategory(false)
     }
@@ -1359,7 +1368,7 @@ export default function TiendaPage() {
     }
 
     navigator.clipboard.writeText(text)
-    alert('Link del producto copiado')
+    notifyUser('Link del producto copiado', 'success')
   }, [worker?.name, worker?.store_name, workerId])
   const eliminarProducto = async (idproducto: number, nombre: string) => {
     if (!confirm(`¿Eliminar "${nombre}" de la tienda?`)) return
@@ -1369,8 +1378,8 @@ export default function TiendaPage() {
         method: 'DELETE', headers: { Authorization: `Bearer ${token ?? ''}` }
       })
       if (r.ok) fetchProductos()
-      else alert(feedbackCopy.deleteFailed)
-    } catch { alert(feedbackCopy.networkError) }
+      else notifyUser(feedbackCopy.deleteFailed, 'error')
+    } catch { notifyUser(feedbackCopy.networkError, 'error') }
   }
 
   const cartTotal = cart.reduce((s, i) => s + (i.precio_venta ?? i.precio) * i.cantidad, 0)
@@ -1382,7 +1391,7 @@ export default function TiendaPage() {
   const totalFinal = cartTotal + commission + (laborEnabled ? laborAmountNum : 0) + (wantsDelivery && sellerDoesDelivery ? deliveryExtraFeeNum : 0)
 
   const handlePay = async () => {
-    if (!buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim()) { alert('Ingresa nombre, correo y WhatsApp para continuar'); return }
+    if (!buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim()) { notifyUser('Ingresa nombre, correo y WhatsApp para continuar', 'warning'); return }
     setPaying(true)
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -1438,26 +1447,26 @@ export default function TiendaPage() {
         trackEvent('tienda_integrated_checkout_error', { worker_id: workerId, message: String(data?.message || '').slice(0, 120) })
         const traceHint = (data as { trace_id?: string } | null)?.trace_id ? ` (trace: ${(data as { trace_id?: string }).trace_id})` : ''
         if (data?.message) {
-          alert(data.message + traceHint)
+          notifyUser(data.message + traceHint, 'error')
         } else if (r.status === 404) {
-          alert(feedbackCopy.quoteApiNotDeployed)
+          notifyUser(feedbackCopy.quoteApiNotDeployed, 'warning')
         } else if (!data) {
-          alert(`${feedbackCopy.networkError} (HTTP ${r.status})`)
+          notifyUser(`${feedbackCopy.networkError} (HTTP ${r.status})`, 'error')
         } else {
-          alert(feedbackCopy.orderProcessError + traceHint)
+          notifyUser(feedbackCopy.orderProcessError + traceHint, 'error')
         }
       }
-    } catch { alert(feedbackCopy.networkError) }
+    } catch { notifyUser(feedbackCopy.networkError, 'error') }
     finally { setPaying(false) }
   }
 
   const handleCreateQuote = async () => {
-    if (!buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim()) { alert('Ingresa nombre, correo y WhatsApp del comprador'); return }
+    if (!buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim()) { notifyUser('Ingresa nombre, correo y WhatsApp del comprador', 'warning'); return }
     setPaying(true)
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
       if (!token) {
-        alert(feedbackCopy.mustLoginWorkerQuote)
+        notifyUser(feedbackCopy.mustLoginWorkerQuote, 'warning')
         return
       }
       const apiUrl = `${window.location.origin}/api`
@@ -1527,18 +1536,18 @@ export default function TiendaPage() {
         setCart([])
       } else if (data?.message) {
         trackEvent('tienda_worker_quote_error', { worker_id: workerId, message: String(data.message).slice(0, 120) })
-        alert(data.message)
+        notifyUser(data.message, 'error')
       } else if (r.status === 404) {
         trackEvent('tienda_worker_quote_error', { worker_id: workerId, message: 'route_404' })
-        alert(feedbackCopy.quoteApiNotDeployed)
+        notifyUser(feedbackCopy.quoteApiNotDeployed, 'warning')
       } else if (!data) {
-        alert(`${feedbackCopy.networkError} (HTTP ${r.status})`)
+        notifyUser(`${feedbackCopy.networkError} (HTTP ${r.status})`, 'error')
       } else {
         trackEvent('tienda_worker_quote_error', { worker_id: workerId, message: String(data?.message || '').slice(0, 120) })
-        alert(feedbackCopy.quoteCreateFailed)
+        notifyUser(feedbackCopy.quoteCreateFailed, 'error')
       }
     } catch {
-      alert(feedbackCopy.networkError)
+      notifyUser(feedbackCopy.networkError, 'error')
     } finally {
       setPaying(false)
     }
@@ -1746,7 +1755,7 @@ export default function TiendaPage() {
                   navigator.share({ title: worker?.store_name ?? 'Tienda', text, url }).catch(() => {})
                 } else {
                   navigator.clipboard.writeText(text)
-                  alert(feedbackCopy.listCopiedWhatsApp)
+                  notifyUser(feedbackCopy.listCopiedWhatsApp, 'success')
                 }
               }}
               className="mt-4 inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-bold px-4 py-2 rounded-xl transition text-sm"
@@ -2470,7 +2479,7 @@ export default function TiendaPage() {
             <button
               onClick={() => {
                 navigator.clipboard.writeText(quotePublicUrl)
-                alert(surfaceCopy.linkCopiedToClipboard)
+                notifyUser(surfaceCopy.linkCopiedToClipboard, 'success')
               }}
               className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-3 rounded-xl transition mb-2 flex items-center justify-center gap-2"
             >
@@ -2515,7 +2524,7 @@ export default function TiendaPage() {
                         documentTitle: 'Propuesta de compra',
                       })
                     } catch {
-                      alert(feedbackCopy.pdfGenerateError)
+                      notifyUser(feedbackCopy.pdfGenerateError, 'error')
                     }
                   }}
                   className="w-full bg-white border-2 border-orange-400 text-orange-600 hover:bg-orange-50 font-black py-3 rounded-xl transition flex items-center justify-center gap-2"
@@ -2540,6 +2549,7 @@ export default function TiendaPage() {
           </div>
         </div>
       )}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   )
 }
