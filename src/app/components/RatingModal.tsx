@@ -32,6 +32,11 @@ export default function RatingModal({
       setError('Por favor selecciona una calificación')
       return
     }
+    const trimmed = comment.trim()
+    if (trimmed.length < 10) {
+      setError('Escribe un comentario de al menos 10 caracteres')
+      return
+    }
 
     setSubmitting(true)
     setError(null)
@@ -141,7 +146,7 @@ export default function RatingModal({
           {/* Comentario */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
-              Comentario (opcional)
+              Comentario <span className="text-slate-500 font-normal">(mín. 10 caracteres)</span>
             </label>
             <textarea
               value={comment}
@@ -176,7 +181,7 @@ export default function RatingModal({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting || stars === 0}
+            disabled={submitting || stars === 0 || comment.trim().length < 10}
             className={uiTone.ctaRating}
           >
             {submitting ? (

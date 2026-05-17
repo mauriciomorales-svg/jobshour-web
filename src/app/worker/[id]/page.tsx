@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { trackEvent } from '@/lib/analytics'
 import { useParams, useRouter } from 'next/navigation'
 import WorkerSocialLinks, { type SocialLink } from '@/app/components/WorkerSocialLinks'
+import ReviewsList from '@/app/components/ReviewsList'
 import {
   openWhatsAppWithText,
   profileNativeShareText,
@@ -336,6 +337,13 @@ export default function WorkerPublicProfile() {
             </div>
           </section>
         )}
+
+        <section className={card}>
+          <h2 className={sectionTitle}>Reseñas</h2>
+          <div className="mt-3 rounded-xl bg-white p-3 text-gray-900">
+            <ReviewsList workerId={worker.id} showAverage canRespond={false} />
+          </div>
+        </section>
 
         {(worker.social_links?.length ?? 0) > 0 && (
           <section className={card}>

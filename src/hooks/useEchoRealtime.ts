@@ -36,6 +36,8 @@ export interface UseEchoRealtimeParams {
   chatNotifySeenIdsRef: MutableRefObject<Set<number>>
   chatNotifySubscribedIdsRef: MutableRefObject<Set<number>>
   setChatBadge: Dispatch<SetStateAction<number>>
+  /** Cliente: solicitud pasó a `completed` (abrir reseña si aplica). */
+  onClientRequestUpdated?: (payload: { id: number; status: string }) => void
 }
 
 /**
@@ -153,6 +155,11 @@ export function useEchoRealtime({
 
       userChannel.listen('.request.updated', (e: any) => {
         console.log('[Notifications] .request.updated (user)', e)
+        const status = String(e?.status ?? '')
+        const reqId = Number(e?.id ?? 0)
+        if (reqId > 0 && status) {
+          onClientRequestUpdated?.({ id: reqId, status })
+        }
         const statusMap: Record<string, string> = {
           accepted: '✅ ¡Tu solicitud fue aceptada!',
           rejected: '❌ Tu solicitud fue rechazada',
@@ -161,8 +168,8 @@ export function useEchoRealtime({
         }
         notify(
           'Actualización de solicitud',
-          statusMap[e?.status] || `Estado: ${e?.status ?? 'actualizado'}`,
-          `request.updated.user:${e?.id ?? ''}:${e?.status ?? ''}`,
+          statusMap[status] || `Estado: ${status || 'actualizado'}`,
+          `request.updated.user:${reqId}:${status}`,
         )
       })
 

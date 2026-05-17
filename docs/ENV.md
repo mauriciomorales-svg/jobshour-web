@@ -38,6 +38,15 @@ En el **VPS** típico (API + inventario en el mismo servidor) los defaults basta
 
 **Cámara / micrófono (PWA):** el sitio debe servirse por **HTTPS**; en Nginx evitá un `Permissions-Policy` global que bloquee `camera`/`microphone`. Ejemplo en `deploy/nginx-web.conf`.
 
+## Pagos (Mercado Pago / Flow)
+
+| Variable | Uso |
+|----------|-----|
+| `NEXT_PUBLIC_MP_PUBLIC_KEY` | Clave pública MP para Brick / checkout en el navegador. Si falta, la web puede pedirla a `GET /api/v1/payments/mp/brick-config`. |
+| `NEXT_PUBLIC_PAYMENT_GATEWAY` | Opcional. Por defecto `mercadopago` (`src/lib/paymentGateway.ts`). |
+
+En **Laravel** (`jobshour-api/.env`): `MP_ACCESS_TOKEN`, `MP_PUBLIC_KEY`, `MERCADOPAGO_WEBHOOK_SECRET`. Flow (`FLOW_API_KEY`, `FLOW_SECRET_KEY`, `PAYMENT_GATEWAY=flow`) queda como legado; la web actual no llama a `payments/flow/init`, solo confirma retornos en `/pago/resultado?token=`.
+
 ## Android / export estático
 
 `npm run build:android` usa `NEXT_PUBLIC_API_URL` explícita en el comando; el bridge de Capacitor en `layout.tsx` reescribe `/api/` hacia el host público cuando aplica.

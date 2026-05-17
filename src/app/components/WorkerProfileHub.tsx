@@ -21,6 +21,7 @@ import WorkerSocialLinks from './WorkerSocialLinks'
 import ProfileCompletenessBar from './ProfileCompletenessBar'
 import { useProfileCompleteness } from '@/hooks/useProfileCompleteness'
 import WorkerEarningsHub from './WorkerEarningsHub'
+import ReviewsList from './ReviewsList'
 import { Link2, Wallet } from 'lucide-react'
 
 // Alias para modo edición dentro de WorkerProfileHub
@@ -558,6 +559,15 @@ export default function WorkerProfileHub({ user, onClose, onCategorySelected, on
       {!completeness.isComplete && (
         <div className="px-4 pt-3 pb-1">
           <ProfileCompletenessBar completeness={completeness} />
+        </div>
+      )}
+
+      {workerData?.id != null && (
+        <div className="px-4 py-3">
+          <h3 className="text-sm font-bold text-gray-800 mb-2">Reseñas de clientes</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-3">
+            <ReviewsList workerId={Number(workerData.id)} showAverage canRespond />
+          </div>
         </div>
       )}
 

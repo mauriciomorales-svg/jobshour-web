@@ -38,6 +38,12 @@ import { HomeSidebar } from './components/HomeSidebar'
 import { HomeBottomBar } from './components/HomeBottomBar'
 import { MapFetchErrorBanner } from './components/MapFetchErrorBanner'
 import { feedbackCopy } from '@/lib/userFacingCopy'
+import {
+  findPendingRatingRequest,
+  markRatingPrompted,
+  workerInfoFromRequest,
+  type RateableServiceRequest,
+} from '@/lib/ratingPrompt'
 import { registerAppToast } from '@/lib/notifyUser'
 import { HomeChatPanels } from './components/HomeChatPanels'
 import { OpenRequestsBanner } from './components/OpenRequestsBanner'
@@ -513,10 +519,39 @@ export default function Home() {
     } catch { /* silencioso */ }
   }, [])
 
+  const promptRatingFromRequests = useCallback((list: RateableServiceRequest[]) => {
+    const pending = findPendingRatingRequest(list)
+    if (!pending) return
+    const info = workerInfoFromRequest(pending)
+    markRatingPrompted(pending.id)
+    setRatingRequestId(pending.id)
+    setRatingWorkerInfo(info)
+    setShowRatingModal(true)
+  }, [])
+
+  const onClientRequestUpdated = useCallback(
+    (payload: { id: number; status: string }) => {
+      if (payload.status !== 'completed' || !user) return
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      if (!token) return
+      fetch(`${getPublicApiBase()}/api/v1/requests/mine`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          const list = (data?.data ?? []) as RateableServiceRequest[]
+          promptRatingFromRequests(list)
+        })
+        .catch(() => {})
+    },
+    [user, promptRatingFromRequests],
+  )
+
   useEchoRealtime({
     user, toast, playNotifSound, setNotifBadge, setActiveRequestId, setPoints,
     userLatRef, userLngRef, fetchWorkerCount, activeChatRequestIds, showChat,
     chatNotifySeenIdsRef, chatNotifySubscribedIdsRef, setChatBadge,
+    onClientRequestUpdated,
   })
 
   useEffect(() => {

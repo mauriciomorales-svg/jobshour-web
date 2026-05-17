@@ -3,9 +3,14 @@
 import { useCallback, useRef, useState, type MutableRefObject } from 'react'
 
 import { getPublicApiBase } from '@/lib/api'
-import { normalizeExpertMapPointPinTypes } from '@/lib/mapPremiumPin'
 import { DEFAULT_MAP_LAT, DEFAULT_MAP_LNG } from '@/lib/mapStorage'
 import type { MapPoint } from '@/app/components/MapSection'
+import {
+  demandNearbyToMapPoint,
+  expertNearbyToMapPoint,
+  type DemandNearby,
+  type ExpertNearby,
+} from '@/lib/mapTypes'
 
 export interface SearchMeta {
   city: string | null
@@ -164,33 +169,12 @@ export function useNearbyFetch({
           }
           setOutsideZone(false)
 
-          const workers = (expertsData.data ?? []).map((w: any) => ({
-            ...normalizeExpertMapPointPinTypes(w),
-            active_route: w.active_route || null,
-            user_id: w.user_id || null,
-          }))
+          const workers = ((expertsData.data ?? []) as ExpertNearby[]).map(expertNearbyToMapPoint)
 
-          const demands = (demandsData.data ?? []).map((d: any) => ({
-            id: d.id,
-            pos: d.pos,
-            name: d.client_name,
-            avatar: d.client_avatar,
-            price: d.offered_price,
-            category_color: d.category_color,
-            category_slug: d.category_slug,
-            category_name: d.category_name,
-            fresh_score: 0,
-            status: 'demand' as const,
-            pin_type: 'demand' as const,
-            urgency: d.urgency,
-            travel_role: d.travel_role ?? null,
-            payload: d.payload ?? null,
-            description: d.description,
-            distance_km: d.distance_km,
-          }))
+          const demands = ((demandsData.data ?? []) as DemandNearby[]).map(demandNearbyToMapPoint)
 
           if (user && workers.length > 0) {
-            const userInResults = workers.find((w: any) => {
+            const userInResults = workers.find((w: MapPoint) => {
               return (w.user_id && w.user_id === user.id) || (w.id && w.id === user.id)
             })
             if (!userInResults && workerStatus !== 'inactive') {
