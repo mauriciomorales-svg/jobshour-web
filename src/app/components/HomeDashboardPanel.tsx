@@ -39,6 +39,7 @@ export function HomeDashboardPanel({
   outsideZone,
 }: {
   hidden: boolean
+  isWorker?: boolean
   userLat: number
   userLng: number
   currentUserId?: number
