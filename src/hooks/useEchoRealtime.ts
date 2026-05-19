@@ -58,6 +58,7 @@ export function useEchoRealtime({
   chatNotifySeenIdsRef,
   chatNotifySubscribedIdsRef,
   setChatBadge,
+  onClientRequestUpdated,
 }: UseEchoRealtimeParams) {
   const activeChatIdsRef = useRef(activeChatRequestIds)
   const showChatRef = useRef(showChat)
