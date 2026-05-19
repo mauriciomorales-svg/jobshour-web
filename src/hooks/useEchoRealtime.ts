@@ -14,9 +14,9 @@ function shouldShowNotify(key: string): boolean {
   notifyDedup.set(key, now)
   if (notifyDedup.size > 200) {
     const cutoff = now - NOTIFY_DEDUP_MS * 2
-    for (const [k, t] of notifyDedup) {
+    notifyDedup.forEach((t, k) => {
       if (t < cutoff) notifyDedup.delete(k)
-    }
+    })
   }
   return true
 }
