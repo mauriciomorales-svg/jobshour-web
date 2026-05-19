@@ -264,51 +264,52 @@ export function useEchoRealtime({
       echo = getEcho()
       if (!echo) return
 
-      const onMessage = (e: any) => {
-        const msg = e?.message ?? e
-        const msgId = msg?.id
-        const senderId = msg?.sender_id
-
-        if (typeof msgId !== 'number') return
-        if (seenMessageIds.has(msgId)) return
-        seenMessageIds.add(msgId)
-
-        if (senderId === user.id) return
-
-        const shouldNotify = !showChat || (typeof document !== 'undefined' && document.hidden)
-
-        const senderName = msg?.sender_name ? String(msg.sender_name) : ''
-        const senderEmail = msg?.sender_email ? String(msg.sender_email) : ''
-        const senderLabel =
-          senderEmail && senderName
-            ? `${senderName} (${senderEmail})`
-            : senderEmail || senderName || ''
-        const text = msg?.body ? String(msg.body).slice(0, 80) : 'Nuevo mensaje'
-        const title = senderLabel ? `💬 ${senderLabel}` : '💬 Nuevo mensaje'
-
-        setChatBadge((prev) => prev + 1)
-
-        if (!shouldNotify) return
-
-        console.log('[ChatNotify] message.new', { id: msgId, sender: senderName, sender_email: senderEmail || undefined })
-        const dedupKey = `chat.private:${rid}:${msgId}`
-        if (!shouldShowNotify(dedupKey)) return
-        toast(title, 'info', text, 5000)
-        playNotifSound()
-
-        try {
-          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification(title, { body: text, icon: '/icon-192x192.png' })
-          }
-        } catch {
-          /* ignore */
-        }
-      }
-
       activeChatRequestIds.forEach((rid) => {
         if (subscribedIds.has(rid)) return
         subscribedIds.add(rid)
         console.log('[ChatNotify] subscribing', { channel: `private-chat.${rid}` })
+
+        const onMessage = (e: any) => {
+          const msg = e?.message ?? e
+          const msgId = msg?.id
+          const senderId = msg?.sender_id
+
+          if (typeof msgId !== 'number') return
+          if (seenMessageIds.has(msgId)) return
+          seenMessageIds.add(msgId)
+
+          if (senderId === user.id) return
+
+          const shouldNotify = !showChat || (typeof document !== 'undefined' && document.hidden)
+
+          const senderName = msg?.sender_name ? String(msg.sender_name) : ''
+          const senderEmail = msg?.sender_email ? String(msg.sender_email) : ''
+          const senderLabel =
+            senderEmail && senderName
+              ? `${senderName} (${senderEmail})`
+              : senderEmail || senderName || ''
+          const text = msg?.body ? String(msg.body).slice(0, 80) : 'Nuevo mensaje'
+          const title = senderLabel ? `💬 ${senderLabel}` : '💬 Nuevo mensaje'
+
+          setChatBadge((prev) => prev + 1)
+
+          if (!shouldNotify) return
+
+          console.log('[ChatNotify] message.new', { id: msgId, sender: senderName, sender_email: senderEmail || undefined })
+          const dedupKey = `chat.private:${rid}:${msgId}`
+          if (!shouldShowNotify(dedupKey)) return
+          toast(title, 'info', text, 5000)
+          playNotifSound()
+
+          try {
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              new Notification(title, { body: text, icon: '/icon-192x192.png' })
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+
         echo.private(`chat.${rid}`).listen('.message.new', onMessage)
       })
     })
