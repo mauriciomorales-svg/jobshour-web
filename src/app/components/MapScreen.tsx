@@ -47,6 +47,7 @@ interface MapScreenProps {
   onDetailRequest: () => void
   onCallPhone: () => void
   dashHidden: boolean
+  isWorker?: boolean
   userLat: number
   userLng: number
   currentUserId: number | undefined
@@ -93,7 +94,7 @@ export function MapScreen(props: MapScreenProps) {
     searchQuery, onSearchChange, workerCount, categories, activeCategory, onCategoryClick,
     selectedDetail, loadingDetail, onCloseDetail, user, workerProfile, chatRequestIdForDetail,
     onTravelJoin, onOpenProfileSection, onVerWorkerProfile, onDetailChat, onDetailRequest, onCallPhone,
-    dashHidden, userLat, userLng, currentUserId, onDashboardClose, onDashboardRefresh,
+    dashHidden, isWorker = false, userLat, userLng, currentUserId, onDashboardClose, onDashboardRefresh,
     setHighlightedRequestId, setSelectedDetail, setShowRequestModal, setDashHidden,
     setShowLoginModal, onProfileRequired, setActiveRequestId, setChatContext, setShowChat,
     setPoints, fetchNearby, checkAuthAndProfile, toast,
@@ -158,6 +159,7 @@ export function MapScreen(props: MapScreenProps) {
 
       <HomeDashboardPanel
         hidden={dashHidden}
+        isWorker={isWorker}
         userLat={userLat}
         userLng={userLng}
         currentUserId={currentUserId}

@@ -50,6 +50,8 @@ interface Solicitud {
 
 interface Props {
   user: any | null
+  /** Trabajador activo: título «Mis trabajos»; cliente: «Mis solicitudes». */
+  isWorker?: boolean
   onLoginRequest: () => void
   onClose: () => void
   onOpenChat?: (requestId: number, otherName: string, otherAvatar: string | null, myRole: 'cliente' | 'trabajador', isSelf: boolean) => void
@@ -127,7 +129,7 @@ function ExpirationTimer({ expiresAt }: { expiresAt: string }) {
   )
 }
 
-export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenChat, onHighlightOnMap }: Props) {
+export default function MisSolicitudes({ user, isWorker = false, onLoginRequest, onClose, onOpenChat, onHighlightOnMap }: Props) {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -357,13 +359,17 @@ export default function MisSolicitudes({ user, onLoginRequest, onClose, onOpenCh
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-800/95 border-b border-slate-700 px-4 pt-4 pb-3 flex items-center justify-between shrink-0">
         <div>
-          <h2 className="text-white font-black text-xl">Mis Solicitudes</h2>
+          <h2 className="text-white font-black text-xl">{isWorker ? 'Mis trabajos' : 'Mis solicitudes'}</h2>
           <p className="text-slate-400 text-xs mt-0.5">
             {user
               ? baseVisibleSolicitudes.length > 0
-                ? `${baseVisibleSolicitudes.length} solicitud${baseVisibleSolicitudes.length > 1 ? 'es' : ''}`
-                : 'Trabajos que publicaste o tomaste'
-              : 'Inicia sesión para ver tus solicitudes'}
+                ? `${baseVisibleSolicitudes.length} ${isWorker ? 'trabajo' : 'solicitud'}${baseVisibleSolicitudes.length > 1 ? 's' : ''}`
+                : isWorker
+                  ? 'Trabajos que tomaste o estás gestionando'
+                  : 'Pedidos que publicaste o estás siguiendo'
+              : isWorker
+                ? 'Inicia sesión para ver tus trabajos'
+                : 'Inicia sesión para ver tus solicitudes'}
           </p>
         </div>
         <div className="flex items-center gap-2">

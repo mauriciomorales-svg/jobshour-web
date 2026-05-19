@@ -21,6 +21,7 @@ type ChatCtx = {
 
 interface HomeChatPanelsProps {
   showSolicitudesPanel: boolean
+  isWorker?: boolean
   user: AuthUser | null
   onLoginRequest: () => void
   onCloseSolicitudes: () => void
@@ -50,6 +51,7 @@ interface HomeChatPanelsProps {
 
 export function HomeChatPanels({
   showSolicitudesPanel,
+  isWorker = false,
   user,
   onLoginRequest,
   onCloseSolicitudes,
@@ -75,6 +77,7 @@ export function HomeChatPanels({
         <div className="fixed inset-0 z-[150]">
           <MisSolicitudes
             user={user}
+            isWorker={isWorker}
             onLoginRequest={onLoginRequest}
             onClose={onCloseSolicitudes}
             onOpenChat={onOpenChatFromSolicitudes}

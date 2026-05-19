@@ -47,7 +47,7 @@ export default function BottomTabBar({ active, onChange, requestsBadge = 0, dema
   const tabs: Tab[] = [
     { key: 'map',      label: 'Mapa',       icon: MapIcon },
     { key: 'feed',     label: isWorker ? 'Oportunidades' : 'Demandas', icon: FeedIcon, badge: demandsBadge },
-    { key: 'requests', label: 'Solicitudes', icon: RequestsIcon, badge: requestsBadge },
+    { key: 'requests', label: isWorker ? 'Mis trabajos' : 'Mis solicitudes', icon: RequestsIcon, badge: requestsBadge },
     { key: 'profile',  label: 'Perfil',      icon: ProfileIcon },
   ]
 

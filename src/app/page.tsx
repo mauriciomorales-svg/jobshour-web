@@ -606,7 +606,7 @@ export default function Home() {
     setPublishDemandInitialDraft(null)
     setShowPublishSuccess(true)
     setTimeout(() => setShowPublishSuccess(false), 3000)
-    toast('Demanda publicada', 'success', 'Ya aparece en el mapa y en Demandas.')
+    toast('Demanda publicada', 'success', 'Ya aparece en el mapa y en Oportunidades.')
     if (snapshot?.mapPoint) {
       setPoints((prev) => {
         if (prev.some((p) => p.id === snapshot.mapPoint.id)) return prev
@@ -1072,6 +1072,7 @@ export default function Home() {
         onDetailRequest={handleDetailRequest}
         onCallPhone={() => handleDetailCallPhone(selectedDetail?.phone)}
         dashHidden={dashHidden}
+        isWorker={workerStatus !== 'guest' && workerStatus !== 'inactive'}
         userLat={userLat}
         userLng={userLng}
         currentUserId={user?.id}
@@ -1104,6 +1105,7 @@ export default function Home() {
 
       <HomeChatPanels
         showSolicitudesPanel={showSolicitudesPanel}
+        isWorker={workerStatus !== 'guest' && workerStatus !== 'inactive'}
         user={user}
         onLoginRequest={() => { setShowSolicitudesPanel(false); setShowLoginModal(true) }}
         onCloseSolicitudes={() => { setShowSolicitudesPanel(false); setActiveTab('map') }}

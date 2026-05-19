@@ -16,6 +16,7 @@ type SetPoints = Dispatch<SetStateAction<MapPoint[]>>
 
 export function HomeDashboardPanel({
   hidden,
+  isWorker = false,
   userLat,
   userLng,
   currentUserId,
@@ -71,8 +72,12 @@ export function HomeDashboardPanel({
       <div className="bg-slate-900 h-full w-full overflow-hidden flex flex-col shadow-2xl">
         <div className="sticky top-0 bg-slate-900 px-4 pt-4 pb-3 border-b border-slate-700/50 z-10 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-black text-white">Demandas</h2>
-            <p className="text-xs text-slate-400">Tu resumen, oportunidades cerca y pedidos reales</p>
+            <h2 className="text-xl font-black text-white">{isWorker ? 'Oportunidades' : 'Demandas'}</h2>
+            <p className="text-xs text-slate-400">
+              {isWorker
+                ? 'Trabajos cerca de ti y pedidos reales para tomar'
+                : 'Tu resumen y pedidos que publicaste'}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <button
