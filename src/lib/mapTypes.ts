@@ -51,7 +51,7 @@ export interface DemandNearby {
 
 export function expertNearbyToMapPoint(w: ExpertNearby): MapPoint {
   return {
-    ...normalizeExpertMapPointPinTypes(w as Record<string, unknown>),
+    ...normalizeExpertMapPointPinTypes(w as unknown as Record<string, unknown>),
     active_route: (w.active_route as MapPoint['active_route']) || null,
     user_id: w.user_id ?? null,
   } as MapPoint
@@ -63,15 +63,16 @@ export function demandNearbyToMapPoint(d: DemandNearby): MapPoint {
     pos: d.pos,
     name: d.client_name,
     avatar: d.client_avatar ?? null,
-    price: d.offered_price ?? undefined,
-    category_color: d.category_color,
-    category_slug: d.category_slug ?? undefined,
+    price: d.offered_price ?? 0,
+    category_color: d.category_color ?? '#64748b',
+    category_slug: d.category_slug ?? null,
     category_name: d.category_name ?? undefined,
     fresh_score: 0,
     status: 'demand',
     pin_type: 'demand',
-    urgency: d.urgency,
-    travel_role: d.travel_role ?? null,
+    urgency: d.urgency === 'urgent' ? 'urgent' : 'normal',
+    travel_role:
+      d.travel_role === 'driver' || d.travel_role === 'passenger' ? d.travel_role : null,
     payload: d.payload ?? null,
     description: d.description,
     distance_km: d.distance_km,
