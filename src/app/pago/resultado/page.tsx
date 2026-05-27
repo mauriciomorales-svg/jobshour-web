@@ -39,6 +39,7 @@ function PagoResultadoContent() {
 
   const [kind, setKind] = useState<ResultKind>('loading')
   const [message, setMessage] = useState<string>(pagoResultadoCopy.verifying)
+  const [syncRetry, setSyncRetry] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -178,7 +179,7 @@ function PagoResultadoContent() {
       cancelled = true
       clearTimers()
     }
-  }, [router, searchParams])
+  }, [router, searchParams, syncRetry])
 
   return (
     <>
@@ -195,7 +196,18 @@ function PagoResultadoContent() {
           <Clock className="h-16 w-16 text-amber-400 mx-auto mb-4" />
           <h1 className="text-xl font-bold mb-2 text-amber-200">{pagoResultadoCopy.titlePending}</h1>
           <p className="text-slate-300 mb-6 text-sm leading-relaxed">{message}</p>
-          <p className="text-sm text-slate-500 mb-6">{pagoResultadoCopy.redirectHome}</p>
+          <p className="text-sm text-slate-500 mb-4">{pagoResultadoCopy.redirectHome}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setKind('loading')
+              setMessage(pagoResultadoCopy.verifying)
+              setSyncRetry((n) => n + 1)
+            }}
+            className="mb-4 inline-flex items-center gap-2 px-6 py-3 bg-slate-700 text-white rounded-xl hover:bg-slate-600 transition"
+          >
+            {pagoResultadoCopy.retrySync}
+          </button>
           <Link
             href="/"
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-800 text-white rounded-xl hover:from-amber-500 hover:to-amber-700 transition"

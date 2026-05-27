@@ -43,12 +43,19 @@ export default function MercadoPagoPayment({
   useEffect(() => {
     if (!effectiveKey) {
       setLoading(false)
+      onErrorRef.current('Mercado Pago no está configurado (falta clave pública).')
       return
     }
 
     const script = document.createElement('script')
     script.src = 'https://sdk.mercadopago.com/js/v2'
     script.async = true
+    script.onerror = () => {
+      setLoading(false)
+      onErrorRef.current(
+        'No se pudo cargar el formulario de Mercado Pago. Revisa bloqueadores de anuncios o tu conexión.'
+      )
+    }
     script.onload = () => {
       void (async () => {
         if (!window.MercadoPago) return

@@ -34,7 +34,7 @@ interface Solicitud {
   fuzzed_latitude?: number
   fuzzed_longitude?: number
   type?: string
-  payment_status?: 'pending' | 'completed' | 'failed' | null
+  payment_status?: 'pending' | 'completed' | 'failed' | 'refunded' | null
   final_price?: number | null
   payload?: { image?: string; seats?: number; departure_time?: string; destination_name?: string; store_name?: string; items_count?: number; load_type?: string; requires_vehicle?: boolean }
   scheduled_at?: string | null
@@ -94,6 +94,12 @@ function getEffectivePrice(s: Solicitud): number | null {
   if (s.client_approved_adjustment && typeof s.adjusted_price === 'number' && s.adjusted_price > 0) return s.adjusted_price
   if (typeof s.offered_price === 'number' && s.offered_price > 0) return s.offered_price
   return null
+}
+
+/** Monto que cobra MP (base + 8%), alineado con jobshour-api MercadoPagoController */
+function getChargeAmountClp(s: Solicitud): number {
+  const base = getEffectivePrice(s) ?? 0
+  return Math.round(base * 1.08)
 }
 
 function ExpirationTimer({ expiresAt }: { expiresAt: string }) {
@@ -507,7 +513,9 @@ export default function MisSolicitudes({ user, isWorker = false, onLoginRequest,
                   const canRespondNow = imWorker && isPending
                   const canCompleteAsWorker = imWorker && ['accepted', 'in_progress'].includes(s.status)
                   const isCompletedAsClient = !imWorker && s.status === 'completed'
-                  const canPayNow = isCompletedAsClient && (!s.payment_status || s.payment_status === 'pending')
+                  const canPayNow =
+                    isCompletedAsClient &&
+                    (!s.payment_status || s.payment_status === 'pending' || s.payment_status === 'failed')
                   const effectivePrice = getEffectivePrice(s)
                   const hasPendingAdjustment = typeof s.adjusted_price === 'number' && s.adjusted_price > 0 && !s.client_approved_adjustment
                   if (s.status === 'cancelled') return null
@@ -884,7 +892,7 @@ export default function MisSolicitudes({ user, isWorker = false, onLoginRequest,
               fetchSolicitudes()
             }}
             serviceRequestId={paymentRequestId}
-            amount={s.final_price || s.offered_price || 0}
+            amount={getChargeAmountClp(s)}
             workerName={s.worker?.user?.name ?? 'Trabajador'}
             description={s.description ?? ''}
             userToken={token}

@@ -2,7 +2,7 @@
 import { surfaceCopy } from '@/lib/userFacingCopy'
 import { uiTone } from '@/lib/uiTone'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import {
   prefersMercadoPagoGateway,
@@ -36,23 +36,28 @@ export default function PaymentModal({
   const [error, setError] = useState<string | null>(null)
   const envMpKey = useMemo(() => getMercadoPagoPublicKeyFromEnv(), [])
   const [remoteMpKey, setRemoteMpKey] = useState<string | undefined>(undefined)
+  const [brickConfigAttempt, setBrickConfigAttempt] = useState(0)
+
+  const loadBrickConfig = useCallback(async () => {
+    if (!prefersMercadoPagoGateway() || envMpKey || !userToken) {
+      return
+    }
+    setRemoteMpKey(undefined)
+    const k = await fetchMercadoPagoBrickConfig(userToken)
+    setRemoteMpKey(k || '')
+  }, [envMpKey, userToken])
 
   useEffect(() => {
     if (!isOpen) {
       setRemoteMpKey(undefined)
+      setError(null)
       return
     }
     if (!prefersMercadoPagoGateway() || envMpKey) {
       return
     }
-    let cancelled = false
-    void fetchMercadoPagoBrickConfig(userToken).then((k) => {
-      if (!cancelled) setRemoteMpKey(k || '')
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [isOpen, userToken, envMpKey])
+    void loadBrickConfig()
+  }, [isOpen, userToken, envMpKey, brickConfigAttempt, loadBrickConfig])
 
   if (!isOpen) return null
 
@@ -129,7 +134,7 @@ export default function PaymentModal({
               Mercado Pago no esta disponible en este momento.
             </p>
             <p className="text-amber-200/80 text-xs mt-1">
-              Intentalo de nuevo en unos segundos.
+              Revisa tu conexión o vuelve a intentar cargar el formulario de pago.
             </p>
           </div>
 
@@ -150,8 +155,16 @@ export default function PaymentModal({
           >
             {surfaceCopy.cancel}
           </button>
-          <button type="button" onClick={onClose} disabled={loading} className={uiTone.ctaPayPrimary}>
-            <span>{surfaceCopy.close}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null)
+              setBrickConfigAttempt((n) => n + 1)
+            }}
+            disabled={loading}
+            className={uiTone.ctaPayPrimary}
+          >
+            <span>Reintentar</span>
           </button>
         </div>
       </div>

@@ -447,6 +447,7 @@ export const pagoResultadoCopy = {
   mpMissingSr: 'Faltan datos para mostrar el resultado. Volvé al inicio.',
   srSyncedPaid: 'En JobsHours esta solicitud ya figura como pagada.',
   srSyncedPending: 'En JobsHours el pago aún figura pendiente; esperá un momento o abrí el chat de la solicitud.',
+  retrySync: 'Verificar de nuevo',
   backHome: 'Volver al inicio',
 } as const
 
