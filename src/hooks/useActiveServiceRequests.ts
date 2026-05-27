@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, type Dispatch, type SetStateAction } from 'react'
 
 import { getPublicApiBase } from '@/lib/api'
+import { readHiddenRequestIds } from '@/lib/hiddenRequests'
 import {
   findPendingRatingRequest,
   markRatingPrompted,
@@ -78,7 +79,12 @@ export function useActiveServiceRequests({
         .then((r) => r.json())
         .then((data) => {
           const list = (data?.data ?? []) as RateableServiceRequest[]
-          const activeList = list.filter((sr) => ['pending', 'accepted', 'in_progress'].includes(sr.status))
+          const hiddenIds = readHiddenRequestIds(user.id)
+          const activeList = list.filter(
+            (sr) =>
+              ['pending', 'accepted', 'in_progress'].includes(sr.status) &&
+              !hiddenIds.includes(sr.id),
+          )
           setOpenActiveRequestsCount(activeList.length)
 
           const byWorker: Record<number, number> = {}
@@ -122,7 +128,12 @@ export function useActiveServiceRequests({
 
     sync()
     const interval = setInterval(sync, 8000)
-    return () => clearInterval(interval)
+    const onHiddenChanged = () => sync()
+    window.addEventListener('jh-hidden-requests-changed', onHiddenChanged)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('jh-hidden-requests-changed', onHiddenChanged)
+    }
   }, [
     user,
     setActiveChatRequestIds,

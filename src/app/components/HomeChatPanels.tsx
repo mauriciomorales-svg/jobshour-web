@@ -48,6 +48,7 @@ interface HomeChatPanelsProps {
   /** Abre el mismo PublishDemandModal que el mapa, con borrador opcional desde el chat */
   onOpenPublishDemandFromChat: (draft?: { description?: string } | null) => void
   focusOpenKey?: number
+  onOpenHistory?: () => void
 }
 
 export function HomeChatPanels({
@@ -72,6 +73,7 @@ export function HomeChatPanels({
   onHighlightRequestFromSolicitudes,
   onOpenPublishDemandFromChat,
   focusOpenKey = 0,
+  onOpenHistory,
 }: HomeChatPanelsProps) {
   return (
     <>
@@ -85,6 +87,7 @@ export function HomeChatPanels({
             onOpenChat={onOpenChatFromSolicitudes}
             onHighlightOnMap={onHighlightRequestFromSolicitudes}
             focusOpenKey={focusOpenKey}
+            onOpenHistory={onOpenHistory}
           />
         </div>
       )}

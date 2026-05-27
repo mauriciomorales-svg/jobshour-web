@@ -30,6 +30,7 @@ export function HomeSidebar({
   onOpenStoreOrders,
   onOpenWorkerQuotes,
   onOpenChatHistory,
+  onOpenRequestHistory,
   onOpenFriends,
   onOpenVerificationCard,
   onResetMap,
@@ -49,6 +50,7 @@ export function HomeSidebar({
   onOpenStoreOrders: () => void
   onOpenWorkerQuotes: () => void
   onOpenChatHistory: () => void
+  onOpenRequestHistory: () => void
   onOpenFriends: () => void
   onOpenVerificationCard: () => void
   onResetMap: () => void
@@ -231,6 +233,13 @@ export function HomeSidebar({
 
               <div className="px-4 py-3 space-y-0.5">
                 <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-2">{navCopy.sectionSocial}</p>
+
+                <button type="button" onClick={onOpenRequestHistory} className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group">
+                  <div className="w-9 h-9 bg-slate-700 rounded-lg flex items-center justify-center group-hover:bg-slate-600 transition">
+                    <span className="text-lg">📁</span>
+                  </div>
+                  <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition">Historial de solicitudes</span>
+                </button>
 
                 <button type="button" onClick={onOpenChatHistory} className="w-full flex items-center gap-3.5 px-3 py-2.5 hover:bg-slate-800 rounded-xl transition group">
                   <div className="w-9 h-9 bg-teal-500/15 rounded-lg flex items-center justify-center group-hover:bg-teal-500/25 transition">

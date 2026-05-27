@@ -11,8 +11,8 @@ import {
   REQUEST_STATUS_CONFIG,
   type MisSolicitudesTab,
 } from '@/lib/requestFlow'
+import { hideRequestForUser, readHiddenRequestIds } from '@/lib/hiddenRequests'
 import { trackFunnelEvent } from '@/lib/analyticsFunnel'
-import TrustPolicyPanel from './TrustPolicyPanel'
 import { isJhFlowDebugEnabled, jhFlowHintOnce, jhFlowLog, jhFlowSummarizeRequest } from '@/lib/jhFlowLog'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
@@ -59,7 +59,8 @@ interface Props {
   onClose: () => void
   onOpenChat?: (requestId: number, otherName: string, otherAvatar: string | null, myRole: 'cliente' | 'trabajador', isSelf: boolean) => void
   onHighlightOnMap?: (requestId: number) => void
-  /** Incrementar al abrir el panel (p. ej. desde el cintillo) para enfocar la pestaña con datos. */
+  /** Abre el módulo de historial (sidebar), fuera de esta pantalla operativa. */
+  onOpenHistory?: () => void
   focusOpenKey?: number
 }
 
@@ -147,6 +148,7 @@ export default function MisSolicitudes({
   onClose,
   onOpenChat,
   onHighlightOnMap,
+  onOpenHistory,
   focusOpenKey = 0,
 }: Props) {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
@@ -162,32 +164,24 @@ export default function MisSolicitudes({
 
   useEffect(() => {
     if (typeof window === 'undefined' || !user?.id) return
-    try {
-      const raw = localStorage.getItem(`jh_hidden_requests_${user.id}`)
-      const parsed = raw ? JSON.parse(raw) : []
-      if (Array.isArray(parsed)) {
-        setHiddenRequestIds(parsed.filter((x): x is number => typeof x === 'number'))
-      }
-    } catch {
-      setHiddenRequestIds([])
-    }
+    setHiddenRequestIds(readHiddenRequestIds(user.id))
+    const onChange = () => setHiddenRequestIds(readHiddenRequestIds(user.id))
+    window.addEventListener('jh-hidden-requests-changed', onChange)
+    return () => window.removeEventListener('jh-hidden-requests-changed', onChange)
   }, [user?.id])
 
   useEffect(() => {
     jhFlowHintOnce()
   }, [])
 
-  const persistHiddenRequestIds = useCallback((next: number[]) => {
-    setHiddenRequestIds(next)
-    if (typeof window !== 'undefined' && user?.id) {
-      localStorage.setItem(`jh_hidden_requests_${user.id}`, JSON.stringify(next))
-    }
-  }, [user?.id])
-
-  const hideRequestFromList = useCallback((requestId: number) => {
-    if (hiddenRequestIds.includes(requestId)) return
-    persistHiddenRequestIds([...hiddenRequestIds, requestId])
-  }, [hiddenRequestIds, persistHiddenRequestIds])
+  const hideRequestFromList = useCallback(
+    (requestId: number) => {
+      if (!user?.id || hiddenRequestIds.includes(requestId)) return
+      hideRequestForUser(user.id, requestId)
+      notifyUser('Movida al historial (oculta). Restaurá desde menú → Historial.', 'success')
+    },
+    [hiddenRequestIds, user?.id],
+  )
 
   const fetchSolicitudes = useCallback(async () => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -362,8 +356,9 @@ export default function MisSolicitudes({
 
   useEffect(() => {
     if (!user || loading || focusOpenKey < 1) return
-    setActiveTab(bestMisSolicitudesTabOnOpen(tabCounts))
-  }, [focusOpenKey, user, loading, tabCounts.active, tabCounts.in_progress, tabCounts.archived])
+    const counts = { active: tabCounts.active, in_progress: tabCounts.in_progress, archived: 0 }
+    setActiveTab(bestMisSolicitudesTabOnOpen(counts))
+  }, [focusOpenKey, user, loading, tabCounts.active, tabCounts.in_progress])
 
   const listByTab = baseVisibleSolicitudes.filter((s) => {
     if (activeTab === 'active') {
@@ -389,10 +384,10 @@ export default function MisSolicitudes({
           <p className="text-slate-400 text-xs mt-0.5">
             {user
               ? baseVisibleSolicitudes.length > 0
-                ? `${baseVisibleSolicitudes.length} ${isWorker ? 'trabajo' : 'solicitud'}${baseVisibleSolicitudes.length > 1 ? 's' : ''}`
+                ? `${baseVisibleSolicitudes.length} en seguimiento (sin archivadas)`
                 : isWorker
-                  ? 'Trabajos que tomaste o estás gestionando'
-                  : 'Pedidos que publicaste o estás siguiendo'
+                  ? 'Solo trabajos activos — el historial está en el menú'
+                  : 'Solo pedidos activos — el historial está en el menú'
               : isWorker
                 ? 'Inicia sesión para ver tus trabajos'
                 : 'Inicia sesión para ver tus solicitudes'}
@@ -423,11 +418,10 @@ export default function MisSolicitudes({
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-4">
         {user && !loading && !error && (
-          <div className="mb-3 grid grid-cols-3 gap-2">
+          <div className="mb-3 grid grid-cols-2 gap-2">
             {([
               { id: 'active' as MisSolicitudesTab, label: 'Activas', count: tabCounts.active },
               { id: 'in_progress' as MisSolicitudesTab, label: 'En curso', count: tabCounts.in_progress },
-              { id: 'archived' as MisSolicitudesTab, label: 'Archivadas', count: tabCounts.archived },
             ]).map((t) => (
               <button
                 key={t.id}
@@ -452,6 +446,16 @@ export default function MisSolicitudes({
               </button>
             ))}
           </div>
+        )}
+
+        {user && onOpenHistory && (
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            className="mb-3 w-full py-2 rounded-xl text-xs font-bold text-slate-400 border border-slate-700 bg-slate-800/60 hover:bg-slate-800"
+          >
+            📁 Historial y archivadas →
+          </button>
         )}
 
         {/* No logueado */}
@@ -867,6 +871,49 @@ export default function MisSolicitudes({
                                 </button>
                               )
                             )}
+                            {['accepted', 'in_progress'].includes(s.status) && (
+                              cancelConfirmId === s.id ? (
+                                <div className="flex-1 flex items-center gap-2 bg-red-500/10 rounded-xl px-3 py-2">
+                                  <span className="text-red-400 text-xs font-bold flex-1">¿Cancelar este servicio?</span>
+                                  <button
+                                    disabled={cancelling}
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      setCancelling(true)
+                                      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+                                      if (!token) { setCancelling(false); return }
+                                      try {
+                                        const res = await apiFetch(`/api/v1/requests/${s.id}/cancel`, {
+                                          method: 'POST',
+                                          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+                                        })
+                                        const data = await res.json()
+                                        if (data.status === 'success') {
+                                          setSolicitudes(prev => prev.filter(x => x.id !== s.id))
+                                        } else {
+                                          notifyUser(data?.message || 'No se pudo cancelar', 'error')
+                                        }
+                                      } catch {}
+                                      setCancelling(false)
+                                      setCancelConfirmId(null)
+                                    }}
+                                    className="px-2.5 py-1 bg-red-500 text-white rounded-lg text-xs font-black transition active:scale-95 disabled:opacity-50"
+                                  >
+                                    {cancelling ? '...' : 'Sí'}
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); setCancelConfirmId(null) }} className="px-2.5 py-1 bg-slate-600 text-slate-300 rounded-lg text-xs font-bold transition">
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setCancelConfirmId(s.id) }}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs font-bold transition active:scale-95"
+                                >
+                                  Cancelar servicio
+                                </button>
+                              )
+                            )}
                             <button
                               type="button"
                               onClick={(e) => {
@@ -875,7 +922,7 @@ export default function MisSolicitudes({
                               }}
                               className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-700/60 hover:bg-slate-600/70 text-slate-300 rounded-xl text-xs font-bold transition active:scale-95 border border-slate-600/60"
                             >
-                              🗂 Ocultar
+                              🗂 Archivar
                             </button>
                           </div>
                         )}
@@ -888,9 +935,6 @@ export default function MisSolicitudes({
           </AnimatePresence>
         )}
 
-        {user && !loading && (
-          <TrustPolicyPanel className="mt-4" />
-        )}
       </div>
 
       {ratingModal && (

@@ -13,6 +13,7 @@ const VerificationCard = dynamic(() => import('./components/VerificationCard'), 
 const CategoryManagement = dynamic(() => import('./components/CategoryManagement'), { ssr: false })
 const StoreOrdersPanel = dynamic(() => import('./components/StoreOrdersPanel'), { ssr: false })
 const WorkerQuotesPanel = dynamic(() => import('./components/WorkerQuotesPanel'), { ssr: false })
+const RequestHistoryPanel = dynamic(() => import('./components/RequestHistoryPanel'), { ssr: false })
 const WorkerDetailModal = dynamic(() => import('./components/WorkerDetailModal'), { ssr: false })
 const NoCoverageOverlay = dynamic(() => import('./components/NoCoverageOverlay'), { ssr: false })
 const ProfileRequiredModal = dynamic(() => import('./components/ProfileRequiredModal'), { ssr: false })
@@ -83,6 +84,7 @@ export default function Home() {
   const [showStoreOrders, setShowStoreOrders] = useState(false)
   const [showWorkerQuotes, setShowWorkerQuotes] = useState(false)
   const [showChatHistory, setShowChatHistory] = useState(false)
+  const [showRequestHistoryPanel, setShowRequestHistoryPanel] = useState(false)
   const [showSolicitudesPanel, setShowSolicitudesPanel] = useState(false)
   const [solicitudesFocusKey, setSolicitudesFocusKey] = useState(0)
   const [dashHidden, setDashHidden] = useState(true)
@@ -1156,6 +1158,10 @@ export default function Home() {
           })
         }}
         focusOpenKey={solicitudesFocusKey}
+        onOpenHistory={() => {
+          setShowSolicitudesPanel(false)
+          setShowRequestHistoryPanel(true)
+        }}
       />
 
       <HomeSidebar
@@ -1173,11 +1179,26 @@ export default function Home() {
         onOpenStoreOrders={() => { setShowStoreOrders(true); setShowSidebar(false) }}
         onOpenWorkerQuotes={() => { setShowWorkerQuotes(true); setShowSidebar(false) }}
         onOpenChatHistory={() => { setShowChatHistory(true); setShowSidebar(false) }}
+        onOpenRequestHistory={() => { setShowRequestHistoryPanel(true); setShowSidebar(false) }}
         onOpenFriends={() => { setShowFriends(true); setShowSidebar(false) }}
         onOpenVerificationCard={() => { setShowVerificationCard(true); setShowSidebar(false) }}
         onResetMap={handleResetMapLocation}
         onLogout={handleLogout}
       />
+
+      {showRequestHistoryPanel && user && (
+        <RequestHistoryPanel
+          user={user}
+          onClose={() => setShowRequestHistoryPanel(false)}
+          onOpenChat={(requestId, otherName, otherAvatar, myRole, isSelf) => {
+            setShowRequestHistoryPanel(false)
+            setActiveRequestId(requestId)
+            setChatContext({ name: otherName, avatar: otherAvatar, myRole, isSelf })
+            setShowChat(true)
+            setChatBadge(0)
+          }}
+        />
+      )}
 
       {showFriends && user && <Friends user={user} onClose={() => setShowFriends(false)} />}
 
