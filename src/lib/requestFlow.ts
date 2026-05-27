@@ -62,6 +62,27 @@ export function matchesMisSolicitudesTab(
   return classifyMisSolicitudesTab(status, createdAt, expiresAt) === tab
 }
 
+export function countMisSolicitudesByTab(
+  items: Array<{ status: string; created_at?: string | null; expires_at?: string | null }>,
+): Record<MisSolicitudesTab, number> {
+  const counts: Record<MisSolicitudesTab, number> = { active: 0, in_progress: 0, archived: 0 }
+  for (const item of items) {
+    const tab = classifyMisSolicitudesTab(item.status, item.created_at, item.expires_at)
+    counts[tab] += 1
+  }
+  return counts
+}
+
+/** Al abrir el panel, ir a la primera pestaña con solicitudes visibles. */
+export function bestMisSolicitudesTabOnOpen(
+  counts: Record<MisSolicitudesTab, number>,
+): MisSolicitudesTab {
+  if (counts.in_progress > 0) return 'in_progress'
+  if (counts.active > 0) return 'active'
+  if (counts.archived > 0) return 'archived'
+  return 'active'
+}
+
 export function getMisSolicitudesEmptyState(tab: MisSolicitudesTab): {
   title: string
   hint: string

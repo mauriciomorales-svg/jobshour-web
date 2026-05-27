@@ -4,9 +4,12 @@ import { useEffect, useState, useCallback } from 'react'
 import { apiFetch } from '@/lib/api'
 import { notifyUser } from '@/lib/notifyUser'
 import {
+  bestMisSolicitudesTabOnOpen,
+  countMisSolicitudesByTab,
   getMisSolicitudesEmptyState,
   matchesMisSolicitudesTab,
   REQUEST_STATUS_CONFIG,
+  type MisSolicitudesTab,
 } from '@/lib/requestFlow'
 import { trackFunnelEvent } from '@/lib/analyticsFunnel'
 import TrustPolicyPanel from './TrustPolicyPanel'
@@ -56,6 +59,8 @@ interface Props {
   onClose: () => void
   onOpenChat?: (requestId: number, otherName: string, otherAvatar: string | null, myRole: 'cliente' | 'trabajador', isSelf: boolean) => void
   onHighlightOnMap?: (requestId: number) => void
+  /** Incrementar al abrir el panel (p. ej. desde el cintillo) para enfocar la pestaña con datos. */
+  focusOpenKey?: number
 }
 
 const STATUS_CONFIG = REQUEST_STATUS_CONFIG
@@ -135,7 +140,15 @@ function ExpirationTimer({ expiresAt }: { expiresAt: string }) {
   )
 }
 
-export default function MisSolicitudes({ user, isWorker = false, onLoginRequest, onClose, onOpenChat, onHighlightOnMap }: Props) {
+export default function MisSolicitudes({
+  user,
+  isWorker = false,
+  onLoginRequest,
+  onClose,
+  onOpenChat,
+  onHighlightOnMap,
+  focusOpenKey = 0,
+}: Props) {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -345,6 +358,13 @@ export default function MisSolicitudes({ user, isWorker = false, onLoginRequest,
 
   const baseVisibleSolicitudes = solicitudes.filter((s) => !hiddenRequestIds.includes(s.id))
 
+  const tabCounts = countMisSolicitudesByTab(baseVisibleSolicitudes)
+
+  useEffect(() => {
+    if (!user || loading || focusOpenKey < 1) return
+    setActiveTab(bestMisSolicitudesTabOnOpen(tabCounts))
+  }, [focusOpenKey, user, loading, tabCounts.active, tabCounts.in_progress, tabCounts.archived])
+
   const listByTab = baseVisibleSolicitudes.filter((s) => {
     if (activeTab === 'active') {
       return s.status === 'pending' && !isPendingExpired(s) && !isStalePending(s)
@@ -405,21 +425,30 @@ export default function MisSolicitudes({ user, isWorker = false, onLoginRequest,
         {user && !loading && !error && (
           <div className="mb-3 grid grid-cols-3 gap-2">
             {([
-              { id: 'active', label: 'Activas' },
-              { id: 'in_progress', label: 'En curso' },
-              { id: 'archived', label: 'Archivadas' },
-            ] as const).map((t) => (
+              { id: 'active' as MisSolicitudesTab, label: 'Activas', count: tabCounts.active },
+              { id: 'in_progress' as MisSolicitudesTab, label: 'En curso', count: tabCounts.in_progress },
+              { id: 'archived' as MisSolicitudesTab, label: 'Archivadas', count: tabCounts.archived },
+            ]).map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setActiveTab(t.id)}
-                className={`py-2 rounded-xl text-xs font-bold transition ${
+                className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 ${
                   activeTab === t.id
                     ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40'
                     : 'bg-slate-800 text-slate-400 border border-slate-700'
                 }`}
               >
-                {t.label}
+                <span>{t.label}</span>
+                {t.count > 0 && (
+                  <span
+                    className={`min-w-[1.25rem] rounded-full px-1 py-0.5 text-[10px] font-black ${
+                      activeTab === t.id ? 'bg-amber-500/40 text-amber-100' : 'bg-slate-700 text-slate-300'
+                    }`}
+                  >
+                    {t.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>

@@ -41,7 +41,9 @@ export function OpenRequestsBanner({
           <p className="text-xs font-bold text-teal-200">
             {count === 1 ? 'Tienes 1 solicitud activa' : `Tienes ${count} solicitudes activas`}
           </p>
-          <p className="text-[11px] text-slate-400">Revisa el chat para no perder el contacto</p>
+          <p className="text-[11px] text-slate-400">
+            En Mis trabajos → pestaña En curso o Activas
+          </p>
         </div>
         <button
           type="button"

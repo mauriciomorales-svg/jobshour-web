@@ -84,6 +84,7 @@ export default function Home() {
   const [showWorkerQuotes, setShowWorkerQuotes] = useState(false)
   const [showChatHistory, setShowChatHistory] = useState(false)
   const [showSolicitudesPanel, setShowSolicitudesPanel] = useState(false)
+  const [solicitudesFocusKey, setSolicitudesFocusKey] = useState(0)
   const [dashHidden, setDashHidden] = useState(true)
   const [dismissEmptyMap, setDismissEmptyMap] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
@@ -590,7 +591,13 @@ export default function Home() {
     setActiveTab(tab)
     if (tab === 'map') { setDashHidden(true); setShowSolicitudesPanel(false); setActiveSection('map') }
     if (tab === 'feed') { setDashHidden(false); setShowSolicitudesPanel(false); setActiveSection('map') }
-    if (tab === 'requests') { setDashHidden(true); setShowSolicitudesPanel(true); setActiveSection('map'); setChatBadge(0) }
+    if (tab === 'requests') {
+      setDashHidden(true)
+      setShowSolicitudesPanel(true)
+      setActiveSection('map')
+      setChatBadge(0)
+      setSolicitudesFocusKey((k) => k + 1)
+    }
     if (tab === 'profile') setActiveSection('profile')
   }, [user, setShowLoginModal])
 
@@ -1148,6 +1155,7 @@ export default function Home() {
             setShowPublishDemand(true)
           })
         }}
+        focusOpenKey={solicitudesFocusKey}
       />
 
       <HomeSidebar

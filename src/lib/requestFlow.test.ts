@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  bestMisSolicitudesTabOnOpen,
   classifyMisSolicitudesTab,
+  countMisSolicitudesByTab,
   getChatNextStep,
   getMisSolicitudesEmptyState,
   getWorkerRequestsEmptyState,
@@ -20,6 +22,18 @@ describe('requestFlow', () => {
     const expires = new Date(Date.now() - 1000).toISOString()
     expect(isPendingExpired('pending', expires)).toBe(true)
     expect(classifyMisSolicitudesTab('pending', new Date().toISOString(), expires)).toBe('archived')
+  })
+
+  it('counts tabs and picks in_progress on open when accepted exist', () => {
+    const items = [
+      { status: 'accepted', created_at: new Date().toISOString() },
+      { status: 'accepted', created_at: new Date().toISOString() },
+      { status: 'pending', created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 3600_000).toISOString() },
+    ]
+    const counts = countMisSolicitudesByTab(items)
+    expect(counts.in_progress).toBe(2)
+    expect(counts.active).toBe(1)
+    expect(bestMisSolicitudesTabOnOpen(counts)).toBe('in_progress')
   })
 
   it('returns guided empty states', () => {
