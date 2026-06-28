@@ -14,7 +14,7 @@ export function readHiddenRequestIds(userId: number): number[] {
 
 export function writeHiddenRequestIds(userId: number, ids: number[]): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem(storageKey(userId), JSON.stringify([...new Set(ids)]))
+  localStorage.setItem(storageKey(userId), JSON.stringify(Array.from(new Set(ids))))
   window.dispatchEvent(new CustomEvent('jh-hidden-requests-changed'))
 }
 

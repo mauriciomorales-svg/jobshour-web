@@ -1436,7 +1436,7 @@ export default function TiendaPage() {
                 </button>
                 {wantsDelivery && (
                   <div className="mt-2 space-y-2">
-                    <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Dirección de entrega..."
+                  <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Dirección de entrega..."
                       className="w-full bg-white border border-gray-200 text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400" />
                     <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
                       <input
@@ -1456,8 +1456,8 @@ export default function TiendaPage() {
                         className="w-full bg-white border border-gray-200 text-sm px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-400"
                         min={0}
                       />
-                    )}
-                  </div>
+                )}
+              </div>
                 )}
               </div>
               <button onClick={isOwner ? handleCreateQuote : handlePay} disabled={paying || !buyerName.trim() || !buyerEmail.trim() || !buyerPhone.trim() || (wantsDelivery && !address.trim())}
@@ -1531,32 +1531,32 @@ export default function TiendaPage() {
                       quote_id: quotePdfSnapshot.quoteId,
                     })
                     try {
-                      void downloadBrandedQuotePdf({
-                        storeName: quotePdfSnapshot.worker.store_name || 'Tienda JobsHours',
-                        workerName: quotePdfSnapshot.worker.name || '—',
-                        buyerName: quotePdfSnapshot.buyer.name,
-                        buyerEmail: quotePdfSnapshot.buyer.email,
-                        buyerPhone: quotePdfSnapshot.buyer.phone,
-                        rows: quotePdfSnapshot.lines.map((l) => ({
-                          title: l.nombre,
-                          quantity: l.cantidad,
-                          amount: l.subtotal,
-                        })),
-                        extras: [
-                          { label: 'Servicio plataforma JobsHours (8%)', amount: quotePdfSnapshot.commission },
-                          ...(quotePdfSnapshot.laborEnabled && quotePdfSnapshot.laborAmountNum > 0
-                            ? [
-                                {
-                                  label: quotePdfSnapshot.laborDesc || 'Mano de obra / servicio',
-                                  amount: quotePdfSnapshot.laborAmountNum,
-                                },
-                              ]
-                            : []),
-                        ],
-                        total: quotePdfSnapshot.total,
-                        expiresAt: quotePdfSnapshot.expiresAt,
-                        publicUrl: quotePdfSnapshot.publicUrl,
-                        quoteId: quotePdfSnapshot.quoteId,
+                    void downloadBrandedQuotePdf({
+                      storeName: quotePdfSnapshot.worker.store_name || 'Tienda JobsHours',
+                      workerName: quotePdfSnapshot.worker.name || '—',
+                      buyerName: quotePdfSnapshot.buyer.name,
+                      buyerEmail: quotePdfSnapshot.buyer.email,
+                      buyerPhone: quotePdfSnapshot.buyer.phone,
+                      rows: quotePdfSnapshot.lines.map((l) => ({
+                        title: l.nombre,
+                        quantity: l.cantidad,
+                        amount: l.subtotal,
+                      })),
+                      extras: [
+                        { label: 'Servicio plataforma JobsHours (8%)', amount: quotePdfSnapshot.commission },
+                        ...(quotePdfSnapshot.laborEnabled && quotePdfSnapshot.laborAmountNum > 0
+                          ? [
+                              {
+                                label: quotePdfSnapshot.laborDesc || 'Mano de obra / servicio',
+                                amount: quotePdfSnapshot.laborAmountNum,
+                              },
+                            ]
+                          : []),
+                      ],
+                      total: quotePdfSnapshot.total,
+                      expiresAt: quotePdfSnapshot.expiresAt,
+                      publicUrl: quotePdfSnapshot.publicUrl,
+                      quoteId: quotePdfSnapshot.quoteId,
                         documentTitle: 'Propuesta de compra',
                       })
                     } catch {

@@ -40,6 +40,7 @@ interface MapScreenProps {
   user: AuthUser | null
   workerProfile: { id?: number } | null
   chatRequestIdForDetail: number | null
+  onTakeDemand?: () => void | Promise<void>
   onTravelJoin: () => void
   onOpenProfileSection: () => void
   onVerWorkerProfile: () => void
@@ -93,7 +94,7 @@ export function MapScreen(props: MapScreenProps) {
     notifBadge, onMenuToggle, headerUser, onLoginClick, onProfileClick,
     searchQuery, onSearchChange, workerCount, categories, activeCategory, onCategoryClick,
     selectedDetail, loadingDetail, onCloseDetail, user, workerProfile, chatRequestIdForDetail,
-    onTravelJoin, onOpenProfileSection, onVerWorkerProfile, onDetailChat, onDetailRequest, onCallPhone,
+    onTakeDemand, onTravelJoin, onOpenProfileSection, onVerWorkerProfile, onDetailChat, onDetailRequest, onCallPhone,
     dashHidden, isWorker = false, userLat, userLng, currentUserId, onDashboardClose, onDashboardRefresh,
     setHighlightedRequestId, setSelectedDetail, setShowRequestModal, setDashHidden,
     setShowLoginModal, onProfileRequired, setActiveRequestId, setChatContext, setShowChat,
@@ -148,6 +149,7 @@ export function MapScreen(props: MapScreenProps) {
           user={user}
           workerProfile={workerProfile}
           chatRequestIdForDetail={chatRequestIdForDetail}
+          onTakeDemand={onTakeDemand}
           onTravelJoin={onTravelJoin}
           onOpenProfileSection={onOpenProfileSection}
           onVerWorkerProfile={onVerWorkerProfile}

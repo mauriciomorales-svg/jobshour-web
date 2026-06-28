@@ -5,6 +5,7 @@ import { ExpertDetail } from '@/app/components/HomeWorkerDetailSheet'
 import { MapPoint } from '@/app/components/MapSection'
 import { feedbackCopy } from '@/lib/userFacingCopy'
 import { isPremiumStoreMapPoint } from '@/lib/mapPremiumPin'
+import { takePublicDemand } from '@/lib/takeDemand'
 
 type ToastFn = (msg: string, type?: 'info' | 'success' | 'error' | 'warning', subtitle?: string) => void
 
@@ -13,11 +14,19 @@ interface CheckAuthResult {
   reason?: 'login' | 'profile'
 }
 
+export type OpenChatFromTakePayload = {
+  requestId: number
+  clientName?: string
+  clientAvatar?: string | null
+  description?: string
+}
+
 interface UsePointDetailOptions {
   checkAuthAndProfile: () => CheckAuthResult
   setShowLoginModal: (v: boolean) => void
   onProfileRequired?: () => void
   setShowChat: (v: boolean) => void
+  onOpenChatFromTake?: (payload: OpenChatFromTakePayload) => void
   fetchNearby: (categoryId?: number | null) => void
   activeCategory: number | null
   toast: ToastFn
@@ -48,10 +57,30 @@ export function usePointDetail({
   setShowLoginModal,
   onProfileRequired,
   setShowChat,
+  onOpenChatFromTake,
   fetchNearby,
   activeCategory,
   toast,
 }: UsePointDetailOptions) {
+
+  const finishTakeDemand = useCallback(
+    (result: Awaited<ReturnType<typeof takePublicDemand>>, detail: ExpertDetail | null) => {
+      if (!result.ok) {
+        toast(result.message, 'error')
+        return
+      }
+      toast(result.message, 'success', 'Aceptá la solicitud en Mis solicitudes cuando estés listo.')
+      setSelectedDetail(null)
+      fetchNearby(activeCategory)
+      onOpenChatFromTake?.({
+        requestId: result.requestId,
+        clientName: result.client?.name ?? detail?.name,
+        clientAvatar: result.client?.avatar ?? detail?.avatar ?? null,
+        description: detail?.title ?? detail?.microcopy,
+      })
+    },
+    [toast, fetchNearby, activeCategory, onOpenChatFromTake],
+  )
   const [selectedDetail, setSelectedDetail] = useState<ExpertDetail | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [highlightedRequestId, setHighlightedRequestId] = useState<number | null>(null)
@@ -155,27 +184,34 @@ export function usePointDetail({
     setPremiumHandoff(null)
   }, [])
 
-  const handleDetailTravelJoin = useCallback(async (detail: ExpertDetail | null) => {
-    if (!detail) return
-    if (!gateInteract(checkAuthAndProfile, setShowLoginModal, onProfileRequired, toast, 'Iniciá sesión para continuar', 'Completá foto y nombre en tu perfil')) return
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-    try {
-      const res = await fetch(`/api/v1/demand/${detail.id}/take`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json()
-      if (res.ok && data.status === 'success') {
-        toast(detail.travel_role === 'driver' ? '🙋 Solicitud enviada al chofer' : '🚗 Te ofreciste como chofer', 'success')
-        setSelectedDetail(null)
-        fetchNearby(activeCategory)
-      } else {
-        toast(data.message || 'Error al conectar', 'error')
+  const handleDetailTakeDemand = useCallback(
+    async (detail: ExpertDetail | null) => {
+      if (!detail) return
+      if (
+        !gateInteract(
+          checkAuthAndProfile,
+          setShowLoginModal,
+          onProfileRequired,
+          toast,
+          'Iniciá sesión para continuar',
+          'Completá foto y nombre en tu perfil',
+        )
+      ) {
+        return
       }
-    } catch {
-      toast(feedbackCopy.networkError, 'error')
-    }
-  }, [checkAuthAndProfile, onProfileRequired, setShowLoginModal, toast, fetchNearby, activeCategory])
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      if (!token) return
+      try {
+        const result = await takePublicDemand(detail.id, token)
+        finishTakeDemand(result, detail)
+      } catch {
+        toast(feedbackCopy.networkError, 'error')
+      }
+    },
+    [checkAuthAndProfile, onProfileRequired, setShowLoginModal, toast, finishTakeDemand],
+  )
+
+  const handleDetailTravelJoin = handleDetailTakeDemand
 
   const handleDetailChat = useCallback(() => {
     if (!gateInteract(checkAuthAndProfile, setShowLoginModal, onProfileRequired, toast, 'Iniciá sesión para chatear', 'Completá tu perfil para chatear')) return
@@ -217,6 +253,7 @@ export function usePointDetail({
     dismissPremiumHandoff,
     handlePointClick,
     handleMapClick,
+    handleDetailTakeDemand,
     handleDetailTravelJoin,
     handleDetailChat,
     handleDetailRequest,

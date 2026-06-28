@@ -7,6 +7,7 @@ import { feedbackCopy } from '@/lib/userFacingCopy'
 import type { ExpertDetail } from './HomeWorkerDetailSheet'
 import type { MapPoint } from './MapSection'
 import { jhFlowLog } from '@/lib/jhFlowLog'
+import { takePublicDemand } from '@/lib/takeDemand'
 
 const DashboardFeed = dynamic(() => import('./DashboardFeed'), { ssr: false })
 
@@ -204,56 +205,36 @@ export function HomeDashboardPanel({
                   toast('Inicia sesión para tomar demandas', 'info')
                   return
                 }
-                fetch(`/take_demand.php?id=${request.id}`, {
-                  method: 'POST',
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: 'application/json',
-                  },
-                })
-                  .then(async (r) => {
-                    let data: Record<string, unknown> = {}
-                    try {
-                      data = (await r.json()) as Record<string, unknown>
-                    } catch {
-                      data = {}
-                    }
-                    if (!r.ok) {
+                void takePublicDemand(request.id, token)
+                  .then((result) => {
+                    if (!result.ok) {
                       jhFlowLog('take_demand.http_error', {
                         demandId: request.id,
-                        httpStatus: r.status,
-                        ...data,
+                        httpStatus: result.httpStatus,
+                        message: result.message,
                       })
-                      const raw = typeof data.message === 'string' ? data.message : ''
-                      const friendly =
-                        r.status === 409 || raw.includes('Ya tomada') || raw.includes('ya fue tomada') || data._worker
-                          ? 'Esta demanda ya fue tomada por otro trabajador.'
-                          : typeof data._status === 'string' && data._status !== 'pending'
-                            ? 'Esta demanda ya no está disponible.'
-                            : raw.includes('propia')
-                              ? 'No puedes tomar tu propia demanda.'
-                              : raw.includes('Sin perfil worker')
-                                ? 'Necesitas perfil de trabajador para tomar demandas.'
-                                : raw || 'No se pudo tomar la demanda.'
-                      toast(friendly, 'error')
+                      toast(result.message, 'error')
                       return
                     }
-                    if (data.status === 'success') {
-                      jhFlowLog('take_demand.ok', { demandId: request.id })
-                      toast('Demanda tomada', 'success', 'El cliente será notificado.')
-                      const removeEvent = new CustomEvent('remove-feed-item', { detail: { id: request.id } })
-                      window.dispatchEvent(removeEvent)
-                      setPoints((prev) => prev.filter((p) => !(p.id === request.id && p.pin_type === 'demand')))
-                      setSelectedDetail(null)
-                      setTimeout(() => {
-                        fetchNearby()
-                        window.dispatchEvent(new Event('reload-feed'))
-                      }, 1500)
-                      setDashHidden(true)
-                    } else {
-                      const raw = typeof data.message === 'string' ? data.message : ''
-                      toast(raw || 'Error al tomar demanda', 'error')
-                    }
+                    jhFlowLog('take_demand.ok', { demandId: request.id, derivedId: result.requestId })
+                    toast(result.message, 'success', 'Coordiná con el cliente en el chat.')
+                    const removeEvent = new CustomEvent('remove-feed-item', { detail: { id: request.id } })
+                    window.dispatchEvent(removeEvent)
+                    setPoints((prev) => prev.filter((p) => !(p.id === request.id && p.pin_type === 'demand')))
+                    setSelectedDetail(null)
+                    setActiveRequestId(result.requestId)
+                    setChatContext({
+                      description: request.description,
+                      name: result.client?.name ?? request.client?.name,
+                      avatar: result.client?.avatar ?? request.client?.avatar ?? null,
+                      myRole: 'trabajador',
+                    })
+                    setShowChat(true)
+                    setTimeout(() => {
+                      fetchNearby()
+                      window.dispatchEvent(new Event('reload-feed'))
+                    }, 800)
+                    setDashHidden(true)
                   })
                   .catch(() => {
                     jhFlowLog('take_demand.network_error', { demandId: request.id })

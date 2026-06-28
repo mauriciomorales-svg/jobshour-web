@@ -542,7 +542,9 @@ export default function MisSolicitudes({
                   const categoryColor = s.category?.color ?? '#6b7280'
                   const isPending = s.status === 'pending'
                   const isActive = ['pending', 'accepted', 'in_progress'].includes(s.status)
-                  const canOpenChatNow = ['accepted', 'in_progress', 'completed'].includes(s.status)
+                  const canOpenChatNow =
+                    ['accepted', 'in_progress', 'completed'].includes(s.status) ||
+                    (s.status === 'pending' && !!s.worker?.id)
                   const canRespondNow = imWorker && isPending
                   const canCompleteAsWorker = imWorker && ['accepted', 'in_progress'].includes(s.status)
                   const isCompletedAsClient = !imWorker && s.status === 'completed'

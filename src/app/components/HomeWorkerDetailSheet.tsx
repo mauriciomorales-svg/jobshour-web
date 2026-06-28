@@ -60,6 +60,7 @@ export function HomeWorkerDetailSheet({
   workerProfile,
   chatRequestIdForDetail,
   onTravelJoin,
+  onTakeDemand,
   onOpenProfileSection,
   onVerWorkerProfile,
   onChatClick,
@@ -74,6 +75,7 @@ export function HomeWorkerDetailSheet({
   /** Solicitud activa cuyo worker coincide con la ficha (mapa experto → chat) */
   chatRequestIdForDetail: number | null
   onTravelJoin: () => void | Promise<void>
+  onTakeDemand?: () => void | Promise<void>
   onOpenProfileSection: () => void
   onVerWorkerProfile: () => void
   /** Si hay conversación con este trabajador, pasa el requestId explícito */
@@ -383,6 +385,14 @@ export function HomeWorkerDetailSheet({
                         ) : (
                           <div className="grid grid-cols-2 gap-2.5">
                             {isDemand ? (
+                              <>
+                              <button
+                                type="button"
+                                onClick={() => void onTakeDemand?.()}
+                                className="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-3.5 rounded-2xl text-sm font-bold transition active:scale-95 shadow-md shadow-amber-500/20"
+                              >
+                                Tomar esta demanda
+                              </button>
                               <a
                                 href={`https://www.google.com/maps/dir/?api=1&destination=${selectedDetail.pos.lat},${selectedDetail.pos.lng}`}
                                 target="_blank"
@@ -400,6 +410,7 @@ export function HomeWorkerDetailSheet({
                                 </svg>
                                 Cómo llegar
                               </a>
+                              </>
                             ) : (
                               <button
                                 type="button"

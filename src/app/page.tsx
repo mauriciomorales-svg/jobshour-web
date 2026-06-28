@@ -325,6 +325,7 @@ export default function Home() {
     showRequestModal, setShowRequestModal,
     premiumHandoff, dismissPremiumHandoff,
     handlePointClick, handleMapClick,
+    handleDetailTakeDemand,
     handleDetailTravelJoin,
     handleDetailRequest, handleDetailCallPhone,
     handleDetailVerWorkerProfile,
@@ -333,6 +334,19 @@ export default function Home() {
     setShowLoginModal,
     onProfileRequired: () => setShowProfileRequired(true),
     setShowChat,
+    onOpenChatFromTake: ({ requestId, clientName, clientAvatar, description }) => {
+      setActiveRequestId(requestId)
+      setChatContext({
+        name: clientName ?? 'Cliente',
+        avatar: clientAvatar ?? null,
+        description,
+        myRole: 'trabajador',
+      })
+      setShowChat(true)
+      setChatBadge(0)
+      setActiveTab('map')
+      setDashHidden(true)
+    },
     fetchNearby,
     activeCategory,
     toast,
@@ -1025,6 +1039,7 @@ export default function Home() {
             ? chatRequestByWorkerId[selectedDetail.id] ?? null
             : null
         }
+        onTakeDemand={() => void handleDetailTakeDemand(selectedDetail)}
         onTravelJoin={() => handleDetailTravelJoin(selectedDetail)}
         onOpenProfileSection={() => setActiveSection('profile')}
         onVerWorkerProfile={() => handleDetailVerWorkerProfile(selectedDetail)}
